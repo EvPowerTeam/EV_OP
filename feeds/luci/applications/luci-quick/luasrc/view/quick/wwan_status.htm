@@ -1,0 +1,190 @@
+<script type="text/javascript">//<![CDATA[
+	function wprogressbar(v, m)
+	{
+		var vn = parseInt(v) || 0;
+		var mn = parseInt(m) || 100;
+		var pc = Math.floor((100 / mn) * vn);
+
+		return String.format(
+			'<div style="width:200px; position:relative; border:1px solid #999999">' +
+				'<div style="background-color:#CCCCCC; width:%d%%; height:15px">' +
+					'<div style="position:absolute; left:0; top:0; text-align:center; width:100%%; color:#000000">' +
+						'<small>%d%%</small>' +
+					'</div>' +
+				'</div>' +
+			'</div>', pc, pc
+		);
+	}
+	
+	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "quick", "wwan", "status")%>', null,
+		function(x, st)
+		{
+			var tx = document.getElementById('wwan_status_text');
+			if (tx)
+			{
+				if (st && st.wwans)
+				{
+					var temp = '';
+					var err = '';
+					var extra = '';
+					for( var i = 0; i < st.wwans.length; i++ )
+					{
+						var text = '';
+						var bar = '';
+						var wnet = st.wwans[i];
+						var reg;
+						if ( wnet.network ) {
+							reg = wnet.network;
+							var indx = reg.indexOf(",");
+							if (indx > 0 && reg.length>indx+1) { reg = reg.substring(indx+1, indx+2); }
+							switch (reg) {
+								case "0":
+									reg = '<%:No network%>';
+								break;
+								case "1":
+									reg = '<%:Registered%>';
+								break;
+								case "2":
+									reg = '<%:Unregistered%>';
+								break;
+								case "3":
+									reg = '<%:Be rejected%>';
+								break;
+								case "4":
+									reg = '<%:Unknown%>';
+								break;
+								case "5":
+									reg = '<%:Roaming%>';
+								break;
+								default:
+									//reg = "code : " + reg;
+								break;
+							}
+						}
+						
+						if ( wnet.ifname ) {
+							text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname);
+						}else {
+							text += String.format('<strong><%:Interface%>: </strong>%s<br />', '');
+							err += 'ifname is null-';
+						}
+						if ( wnet.sim ) {
+							text += String.format('<strong><%:SIM card%>: </strong>%s<br />', wnet.sim);
+						}else {
+							text += String.format('<strong><%:SIM card%>: </strong>%s<br />', '');
+							err += 'sim is null-';
+						}	
+						//------network-----
+						text += '<strong><%:Network%>: </strong>';
+						if ( wnet.operator ) {
+							ope = wnet.operator;
+							ope = ope.match(/\"([^\",]*)\"/)[0];
+							if(ope=="\"CHN-UNICOM\"" || ope=="\"UNICOM\"" || ope=="\"46001\"")
+							{
+								text += '<%:China unicom%>';
+							}
+							else if(ope=="\"CHINA MOBILE\"" || ope=="\"CMCC\"" || ope=="\"46000\"")
+							{
+								text += '<%:China mobile%>';
+							}
+						}else {
+							//text += String.format('<strong><%:Network%>: </strong>%s<br />', '');
+							err += 'operator is null-';
+						}
+						text += " ";
+						if ( wnet.network ) {
+							text += reg;
+							//text += String.format('<strong><%:Network%>: </strong>%s<br />', reg);
+						}else {
+							//text += String.format('<strong><%:Network%>: </strong>%s<br />', '');
+							err += 'network is null-';
+						}
+						
+						text += '<br />';						
+						/*if ( wnet.hsignal ) {
+							text += hsignal + '<br />';
+							//text += String.format('<strong><%:Network%>: </strong>%s<br />', reg);
+						}else {
+							//text += String.format('<strong><%:Network%>: </strong>%s<br />', '');
+							err += 'hsignal is null-';
+						}*/
+						//------^----------
+						if ( wnet.isup ) {
+							text += '<strong><%:Mobile data%>: </strong><%:linked%><br />';
+						} else { 
+							text += '<strong><%:Mobile data%>: </strong><%:broke%><br />';
+						}
+						if ( wnet.signal ) {
+							text += String.format('<strong><%:Signal%>: </strong>%s<br />', wnet.signal);
+							var sig = wnet.signal;
+							var indx = sig.indexOf(",");
+							if (indx > 0) { sig = sig.substring(0, indx); indx = parseInt(sig); }
+							if (indx < 0 || indx > 31) indx = 0;
+							bar = wprogressbar(indx, 31);
+						}else {
+							text += String.format('<strong><%:Signal%>: </strong>%s<br />', '');
+							bar = wprogressbar(0, 31);
+							err += 'signal is null-';
+						}
+						
+						temp += String.format('%s%s<br />', text, bar);
+						if ( wnet.extra ) {
+							extra += String.format('{[%s]%s}<br />', wnet.ifname, wnet.extra);
+						}
+					}
+										
+					//temp += err;
+					tx.innerHTML = temp;
+					if (e = document.getElementById('wwan_status_extra')) {
+						if ( extra ) {
+							e.innerHTML = String.format('&nbsp;&nbsp;&nbsp;&nbsp;---Report---<br />%s', extra);
+						}else {
+							e.innerHTML = '';
+						}
+					}
+				}
+				else
+				{
+					if (e = document.getElementById('wwan_status_extra')) {
+						e.innerHTML = '';
+					}
+					if (!st)
+						tx.innerHTML = 'st - null';
+					else if (!st.wwans)
+						tx.innerHTML = 'st.wwans - null';
+					else
+						tx.innerHTML = 'st st.wwans - null';
+				}
+			}
+		}
+	);
+//]]></script>
+
+<style type="text/css">
+  .wanok { background-color: rgb(144, 240, 144); }
+  .wanko { background-color: rgb(240, 144, 144); }
+  .wanrecov { background-color: rgb(240, 240, 0); }
+  .wanfail { background-color: rgb(255, 165, 0); }
+  .wanko, .wanok, .wanrecov, .wanfail {
+	padding: 0.4em;
+	margin: 0.4em;
+  }
+</style>
+
+<fieldset class="cbi-section">
+	<legend><%:3G Modem Information%></legend>
+	<div id="wwan_status_text" style="text-align:left;"><em><%:Collecting data...%></em></div>
+	<div id="wwan_status_extra" style="text-align:left;"></div>
+</fieldset>
+<style type="text/css">
+  .container {	/* container for entire page. fixes bootstrap theme's ridiculously small page width */
+	max-width: 1044px;
+  }
+  #wwan_status_text {
+	padding: 0px 20px 0px 80px;
+	display: table;
+	font-size: 14px;
+	margin: auto;
+	width: 100%;
+  }
+</style>

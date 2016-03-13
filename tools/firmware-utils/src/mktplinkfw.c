@@ -192,7 +192,7 @@ static struct flash_layout layouts[] = {
 		.rootfs_ofs	= 0x100000,
 	}, {
 		.id		= "16M",
-		.fw_max_len	= 0xf80000,
+		.fw_max_len	= 0xf80000, //0xf80000 fw_max_len is 0xfc0000 16M flash
 		.kernel_la	= 0x80060000,
 		.kernel_ep	= 0x80060000,
 		.rootfs_ofs	= 0x140000,
@@ -243,12 +243,12 @@ static struct board_info boards[] = {
 		.id		= "TL-MR3420v1",
 		.hw_id		= HWID_TL_MR3420_V1,
 		.hw_rev		= 1,
-		.layout_id	= "4M",
+		.layout_id	= "16M",
 	}, {
 		.id		= "TL-MR3420v2",
 		.hw_id		= HWID_TL_MR3420_V2,
 		.hw_rev		= 1,
-		.layout_id	= "4Mlzma",
+		.layout_id	= "16Mlzma",
 	}, {
 		.id		= "TL-WA701Nv1",
 		.hw_id		= HWID_TL_WA701N_V1,

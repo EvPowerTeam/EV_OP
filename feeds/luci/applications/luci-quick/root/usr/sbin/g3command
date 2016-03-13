@@ -1,0 +1,211 @@
+#!/bin/sh
+
+#lilu
+#read 3g modem information
+
+usage()
+{
+	echo 'script -help'
+}
+
+
+#if [ -n "$1" ] && [ -n "$(echo "$1" | egrep -o "\/dev\/.*")" ] ; then
+if [ -n "$1" ] && [ -e $1 ] ; then
+	dev=$1
+	#dev='/dev/ttyUSB2'
+else
+	echo 'script <device> [command] [command] ...'
+	echo 'script <device> -AT [AT command]'
+	echo 'script <device> -all'
+	echo 'script -help'
+	exit 1 #command error
+fi
+
+
+tmpdir="/var/g3modem"
+if [ ! -e $tmpdir ] ; then
+	mkdir -p $tmpdir &> /dev/null
+fi
+
+gcomfile="getinfo$$.gcom"
+if [ -e $tmpdir/$gcomfile ] ; then
+	gcomfile="getinfo$$$(date "+%H%M%S").gcom"
+fi
+
+
+if [ -e $tmpdir/g3info${dev##*/}.pid ] ; then
+	echo "$$" >> $tmpdir/g3info${dev##*/}.pid
+	cnt=$(awk 'END{print FNR}' $tmpdir/g3info${dev##*/}.pid)
+	if [ $cnt -ge 6 ] ; then
+		rm $tmpdir/g3info${dev##*/}.pid &> /dev/null
+	fi
+	exit 2 #program error
+else
+	echo "$$" > $tmpdir/g3info${dev##*/}.pid
+fi
+
+
+
+
+
+unset is_show
+
+setcmd()
+{
+	#s1 atcmd
+if [ -n "$1" ] ; then
+#atcmd=AT+COPS^m
+atcmd=$1
+
+echo "
+opengt
+ set com 115200n81
+ set comecho off
+ set senddelay 0.02
+ waitquiet 0.2 0.2
+ flash 0.1
+
+:start
+ send \"$atcmd\"
+ get 1 \"\" \$s
+ print \$s
+
+:continue
+ exit 0
+" > $tmpdir/$gcomfile
+
+else
+	return 1
+fi 
+
+}
+
+getinfo() 
+{
+	#s1 command
+	case $1 in
+	-signal)
+		setcmd "AT+CSQ^m"
+		strength=$(comgt -d $dev -s $tmpdir/$gcomfile | egrep -o [0-9]{1,2},[0-9]{1,2} | awk 'FNR==1{print $0}')
+		if [ -n "$(cat $tmpdir/g3info${dev##*/} | grep SIGNAL:)" ] ; then
+			sed -i "s!SIGNAL:.*!SIGNAL: $strength!" $tmpdir/g3info${dev##*/}
+		else
+			echo "SIGNAL: $strength" >> $tmpdir/g3info${dev##*/}
+		fi
+		if [ -n "$is_show" ] ; then
+			echo "SIGNAL: $strength"
+		fi
+	;;
+	-sim) 
+		setcmd "AT+CIMI^m"
+		simid=$(comgt -d $dev -s $tmpdir/$gcomfile | egrep -o [0-9]{15} | awk 'FNR==1{print $0}')
+		if [ -n "$(cat $tmpdir/g3info${dev##*/} | grep SIMID:)" ] ; then
+			sed -i "s!SIMID:.*!SIMID: $simid!" $tmpdir/g3info${dev##*/}
+		else
+			echo "SIMID: $simid" >> $tmpdir/g3info${dev##*/}
+		fi
+		if [ -n "$is_show" ] ; then
+			echo "SIMID: $simid"
+		fi
+	;;
+	-regist)
+		setcmd "AT+CREG?^m"
+		regcode=$(comgt -d $dev -s $tmpdir/$gcomfile | egrep -o [0-2],[0-5] | awk 'FNR==1{print $0}')
+		if [ -n "$(cat $tmpdir/g3info${dev##*/} | grep REGNET:)" ] ; then
+			sed -i "s!REGNET:.*!REGNET: $regcode!" $tmpdir/g3info${dev##*/}
+		else
+			echo "REGNET: $regcode" >> $tmpdir/g3info${dev##*/}
+		fi
+		if [ -n "$is_show" ] ; then
+			echo "REGNET: $regcode"
+		fi
+	;;
+	-operator)
+		setcmd "AT+COPS?^m"
+		operator=$(comgt -d $dev -s $tmpdir/$gcomfile | egrep -o COPS:.* | awk 'FNR==1{print $0}')
+		if [ -n "$(cat $tmpdir/g3info${dev##*/} | grep COPS:)" ] ; then
+			sed -i "s!COPS:.*!$operator!" $tmpdir/g3info${dev##*/}
+		else
+			echo "$operator" >> $tmpdir/g3info${dev##*/}
+		fi
+		if [ -n "$is_show" ] ; then
+			echo "$operator"
+		fi
+	;;
+	#huawei
+	-hsignal)
+		setcmd "AT\^HCSQ?^m"
+		#hstrength=$(comgt -d $dev -s /etc/gcom/gethstrength.gcom | egrep -o HCSQ:.*)
+		hstrength=$(comgt -d $dev -s $tmpdir/$gcomfile | egrep -o "HCSQ:.*")
+		sed -i '/HCSQ:/'d $tmpdir/g3info${dev##*/}
+		echo "$hstrength" >> $tmpdir/g3info${dev##*/}
+		if [ -n "$is_show" ] ; then
+			echo "$hstrength"
+		fi
+	;;
+	*)
+		echo "Unknown command"
+	;;
+	esac
+	#remove unnecessary lines
+	sed -i "/:/!d"  $tmpdir/g3info${dev##*/}
+}
+
+
+
+
+for var in $* ; do
+	case $var in
+	-show)
+		is_show=true
+		break
+	;;
+	esac
+	unset is_show
+done
+
+if [ $2 = -AT ] ; then
+	setcmd "$3^m"
+	comgt -d $dev -s $tmpdir/$gcomfile  &> $tmpdir/tmpdata
+	if [ -n "$is_show" ] ; then
+		cat $tmpdir/tmpdata
+	fi	
+else
+
+for var in $* ; do
+	case $var in
+	-help) 
+		echo "[command] [command] ..."
+		echo "-show    --> show received"
+		echo "-signal"
+		echo "-sim"
+		echo "-regist"
+		echo "-operator"
+		echo "-hsignal"
+		echo "-AT [AT command]"
+		break
+	;;
+	-all)
+		cmds="-signal -sim -regist -operator -hsignal"
+		for var1 in $cmds ; do
+			getinfo $var1
+		done
+		#cat /var/g3modem/g3info${dev##*/}
+		break
+	;;
+	*)
+		if [ $var = $dev ] || [ $var = -show ] ; then
+			continue
+		fi
+		getinfo $var
+	;;
+	esac
+done
+
+fi
+
+rm $tmpdir/$gcomfile &> /dev/null
+rm $tmpdir/g3info${dev##*/}.pid &> /dev/null
+
+#exit 0
+

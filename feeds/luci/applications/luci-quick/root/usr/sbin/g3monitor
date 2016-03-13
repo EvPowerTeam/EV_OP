@@ -1,0 +1,159 @@
+#!/bin/sh
+
+# lilu
+#interval > 3min
+
+tmpdir="/var/g3modem"
+if [ ! -e $tmpdir ] ; then
+	mkdir -p $tmpdir &> /dev/null
+fi
+
+if [ -e $tmpdir/g3monitor.pid ] ; then
+	echo "$$" >> $tmpdir/g3monitor.pid
+	cnt=$(awk 'END{print FNR}' $tmpdir/g3monitor.pid)
+	if [ $cnt -ge 10 ] ; then
+		reboot
+	fi
+	exit 0
+	#kill $(cat $tmpdir/g3monitor.pid) &> /dev/null
+	#rm $tmpdir/g3monitor.pid &> /dev/null
+fi
+
+echo "$$" > $tmpdir/g3monitor.pid
+
+
+lose_cnt=$(awk 'FNR==1{print $0}' $tmpdir/g3monitor_data)
+run_cnt=$(awk 'FNR==2{print $0}' $tmpdir/g3monitor_data)
+if [ -z "$lose_cnt" ]; then
+	lose_cnt=0
+fi
+if [ -z "$run_cnt" ]; then
+	run_cnt=0
+fi
+
+reset_modem()
+{ #$1 interface
+	ubus -S list "network.interface.$1" > /dev/null || {
+		echo "Interface $1 not found"
+		return 2
+	}
+	section=network.$1
+	if [ "$(uci get $section)" = "interface" ] && [ "$(uci get $section.proto)" = "3g" ]; then
+		dev=$(uci get $section.device 2> /dev/null)
+		atdev=$(uci get $section.atdevice 2> /dev/null)
+		if [ -n "$dev" ] && [ -n "$atdev" ] && [ -e $dev ] && [ -e $atdev ] ; then
+			#restart
+		        ifdown $1 &> /dev/null
+		        sleep 8
+		        #hardware reset
+			sh /usr/sbin/g3command $(uci get $section.device) -AT '+++'
+			sleep 1
+			sh /usr/sbin/g3command $(uci get $section.device) -AT 'AT\^RESET'
+			if [ -n "$(cat $tmpdir/tmpdata | grep 'Error Report')" ] ; then
+				sh /usr/sbin/g3command $(uci get $section.atdevice) -AT 'AT\^RESET'
+			fi
+
+		        logger -t 3gmonitor -p notice "Reset 3G modem($1)"
+		        sleep 30
+		        #ifup $infce &> /dev/null
+			sh /usr/sbin/g3modem $1
+			
+		else
+			echo "Interface $1 Error: device ${dev:-unknown} and atdevice ${atdev:-unknown}"
+		fi
+	else
+		echo "Interface $1 isn't 3g protocol"
+	fi
+}
+
+
+if [ -n "$1" ] ; then
+	case $1 in
+	-reset)
+		if [ -n "$2" ] ; then
+			reset_modem $2
+		else
+			echo "script -reset <(3g)interface>"
+		fi
+	;;
+	*)
+		echo "script -reset <(3g)interface>"
+	;;
+	esac
+else
+
+#logger -t 3gmonitor -p notice "3G interface monitor is doing"
+if [ $run_cnt -lt 20000 ]; then
+	let run_cnt++	
+fi
+#ping=$(ping -c 4 -W 3 -s 4 -q www.e-chong.com)
+pi=$(ping -c 4 -W 5 -s 4 -q www.e-chong.com | egrep -o '[0-9]{1,3}% packet loss')
+if [ -n "$pi" ]; then
+	if [ ${pi%%\%*} -eq 100 ]; then
+		#100% packet loss
+		#let lose_cnt++
+		logger -t 3gmonitor -p warn "100% packet loss"
+	else
+		lose_cnt=0
+	fi
+else
+	#ping: unknown host www.e-chong.com
+	if [ $lose_cnt -lt 200 ]; then
+		let lose_cnt++
+	else
+		reboot	
+	fi
+	
+	logger -t 3gmonitor -p error "(lose $lose_cnt run $run_cnt) unknown host"
+	ifces=$(ubus list network.interface.* | awk -F. '{print $3}')
+	[ -n "$ifces" ] && for ifce in $ifces; do
+		if [ "$(uci get network.$ifce.proto)" = "3g" ]; then
+
+			if [ -n "$(ping -I 3g-$ifce -c 4 -W 3 -s 4 -q www.e-chong.com | egrep -o '[0-9]{1,3}% packet loss')" ]; then
+				lose_cnt=0
+				#if [ -n "$(ip route list table 0 | egrep -o 'table [0-9]{1,3}')" ]; then
+					#logger -t 3gmonitor -p notice "(no route list table)set mwan3"
+				#	env -i ACTION=ifup INTERFACE=wwan1 DEVICE=3g-wwan1 /sbin/hotplug-call iface
+				#fi
+			else
+				#if [ $run_cnt -ge 2 ] && [ -e /dev/ttyUSB0 ] && [ -e /dev/ttyUSB2 ]; then
+				#if [ $run_cnt -ge 2 ]; then
+					reset_modem $ifce
+					run_cnt=0
+				#fi
+			fi
+
+		fi
+	done
+
+
+
+	
+#	infce=$(ifconfig | grep '3g')
+#	if [ ${#infce} -gt 0 ]; then
+#		for word in $infce; do
+#			if [ ${word%%-*} = '3g' ]; then
+#				if [ "$(ip route | grep default.*$word)" = "" ]; then
+#					# no default gw
+#					a2=$(ifconfig $word | egrep -o "P-t-P:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}")
+#					a3=${a2:6}
+#					route add default gw $a3 metric 3
+#					logger -t 3gmonitor -p notice "Interface $word add default gw"
+#					env -i ACTION=ifup INTERFACE=${word:3} DEVICE=$word /sbin/hotplug-call iface
+#				fi
+#			fi
+#		done
+#	fi
+	
+	
+fi
+
+echo "$lose_cnt" > $tmpdir/g3monitor_data
+echo "$run_cnt" >> $tmpdir/g3monitor_data
+
+fi #[ -n "$1" ]
+
+#kill $(cat $tmpdir/g3monitor.pid) &> /dev/null
+rm $tmpdir/g3monitor.pid &> /dev/null
+exit 0
+

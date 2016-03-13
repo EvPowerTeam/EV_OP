@@ -1,0 +1,84 @@
+#!/bin/sh
+
+tmpdir="/var/g3modem"
+if [ ! -e $tmpdir ] ; then
+	mkdir -p $tmpdir &> /dev/null
+fi
+
+set_if_up() 
+{  #$1 interface
+	ubus -S list "network.interface.$1" > /dev/null || {
+		echo "Interface $1 not found"
+		return 2
+	}
+	section=network.$1
+	dev=$(uci get $section.device 2> /dev/null)
+	atdev=$(uci get $section.atdevice 2> /dev/null)
+	if [ -n "$dev" ] && [ -n "$atdev" ] && [ -e $dev ] && [ -e $atdev ] ; then
+        if [ "$(uci get $section)" = "interface" ] && [ "$(uci get $section.proto)" = "3g" ]; then 
+		#ifdown $1
+		#sleep 8
+		rm $tmpdir/tmpdata &> /dev/null
+		sh /usr/sbin/g3command $dev -operator -show &> $tmpdir/tmpdata
+		operator=$(cat $tmpdir/tmpdata | grep "COPS:" | awk -F, '{print $3}')
+		[ -z "$operator" ] && {
+			sh /usr/sbin/g3command $atdev -operator -show &> $tmpdir/tmpdata
+                	operator=$(cat $tmpdir/tmpdata | grep "COPS:" | awk -F, '{print $3}')
+		}
+		[ -z "$operator" ] && {
+			operator=$(awk -F: '/COPS:.*/{print $2}'  /var/g3modem/g3info$atdev | awk -F, 'END{print $3}')
+		}
+		if [ -n "$operator" ]; then
+			if [ "$operator" = "\"CHN-UNICOM\"" ] || [ "$operator" = "\"UNICOM\"" ] || [ "$operator" = "\"46001\"" ]; then
+			#china unicom
+			uci set $section.apn=3gnet
+			uci set $section.dialnumber=*99#
+			uci commit network
+			elif [ "$operator" = "\"CHINA MOBILE\"" ] || [ "$operator" = "\"CMCC\"" ] || [ "$operator" = "\"46000\"" ]; then
+			#china mobile
+			uci set $section.apn=cmnet
+			uci set $section.dialnumber=*99***1#
+			uci commit network
+			else
+			logger -t g3modem -p notice "Interface $1 can\'t get SIM operator" 
+			fi
+			sleep 1
+			ifup $1
+		else
+			rm $tmpdir/tmpdata &> /dev/null
+			sh /usr/sbin/read3ginfo $dev -sim -show &> $tmpdir/tmpdata
+			sim=$(cat $tmpdir/tmpdata | egrep -o "[0-9]{15}")
+			[ -z "$sim" ] && { 
+				sh /usr/sbin/read3ginfo $atdev -sim -show &> $tmpdir/tmpdata
+				sim=$(cat $tmpdir/tmpdata | egrep -o "[0-9]{15}")
+			}
+			[ -z "$sim" ] && { 
+				sim=$(awk -F: '/SIMID:.*/{print $2}'  /var/g3modem/g3info$atdev  | egrep -o "[0-9]{15}")
+			}
+			if [ -n "$sim" ] ; then
+				sleep 1
+				ifup $1
+			else
+				ifdown $1
+				#echo "Interface $1 no SIM card" 
+				logger -t g3modem -p notice "Interface $1 no SIM card" 
+			fi
+			#echo "Interface $1 can not get operator" 
+			logger -t g3modem -p notice "Interface $1 can\'t get SIM operator" 
+		fi #device
+        fi 
+	fi
+
+} 
+
+
+if [ -n "$1" ]; then
+	set_if_up $1
+else
+	#xiugai
+	set_if_up wwan1
+	#HUAWEI
+	atdev=$(uci get network.wwan1.atdevice 2> /dev/null)
+	[ -n "$atdev" ] && sh /usr/sbin/g3command $atdev -AT 'AT\^LEDCTRL=1^m'
+fi
+

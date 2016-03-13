@@ -19,7 +19,13 @@
 #include "dev-m25p80.h"
 #include "dev-usb.h"
 #include "machtypes.h"
-
+#include "pci.h"
+/**
+ GPIO0   USB_PWR_EN  low reset 4-5 seconds
+ GPIO11  STATUS_LED  high green  low red
+ GPIO12  RESET
+*/
+/* openwrt
 #define TL_MR3X20_GPIO_LED_QSS		0
 #define TL_MR3X20_GPIO_LED_SYSTEM	1
 #define TL_MR3X20_GPIO_LED_3G		8
@@ -28,6 +34,15 @@
 #define TL_MR3X20_GPIO_BTN_QSS		12
 
 #define TL_MR3X20_GPIO_USB_POWER	6
+*/
+#define TL_MR3X20_GPIO_LED_QSS		6
+#define TL_MR3X20_GPIO_LED_SYSTEM	11
+#define TL_MR3X20_GPIO_LED_3G		8
+
+#define TL_MR3X20_GPIO_BTN_RESET	12
+#define TL_MR3X20_GPIO_BTN_QSS		1
+
+#define TL_MR3X20_GPIO_USB_POWER	0
 
 #define TL_MR3X20_KEYS_POLL_INTERVAL	20	/* msecs */
 #define TL_MR3X20_KEYS_DEBOUNCE_INTERVAL (3 * TL_MR3X20_KEYS_POLL_INTERVAL)
@@ -45,7 +60,7 @@ static struct gpio_led tl_mr3x20_leds_gpio[] __initdata = {
 	{
 		.name		= "tp-link:green:system",
 		.gpio		= TL_MR3X20_GPIO_LED_SYSTEM,
-		.active_low	= 1,
+		.active_low	= 0,
 	}, {
 		.name		= "tp-link:green:qss",
 		.gpio		= TL_MR3X20_GPIO_LED_QSS,
@@ -78,9 +93,10 @@ static struct gpio_keys_button tl_mr3x20_gpio_keys[] __initdata = {
 static void __init tl_ap99_setup(void)
 {
 	u8 *mac = (u8 *) KSEG1ADDR(0x1f01fc00);
-	u8 *ee = (u8 *) KSEG1ADDR(0x1fff1000);
+	//u8 *ee = (u8 *) KSEG1ADDR(0x1fff1000);
 
 	ath79_register_m25p80(&tl_mr3x20_flash_data);
+	//ath79_register_m25p80(NULL);
 
 	ath79_register_gpio_keys_polled(-1, TL_MR3X20_KEYS_POLL_INTERVAL,
 					 ARRAY_SIZE(tl_mr3x20_gpio_keys),
@@ -96,7 +112,8 @@ static void __init tl_ap99_setup(void)
 	/* WAN port */
 	ath79_register_eth(0);
 
-	ap91_pci_init(ee, mac);
+	//ap91_pci_init(ee, mac);
+	ath79_register_pci();
 }
 
 static void __init tl_mr3x20_usb_setup(void)
@@ -114,7 +131,7 @@ static void __init tl_mr3220_setup(void)
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(tl_mr3x20_leds_gpio),
 				 tl_mr3x20_leds_gpio);
-	ap9x_pci_setup_wmac_led_pin(0, 1);
+	//ap9x_pci_setup_wmac_led_pin(0, 1);
 	tl_mr3x20_usb_setup();
 }
 
@@ -127,7 +144,7 @@ static void __init tl_mr3420_setup(void)
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(tl_mr3x20_leds_gpio),
 				 tl_mr3x20_leds_gpio);
-	ap9x_pci_setup_wmac_led_pin(0, 0);
+	//ap9x_pci_setup_wmac_led_pin(0, 0);
 	tl_mr3x20_usb_setup();
 }
 
@@ -140,7 +157,7 @@ static void __init tl_wr841n_v7_setup(void)
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(tl_mr3x20_leds_gpio) - 1,
 				 tl_mr3x20_leds_gpio);
-	ap9x_pci_setup_wmac_led_pin(0, 0);
+	//ap9x_pci_setup_wmac_led_pin(0, 0);
 }
 
 MIPS_MACHINE(ATH79_MACH_TL_WR841N_V7, "TL-WR841N-v7",

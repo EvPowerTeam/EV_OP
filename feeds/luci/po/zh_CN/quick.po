@@ -1,0 +1,99 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"PO-Revision-Date: 2015-11-16 16:16+0200\n"
+"Last-Translator: lilu <>\n"
+"Language-Team: none\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Pootle 2.0.6\n"
+
+
+msgid "Quick"
+msgstr "快速设定"
+
+msgid "WAN Configuration"
+msgstr "网际网络设定"
+
+msgid "LAN Configuration"
+msgstr "本地网络设定"
+
+msgid "WiFi Configuration"
+msgstr "无线网络设定"
+
+msgid "3G/4G Configuration"
+msgstr "移动数据设定"
+
+msgid "Configure Wide Area Network"
+msgstr "网际网络设定"
+
+msgid "Configure Local Area Network"
+msgstr "本地网络设定"
+
+msgid "Configure Wireless"
+msgstr "无线设定"
+
+msgid "Configure 3G/4G Modems"
+msgstr "3G/4G无线上网卡配置"
+
+msgid "VPN Configuration"
+msgstr "VPN配置"
+
+msgid "China unicom"
+msgstr "中国联通"
+
+msgid "China mobile"
+msgstr "中国移动"
+
+msgid "China telecom"
+msgstr "中国电信"
+
+msgid "SIM card"
+msgstr "SIM卡"
+
+msgid "Signal"
+msgstr "信号质量"
+
+msgid "Network status"
+msgstr "网络状态"
+
+msgid "Mobile data"
+msgstr "移动数据"
+
+msgid "linked"
+msgstr "已连接"
+
+msgid "broke"
+msgstr "已断开"
+
+msgid "No network"
+msgstr "无网络"
+
+msgid "Registered"
+msgstr "已注册"
+
+msgid "Unregistered"
+msgstr "未注册"
+
+msgid "Be rejected"
+msgstr "被拒绝"
+
+msgid "Unknown"
+msgstr "未知"
+
+msgid "Roaming"
+msgstr "漫游"
+
+msgid ""
+"Interface \"%s\" will be upped!\\n"
+"Please confirm the modified data before connection has been saved.\\n"
+"Connection takes about 20 seconds."
+msgstr ""
+"接口 \"%s\" 将打开！\\n"
+"连接前请确认修改的参数已经保存。\\n"
+"连接过程大约20秒钟。"
+
+

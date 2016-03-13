@@ -1162,7 +1162,7 @@ $(eval $(call SingleProfile,TPLINKOLD,squashfs-only,TLWR841NV15,tl-wr841nd-v1.5,
 
 $(eval $(call SingleProfile,TPLINK,64kraw,RNXN360RT,rnx-n360rt,TL-WR941ND,ttyS0,115200,0x09410002,0x00420001,4M))
 $(eval $(call SingleProfile,TPLINK,64kraw,TLMR3220V1,tl-mr3220-v1,TL-MR3220,ttyS0,115200,0x32200001,1,4M))
-$(eval $(call SingleProfile,TPLINK,64kraw,TLMR3420V1,tl-mr3420-v1,TL-MR3420,ttyS0,115200,0x34200001,1,4M))
+$(eval $(call SingleProfile,TPLINK,64kraw,TLMR3420V1,tl-mr3420-v1,TL-MR3420,ttyS0,115200,0x34200001,1,16M))
 $(eval $(call SingleProfile,TPLINK,64kraw,TLWA701NV1,tl-wa701n-v1,TL-WA901ND,ttyS0,115200,0x07010001,1,4M))
 $(eval $(call SingleProfile,TPLINK,64kraw,TLWA730REV1,tl-wa730rev1,TL-WA901ND,ttyS0,115200,0x07300001,1,4M))
 $(eval $(call SingleProfile,TPLINK,64kraw,TLWA7510NV1,tl-wa7510n,TL-WA7510N,ttyS0,115200,0x75100001,1,4M))
@@ -1198,7 +1198,7 @@ $(eval $(call SingleProfile,TPLINK-LZMA,64kraw,TLMR3020,tl-mr3020-v1,TL-MR3020,t
 $(eval $(call SingleProfile,TPLINK-LZMA,64kraw,TLMR3040V1,tl-mr3040-v1,TL-MR3040,ttyATH0,115200,0x30400001,1,4Mlzma))
 $(eval $(call SingleProfile,TPLINK-LZMA,64kraw,TLMR3040V2,tl-mr3040-v2,TL-MR3040-v2,ttyATH0,115200,0x30400002,1,4Mlzma))
 $(eval $(call SingleProfile,TPLINK-LZMA,64kraw,TLMR3220V2,tl-mr3220-v2,TL-MR3220-v2,ttyATH0,115200,0x32200002,1,4Mlzma))
-$(eval $(call SingleProfile,TPLINK-LZMA,64kraw,TLMR3420V2,tl-mr3420-v2,TL-MR3420-v2,ttyS0,115200,0x34200002,1,4Mlzma))
+$(eval $(call SingleProfile,TPLINK-LZMA,64kraw,TLMR3420V2,tl-mr3420-v2,TL-MR3420-v2,ttyS0,115200,0x34200002,1,16Mlzma))
 $(eval $(call SingleProfile,TPLINK-LZMA,64kraw,TLWA701NV2,tl-wa701nd-v2,TL-WA701ND-v2,ttyATH0,115200,0x07010002,1,4Mlzma))
 $(eval $(call SingleProfile,TPLINK-LZMA,64kraw,TLWR703,tl-wr703n-v1,TL-WR703N,ttyATH0,115200,0x07030101,1,4Mlzma))
 $(eval $(call SingleProfile,TPLINK-LZMA,64kraw,TLWR710,tl-wr710n-v1,TL-WR710N,ttyATH0,115200,0x07100001,1,8Mlzma))

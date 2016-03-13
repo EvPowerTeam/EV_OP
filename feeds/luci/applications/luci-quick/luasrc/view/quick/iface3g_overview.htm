@@ -1,0 +1,300 @@
+<%#
+LuCI - Lua Configuration Interface
+Copyright 2010 Jo-Philipp Wich <xm@subsignal.org>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+-%>
+
+<%-
+	local ntm = require "luci.model.network".init()
+	local fwm = require "luci.model.firewall".init()
+
+	local net
+	local ifaces = { }
+	local netlist = { }
+	for _, net in ipairs(ntm:get_networks()) do
+		--local strt, ed = string.find(tostring(net:name()), "ppp")
+		--if strt and ed then
+		--if net:name() ~= "" then
+		if net:proto() == "3g" then
+			local z = fwm:get_zone_by_network(net:name())
+			ifaces[#ifaces+1] = net:name()
+			netlist[#netlist+1] = {
+				net:name(), z and z:name() or "-", z
+			}
+		end
+	end
+
+	table.sort(netlist,
+		function(a, b)
+			if a[2] ~= b[2] then
+				return a[2] < b[2]
+			else
+				return a[1] < b[1]
+			end
+		end)
+
+
+-%>
+
+<script type="text/javascript" src="<%=resource%>/cbi.js"></script>
+<script type="text/javascript">//<![CDATA[
+	function iface_shutdown(id, reconnect) {
+		if (!reconnect && !confirm(String.format('<%_Really shutdown interface "%s" ?\nYou might lose access to this device if you are connected via this interface.%>', id)))
+			return;
+		if (reconnect && !confirm(String.format('<%_Interface "%s" will be upped!\nPlease confirm the modified data before connection has been saved.\nConnection takes about 20 seconds.%>', id)))
+			return;
+
+
+		var d = document.getElementById(id + '-ifc-description');
+		if (d)
+			d.innerHTML = reconnect
+				? '<em><%:Interface is reconnecting...%></em>'
+				: '<em><%:Interface is shutting down...%></em>';
+
+		var s = document.getElementById('ifc-rc-status');
+		if (s)
+		{
+			s.parentNode.style.display = 'block';
+			s.innerHTML = '<%:Waiting for changes to be applied...%>';
+		}
+
+		XHR.get('<%=luci.dispatcher.build_url("admin", "network")%>/iface_' + (reconnect ? 'reconnect' : 'shutdown') + '/' + id, null,
+			function(x)
+			{
+				if (s)
+				{
+					s.innerHTML = reconnect
+						? '<%:Interface reconnected%>'
+						: '<%:Interface shut down%>';
+
+					window.setTimeout(function() {
+						s.parentNode.style.display = 'none';
+					}, 1000);
+				}
+			}
+		);
+	}
+	function g3modem_reset(id, prama) {
+		if (!confirm(String.format('<%_Really reset interface "%s" ?\nThis action will spend 60 seconds.%>', id)))
+			return;
+		
+		var d = document.getElementById(id + '-ifc-description');
+		if (d)
+			d.innerHTML = '<em><%:Interface is resetting...%></em>';
+		
+		var s = document.getElementById('ifc-rc-status');
+		if (s)
+		{
+			s.parentNode.style.display = 'block';
+			s.innerHTML = '<%:Waiting for changes to be applied...%>';
+		}
+		
+		XHR.get('<%=luci.dispatcher.build_url("admin", "quick", "wwan", "reset")%>/' + id, null,
+			function(x)
+			{
+				if (s)
+				{
+					s.innerHTML = '<%:Interface reconnected%>';
+
+					window.setTimeout(function() {
+						s.parentNode.style.display = 'none';
+					}, 1000);
+				}
+			}
+		);
+		/*XHR.get('<%=luci.dispatcher.build_url("admin", "network")%>/iface_' + (reconnect ? 'reconnect' : 'shutdown') + '/' + id, null,
+			function(x)
+			{
+				if (s)
+				{
+					s.innerHTML = reconnect
+						? '<%:Interface reconnected%>'
+						: '<%:Interface shut down%>';
+
+					window.setTimeout(function() {
+						s.parentNode.style.display = 'none';
+					}, 1000);
+				}
+			}
+		);*/
+	}
+
+	var iwxhr = new XHR();
+	var wifidevs = <%=luci.http.write_json(netdevs)%>;
+	var arptable = <%=luci.http.write_json(arpcache)%>;
+
+	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "network", "iface_status", table.concat(ifaces, ","))%>', null,
+		function(x, ifcs)
+		{
+			if (ifcs)
+			{
+				for (var idx = 0; idx < ifcs.length; idx++)
+				{
+					var ifc = ifcs[idx];
+					var html = '';
+
+					var s = document.getElementById(ifc.id + '-ifc-devices');
+					if (s)
+					{
+						var stat = String.format(
+							'<img src="<%=resource%>/icons/%s%s.png" style="width:16px; height:16px; vertical-align:middle; margin-top:12px" />',
+								ifc.type,
+								ifc.is_up ? '' : '_disabled'
+						);
+
+						if (ifc.subdevices && ifc.subdevices.length)
+						{
+							stat += ' <strong>(';
+
+							for (var j = 0; j < ifc.subdevices.length; j++)
+							{
+								var sif = ifc.subdevices[j];
+
+								stat += String.format(
+									'<img src="<%=resource%>/icons/%s%s.png" style="width:16px; height:16px; vertical-align:middle" title="%h" />',
+										sif.type,
+										sif.is_up ? '' : '_disabled',
+										sif.name
+								);
+							}
+
+							stat += ')</strong>';
+						}
+
+						stat += String.format(
+							'<br /><strong>%h<br />Status:</strong>',
+								ifc.name.toUpperCase()
+						);
+
+						s.innerHTML = stat;
+					}
+
+					var d = document.getElementById(ifc.id + '-ifc-description');
+					if (d && ifc.proto && ifc.ifname)
+					{
+						if (ifc.is_up)
+						{
+							html += String.format('<strong><%:Uptime%>:</strong> %t<br />', ifc.uptime);
+						}
+
+						if (ifc.type != 'tunnel')
+						{
+							html += String.format('<strong><%:MAC-Address%>:</strong> %s<br />', ifc.macaddr);
+						}
+
+						html += String.format(
+							'<strong><%:RX%></strong>: %.2mB (%d <%:Pkts.%>)<br />' +
+							'<strong><%:TX%></strong>: %.2mB (%d <%:Pkts.%>)<br />',
+								ifc.rx_bytes, ifc.rx_packets,
+								ifc.tx_bytes, ifc.tx_packets
+						);
+
+						if (ifc.ipaddrs && ifc.ipaddrs.length)
+						{
+							html += '<strong><%:IPv4%>: </strong>';
+
+							for (var i = 0; i < ifc.ipaddrs.length; i++)
+								html += String.format(
+									'%s%s/%d',
+									i ? ', ' : '',
+									ifc.ipaddrs[i].addr,
+									ifc.ipaddrs[i].prefix
+								);
+
+							html += '<br />';
+						}
+
+						if (ifc.ip6addrs && ifc.ip6addrs.length)
+						{
+							html += '<strong><%:IPv6%>: </strong>';
+
+							for (var i = 0; i < ifc.ip6addrs.length; i++)
+								html += String.format(
+									'%s%s/%d',
+									i ? ', ' : '',
+									ifc.ip6addrs[i].addr.toUpperCase(),
+									ifc.ip6addrs[i].prefix
+								);
+
+							html += '<br />';
+						}
+
+						d.innerHTML = html;
+					}
+					else if (d && !ifc.proto)
+					{
+						var e = document.getElementById(ifc.id + '-ifc-edit');
+						if (e)
+							e.disabled = true;
+
+						d.innerHTML = String.format(
+							'<em><%:Unsupported protocol type.%></em><br />' +
+							'<a href="%h"><%:Install protocol extensions...%></a>',
+								'<%=luci.dispatcher.build_url("admin/system/packages")%>?query=luci-proto&display=available'
+						);
+					}
+					else if (d && !ifc.ifname)
+					{
+						d.innerHTML = String.format(
+							'<em><%:Network without interfaces.%></em><br />' +
+							'<a href="<%=luci.dispatcher.build_url("admin/network/network/%s")%>?tab.network.%s=physical"><%:Assign interfaces...%></a>',
+								ifc.name, ifc.name
+						);
+					}
+					else if (d)
+					{
+						d.innerHTML = '<em><%:Interface not present or not connected yet.%></em>';
+					}
+				}
+			}
+		}
+	);
+//]]></script>
+
+<fieldset class="cbi-section" style="display:none">
+	<legend><%:Reconnecting interface%></legend>
+	<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle" />
+	<span id="ifc-rc-status"><%:Waiting for changes to be applied...%></span>
+</fieldset>
+
+
+
+<div class="cbi-map">
+	<fieldset class="cbi-section">
+
+		<table class="cbi-section-table" style="margin:10px; empty-cells:hide">
+			<%
+				for i, net in ipairs(netlist) do
+					local z = net[3]
+					local c = z and z:get_color() or "#EEEEEE"
+					local t = z and translate("Part of zone %q" % z:name()) or translate("No zone assigned")
+			%>
+				<tr class="cbi-section-table-row cbi-rowstyle-<%=i % 2 + 1%>">
+					<td class="cbi-value-field" style="padding:3px">
+							<div class="ifacebox-body" id="<%=net[1]%>-ifc-devices" align="center" title="<%=pcdata(t)%>">
+								<img src="<%=resource%>/icons/ethernet_disabled.png" style="width:16px; height:16px" /><br />
+								<small>?</small>
+							</div>
+					</td>
+					<td class="cbi-value-field" style="vertical-align:middle; text-align:left; padding:3px" id="<%=net[1]%>-ifc-description">
+						<em><%:Collecting data...%></em>
+					</td>
+					<td style="width:420px">
+						<input type="button" class="cbi-button cbi-button-reload" style="width:100px;  margin-top:12px" onclick="g3modem_reset('<%=net[1]%>', reset)" title="<%:Reset this modem%>" value="<%:Reset%>" />
+						<input type="button" class="cbi-button cbi-button-reload" style="width:100px;  margin-top:12px" onclick="iface_shutdown('<%=net[1]%>', true)" title="<%:Reconnect this interface%>" value="<%:Connect%>" />
+						<input type="button" class="cbi-button cbi-button-reset" style="width:100px; margin-top:12px" onclick="iface_shutdown('<%=net[1]%>', false)" title="<%:Shutdown this interface%>" value="<%:Stop%>" />
+					</td>
+				</tr>
+				<tr> </tr>
+			<% end %>
+		</table>
+
+	</fieldset>
+</div>
+

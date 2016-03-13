@@ -56,6 +56,17 @@ define Package/comgt/install
 	$(INSTALL_DATA) ./files/setmode.gcom $(1)/etc/gcom/setmode.gcom
 	$(INSTALL_DATA) ./files/getcardinfo.gcom $(1)/etc/gcom/getcardinfo.gcom
 	$(INSTALL_DATA) ./files/getstrength.gcom $(1)/etc/gcom/getstrength.gcom
+#---lilu
+	$(INSTALL_DATA) ./files/getregistcode.gcom $(1)/etc/gcom/getregistcode.gcom
+	$(INSTALL_DATA) ./files/getsimid.gcom $(1)/etc/gcom/getsimid.gcom
+	$(INSTALL_DATA) ./files/getoperator.gcom $(1)/etc/gcom/getoperator.gcom
+	$(INSTALL_DATA) ./files/setoperator.gcom $(1)/etc/gcom/setoperator.gcom
+	$(INSTALL_DATA) ./files/setonmodemair.gcom $(1)/etc/gcom/setonmodemair.gcom
+	$(INSTALL_DATA) ./files/setoffmodemair.gcom $(1)/etc/gcom/setoffmodemair.gcom
+	$(INSTALL_DATA) ./files/setcmdmode.gcom $(1)/etc/gcom/setcmdmode.gcom
+	$(INSTALL_DATA) ./files/setreset.gcom $(1)/etc/gcom/setreset.gcom
+	$(INSTALL_DATA) ./files/gethstrength.gcom $(1)/etc/gcom/gethstrength.gcom
+#-^-lilu
 	$(INSTALL_DATA) ./files/getcarrier.gcom $(1)/etc/gcom/getcarrier.gcom
 	$(INSTALL_DATA) ./files/getcnum.gcom $(1)/etc/gcom/getcnum.gcom
 	$(INSTALL_DATA) ./files/getimsi.gcom $(1)/etc/gcom/getimsi.gcom

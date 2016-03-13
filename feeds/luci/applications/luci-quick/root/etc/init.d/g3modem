@@ -1,0 +1,17 @@
+#!/bin/sh /etc/rc.common
+# lilu
+
+START=99
+
+#boot() {
+        #hardware reset
+#	echo 0 > /sys/class/gpio/export
+#	echo out > /sys/class/gpio/gpio0/direction
+#	echo 1 > /sys/class/gpio/gpio0/value	
+#}
+
+{
+sh /usr/sbin/savelog
+#sleep 1
+sh /usr/sbin/g3modem
+} &

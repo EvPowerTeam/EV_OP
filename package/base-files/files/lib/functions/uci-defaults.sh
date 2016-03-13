@@ -175,7 +175,7 @@ set network.lan.ifname='$ifname'
 set network.lan.force_link=1
 set network.lan.type='bridge'
 set network.lan.proto='static'
-set network.lan.ipaddr='192.168.1.1'
+set network.lan.ipaddr='192.168.6.1'
 set network.lan.netmask='255.255.255.0'
 set network.lan.ip6assign='60'
 EOF
@@ -191,8 +191,82 @@ set network.wan.proto='dhcp'
 set network.wan6='interface'
 set network.wan6.ifname='@wan'
 set network.wan6.proto='dhcpv6'
+set network.wan.metric='1'
+set network.wan6.metric='2'
 EOF
 }
+
+#wwan1-wwan2-ppp3-ppp4
+ucidef_set_interface_wwan1() {
+	local ifname=$1
+
+	uci batch <<EOF
+set network.wwan1='interface'
+set network.wwan1.ifname='$ifname'
+set network.wwan1.proto='3g'
+set network.wwan1.apn='cmnet'
+set network.wwan1.service='umts'
+set network.wwan1.dialnumber='*99***1#'
+set network.wwan1.device='/dev/ttyUSB0'
+set network.wwan1.atdevice='/dev/ttyUSB2'
+set network.wwan1.metric='4'
+EOF
+}
+ucidef_set_interface_wwan2() {
+	local ifname=$1
+
+	uci batch <<EOF
+set network.wwan2='interface'
+set network.wwan2.ifname='$ifname'
+set network.wwan2.proto='3g'
+set network.wwan2.apn='3gnet'
+set network.wwan2.service='umts'
+set network.wwan2.dialnumber='*99#'
+set network.wwan2.device='/dev/ttyUSB5'
+set network.wwan2.atdevice='/dev/ttyUSB7'
+set network.wwan2.metric='5'
+EOF
+}
+ucidef_set_interface_ppp3() {
+	local ifname=$1
+
+	uci batch <<EOF
+set network.ppp3='interface'
+set network.ppp3.ifname='$ifname'
+set network.ppp3.proto='3g'
+set network.ppp3.apn='3gnet'
+set network.ppp3.service='umts'
+set network.ppp3.dialnumber='*99#'
+set network.ppp3.device='/dev/ttyUSB3'
+set network.ppp3.metric='6'
+EOF
+}
+ucidef_set_interface_ppp4() {
+	local ifname=$1
+
+	uci batch <<EOF
+set network.ppp4='interface'
+set network.ppp4.ifname='$ifname'
+set network.ppp4.proto='3g'
+set network.ppp4.apn='3gnet'
+set network.ppp4.service='umts'
+set network.ppp4.dialnumber='*99#'
+set network.ppp4.device='/dev/ttyUSB5'
+set network.ppp4.metric='7'
+EOF
+}
+
+ucidef_set_interfaces_3g() {
+	local wwan1_ifname=$1
+	local wwan2_ifname=$2
+	local wwan3_ifname=$3
+	local wwan4_ifname=$4
+	ucidef_set_interface_wwan1 "$wwan1_ifname"
+	ucidef_set_interface_wwan2 "$wwan2_ifname"
+	#ucidef_set_interface_ppp3 "$ppp3_ifname"
+	#ucidef_set_interface_ppp4 "$ppp4_ifname"
+}
+#--^--
 
 ucidef_set_interfaces_lan_wan() {
 	local lan_ifname=$1

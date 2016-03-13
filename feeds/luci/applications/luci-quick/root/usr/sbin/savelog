@@ -1,0 +1,83 @@
+#!/bin/sh
+
+#lilu
+#save system log
+
+#ls -l /sys/block/sd*
+ublock=$(ls -l /sys/block/sd* | grep "1\.3" | egrep -o "sd[a-z]" | awk 'FNR==1{print $0}')
+if [ -z "$ublock" ] ; then
+	ublock=$(ls -l /sys/block/sd* | grep "1\.2" | egrep -o "sd[a-z]" | awk 'FNR==1{print $0}')
+	if [ -z "$ublock" ] ; then
+		ublock=sda
+	fi
+fi
+if [ ! -n "$(mount | grep "/dev/$ublock[0-9]")" ] && [ -e /dev/$ublock ] ; then
+	mkdir -p /mnt/umemory  &> /dev/null
+	
+	#mount -t vfat /dev/sda1 /mnt/umemory
+	devi=$(ls /dev | grep "$ublock[0-9]" | awk 'FNR==1{print $0}')
+	if [ -n "$devi" ]; then
+		mount  /dev/$devi /mnt/umemory/  &> /dev/null
+		mounted=1
+		sleep 1
+	fi
+fi
+
+#if [ -n "$(mount | grep "/dev/sd.*/mnt/umemory")" ]; then
+if [ -n "$(mount | grep "/dev/$ublock[0-9]")" ]; then
+	path="$(mount | grep "/dev/$ublock[0-9]" | awk 'FNR==1{print $3}')"
+	if [ -e /var/logsystem.text ]; then
+		fname=$(awk 'FNR==1{print $0}' /var/logsystem.text)
+	fi
+	if [ -n "$fname" ] && [ ${#fname} -gt 9 ] ; then
+	#exist file in /var
+		if [ -e $path/routerlog/$fname ] ; then
+			tag=$(awk 'NF{a=$0}END{print a}' $path/routerlog/$fname  | awk -F. '{print $1}')
+			syslog=$(logread)
+			line=$(echo "$syslog" | grep -n "$tag" | awk -F: 'FNR==1{print $1}')
+			syslog_lines=$(echo "$syslog" | awk 'END{print FNR}')
+			if [ -n "$line" ] && [ $line -le  $syslog_lines ]; then
+				logs=$(echo "$syslog" | awk "FNR>$line")
+				if [ -n "$logs" ]; then
+					echo " " >> $path/routerlog/$fname
+				 	echo "$logs" >> $path/routerlog/$fname
+				#echo "$fname" > /var/logsystem.text
+				#echo "$syslog" >> /var/logsystem.text
+				fi
+			else
+				echo " " >> $path/routerlog/$fname
+				echo " " >> $path/routerlog/$fname
+				echo "$syslog" >> $path/routerlog/$fname
+				echo "$fname" > /var/logsystem.text
+				echo "$syslog" >> /var/logsystem.text
+			fi
+		else
+		#no file in umemory
+			fname=logsystem$(date "+%Y%m%d_%H%M")
+			if [ ! -e $path/routerlog ] ; then 
+				mkdir -p $path/routerlog  &> /dev/null
+			fi
+			syslog=$(logread)
+			echo "$syslog" > $path/routerlog/$fname
+			echo "$fname" > /var/logsystem.text
+			echo "$syslog" >> /var/logsystem.text
+		fi
+	else
+	#no file in /var
+		fname=logsystem$(date "+%Y%m%d_%H%M")
+		if [ ! -e $path/routerlog ] ; then 
+			mkdir -p $path/routerlog  &> /dev/null
+		fi
+		syslog=$(logread)
+		echo "$syslog" > $path/routerlog/$fname
+		echo "$fname" > /var/logsystem.text
+		echo "$syslog" >> /var/logsystem.text
+	fi
+
+	if [ -n "$mounted" ]; then
+		#sleep 1
+		#umount /mnt/umemory/  &> /dev/null
+		unset mounted
+	fi
+fi
+

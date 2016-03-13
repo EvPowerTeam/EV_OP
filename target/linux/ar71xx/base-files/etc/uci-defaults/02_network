@@ -366,6 +366,8 @@ wzr-hp-ag300h)
 	ucidef_set_interfaces_lan_wan "eth0" "eth1"
 	ucidef_add_switch "switch0" "1" "1"
 	ucidef_add_switch_vlan "switch0" "1" "0 1 2 3 4"
+	#lilu--3g	
+	ucidef_set_interfaces_3g "wwan1" "wwan2" "wwan3" "wwan4"
 	;;
 
 wzr-hp-g450h)
