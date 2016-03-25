@@ -111,7 +111,7 @@ config wifi-iface
 	option mode     ap
 	option ssid     EVPower
 	option encryption psk2
-	option key      1234!asdfg
+	option key      asdfg1234!
 
 EOF
 	devidx=$(($devidx + 1))

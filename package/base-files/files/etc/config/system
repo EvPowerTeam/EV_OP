@@ -1,5 +1,5 @@
 config system
-	option hostname	OneX
+	option hostname	EVPower
 	option zonename 'Asia/Hong Kong'
 	option timezone 'HKT-8'
 
