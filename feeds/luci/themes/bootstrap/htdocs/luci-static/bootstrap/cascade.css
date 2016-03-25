@@ -777,6 +777,10 @@ header h3 a, header .brand {
 	line-height: 1;
 }
 
+header .brand {
+	color: #00ff00;
+}
+
 header p {
 	margin: 0;
 	line-height: 40px;

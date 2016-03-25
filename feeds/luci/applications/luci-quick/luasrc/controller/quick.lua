@@ -18,20 +18,30 @@ entry({"admin", "quick", "lan"}, cbi("quick/lan"), _("LAN Configuration"), 2)
 entry({"admin", "quick", "wifi"}, cbi("quick/wifi"), _("WiFi Configuration"), 3)
 entry({"admin", "quick", "wwan"}, cbi("quick/wwan"), _("3G/4G Configuration"), 4)
 
+entry({"admin", "quick", "vpn"}, cbi("quick/vpn"), _("VPN Configuration"), 5)
+
+page = entry({"admin","quick","wwan","evlink"},call("evlink_status"))
+page.leaf = true
+
 page = entry({"admin", "quick", "wwan", "status"}, call("info_3gnet"))
 page.leaf = true
 page = entry({"admin", "quick", "wwan", "reset"}, call("g3net_reset"))
 page.leaf = true
 
-entry({"admin", "quick", "vpn"}, cbi("quick/vpn"), _("VPN Configuration"), 5)
 
+end
+
+function evlink_status()
+	local stat = {}
+	stat.heartbeat = luci.sys.exec("cat /tmp/saveHB")
+	stat.id = luci.sys.exec("cat /bin/saveRID")
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(stat)
 end
 
 function g3net_reset(iface)
 	if iface then 
 		luci.sys.exec(string.format("sh /usr/sbin/g3monitor -reset %s", iface))
-	else
-		luci.sys.exec("sh /usr/sbin/g3monitor -reset wwan1")
 	end
 end
 
