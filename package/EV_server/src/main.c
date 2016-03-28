@@ -13,6 +13,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <syslog.h>
 
 #include "data.h"
 #include "net_info.h"
@@ -21,11 +24,14 @@
 
 #define  HB_SUCCESS  	0x01
 #define  HB_FAILSE	0x02
+#define  LOCKFILE	"/var/run/EV_HB.pid"
+#define	 LOCKMODE	(S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)
 
 unsigned  char  G_StopCnt =0;
 char get_HB(float data);
 void GetPresentHB(int savefd, char flag);
-
+void daemonize(const char *cmd);
+int already_running(void);
 void sig_handler(int signo)
 {
 	printf("SIGPIPE  \n");
@@ -74,55 +80,57 @@ int sock_conn_server(struct sockaddr_in *cliaddr, struct connect_serv *conn)
 	return serv_fd;
 }
 
+
 int  open_saveHB_file( const char *path)
 {
-	struct stat st;
-	int fd;
-	if(stat(path, &st) == -1)
-	{
-		perror("stat:");
-		if( (fd = open(path, O_CREAT| O_RDWR|O_EXCL|O_TRUNC, 0666)) < 0)
+		struct stat st;
+		int fd;
+		if(stat(path, &st) == -1)
 		{
-			perror("open saveHB_file:");
-			exit(1);
-		}	
-	}
-	else
-	{
-		if((fd = open(path, O_RDWR|O_TRUNC, 0666)) < 0)
-		{
-			perror("open saveHB_file:");
-			exit(1);
+				perror("stat:");
+				if( (fd = open(path, O_CREAT| O_RDWR|O_EXCL|O_TRUNC, 0666)) < 0)
+				{
+						perror("open saveHB_file:");
+						exit(1);
+				}	
 		}
-	}
-	return fd;
+		else
+		{
+				if((fd = open(path, O_RDWR|O_TRUNC, 0666)) < 0)
+				{
+						perror("open saveHB_file:");
+						exit(1);
+				}
+		}
+		return fd;
 }
 
 int open_Rid_file(const char *path)
 {
-	struct stat st;
-	int fd;
-	if(stat(path, &st) == -1)
-	{
-		perror("stat:");
-		if( (fd = open(path, O_CREAT| O_RDWR|O_EXCL|O_TRUNC, 0666)) < 0)
+		struct stat st;
+		int fd;
+		if(stat(path, &st) == -1)
 		{
-			perror("open saveRID_file:");
-			exit(1);
+				perror("stat:");
+				if( (fd = open(path, O_CREAT| O_RDWR|O_EXCL|O_TRUNC, 0666)) < 0)
+				{
+						perror("open saveRID_file:");
+						exit(1);
+				}
+				system("echo 1011 > /bin/saveRID");
 		}
-		system("echo 1011 > /bin/saveRID");
-	}
-	else
-	{
-		if((fd = open(path, O_RDWR, 0666)) < 0)
+		else
 		{
-			perror("open saveRID_file:");
-			exit(1);
+				if((fd = open(path, O_RDWR, 0666)) < 0)
+				{
+						perror("open saveRID_file:");
+						exit(1);
+				}
 		}
-	}
-	return fd;
+		return fd;
 
 }
+
 int read_Rid(int fd, unsigned int * cid)
 {
 		unsigned char buff[20] = {0};
@@ -164,14 +172,20 @@ int   main(int   argc,   char   *argv[])
 	int sock_serv_fd;
 	struct sockaddr_in   cliaddr;
 	struct connect_serv   conn_serv;
-	int savefd;
-	int Rid_fd;
+	unsigned int cid = 47001001;
+	int savefd, Rid_fd;
 	char buff[5] ={0};
-	unsigned int cid = 1011;
 	signal(SIGPIPE, sig_handler);
+	daemonize(argv[0]);
+
+	if(already_running())
+	{
+		syslog(LOG_ERR, "%s[%ld] is already running...", argv[0], (long int)getpid());
+		exit(1);
+	}
+	
 	savefd = open_saveHB_file("/tmp/saveHB");
 	Rid_fd = open_Rid_file("/bin/saveRID");
-
 while(1)
 {
 	if(!protocol_init(cid, 0)){
@@ -184,12 +198,10 @@ while(1)
 	break;
 }
 
-
 while(1)
 {
 	system("echo 0 > /tmp/saveHB");
-	//read_Rid(Rid_fd, &cid);
-
+	
 	if(!protocol_init(cid, 1))
 	{
 		goto waitTime_err;
@@ -307,7 +319,7 @@ while(1){
 		{
 			goto waitTime_err;
 		}
-		if(G_StopCnt == 30)
+		if(G_StopCnt == 60)
 		{
 			GetPresentHB(savefd, HB_FAILSE);
 			goto	waitTime_err;
@@ -342,12 +354,15 @@ while(1){
 waitTime_err:
 		sleep(5);
 		printf("长时间连接connect timeout，返回join server reconnect...\n");
+		if(read_Rid(Rid_fd, &cid))
+		{
+			goto waitTime_err;
+		}
 //		free(CServer_req);
 //		free(ConnectCF);
 //		free(CS_FUP);
 //		free(CS_PUP);
 		G_StopCnt = 0;
-		read_Rid(Rid_fd, &cid);
   } // while(1) of join server		
 }
 
@@ -431,3 +446,117 @@ void GetPresentHB(int savefd, char flag)
 			HB_DateTime_cnt++;
 	}
 }
+
+
+int lockfile(int fd)
+{
+	struct flock lock;
+	lock.l_type = F_WRLCK;
+	lock.l_whence = SEEK_SET;
+	lock.l_start = 0;
+	lock.l_len = 20;
+
+	return fcntl(fd, F_SETLK, &lock);
+}
+// 文件锁防止该守护进程有多个同时运行，以后使用cron守护进程定时重启时用
+int already_running(void)
+{
+	int fd;
+	char buff[16] = {0};
+	if( (fd = open(LOCKFILE, O_RDWR|O_CREAT, LOCKMODE)) < 0)
+	{
+		syslog(LOG_ERR, "can't open %s: %s", LOCKFILE, strerror(errno));
+		exit(1);
+	}
+	if(lockfile(fd) <0)
+	{
+		if(errno == EAGAIN || errno == EACCES)
+		{
+			close(fd);
+			return 1;
+		}
+		syslog(LOG_ERR, "can't lock %s: %s", LOCKFILE, strerror(errno));
+		exit(1);
+	}
+
+	ftruncate(fd, 0);
+	sprintf(buff, "%ld", (long)getpid());
+	write(fd, buff, strlen(buff)+1);
+	return 0;
+}
+
+
+// 守护进程创建函数
+void daemonize(const char *cmd)
+{
+	int			i, fd0, fd1, fd2;
+	pid_t			pid;
+	struct	rlimit		rl;
+	struct	sigaction	sa;
+	
+	umask(0);
+	
+	if(getrlimit(RLIMIT_NOFILE, &rl) < 0)
+	{
+		perror("can't get file limit");
+		exit(1);
+	}
+
+	if((pid = fork()) < 0)
+	{
+		perror("can't fork");
+		exit(1);
+	}else if(pid != 0) // parent
+	{
+		exit(0);
+	}
+
+	setsid();
+
+	sa.sa_handler = SIG_IGN;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	if(sigaction(SIGHUP, &sa, NULL) < 0)
+	{
+		perror("can't ignore SIGHUP");
+		exit(1);
+	}
+	
+	if((pid = fork()) < 0)
+	{
+		perror("can't fork");
+		exit(1);
+	}else if(pid != 0)	// parent
+	{
+		exit(0);
+	}
+	
+	if(chdir("/") < 0)
+	{
+		perror("can't chdir");
+		exit(1);
+	}
+	
+	if(rl.rlim_max == RLIM_INFINITY)
+	{
+		rl.rlim_max = 1024;
+	}
+
+	for(i=0; i< rl.rlim_max; i++)
+		close(i);
+
+	fd0 = open("/dev/null", O_RDWR);
+	fd1 = dup(0);
+	fd2 = dup(0);
+	
+	openlog(cmd, LOG_CONS, LOG_DAEMON);
+	if(fd0 !=0 || fd1 != 1 || fd2 != 2){
+		syslog(LOG_ERR, "unexpected file descriptors %d %d %d", fd0, fd1, fd2);
+		exit(1);
+	}
+	syslog(LOG_INFO, "%s is  ok.......", cmd);
+}
+
+
+
+

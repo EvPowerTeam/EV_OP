@@ -21,8 +21,7 @@ void protocol_req_ready(ConnectREQ_INFO *req);
 void protocol_CSREQ_ready(void);
 void protocol_CSHB_ready(void);
 void protocol_CSFUP_ready(void);
-void protocal_CSUP_ready(void);
-
+void protocol_CSUP_ready(void);
 
 Present_INFO  DayofYear(void);	
 DateTime	get_DateTime(void);

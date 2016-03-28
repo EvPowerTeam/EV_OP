@@ -1,7 +1,7 @@
 #!/bin/sh /etc/rc.common
 # lilu
 
-#START=99
+START=99
 
 #boot() {
         #hardware reset
@@ -13,5 +13,5 @@
 {
 sh /usr/sbin/savelog
 #sleep 1
-#sh /usr/sbin/g3modem
+sh /usr/sbin/g3modem
 } &

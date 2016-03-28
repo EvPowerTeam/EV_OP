@@ -26,7 +26,7 @@ set_if_up()
                 	operator=$(cat $tmpdir/tmpdata | grep "COPS:" | awk -F, '{print $3}')
 		}
 		[ -z "$operator" ] && {
-			operator=$(awk -F: '/COPS:.*/{print $2}'  /var/g3modem/g3info$atdev | awk -F, 'END{print $3}')
+			operator=$(awk -F: '/COPS:.*/{print $2}' $tmpdir/g3info${atdev##*/} | awk -F, 'END{print $3}')
 		}
 		if [ -n "$operator" ]; then
 			if [ "$operator" = "\"CHN-UNICOM\"" ] || [ "$operator" = "\"UNICOM\"" ] || [ "$operator" = "\"46001\"" ]; then
@@ -40,10 +40,12 @@ set_if_up()
 			uci set $section.dialnumber=*99***1#
 			uci commit network
 			else
-			logger -t g3modem -p notice "Interface $1 can\'t get SIM operator" 
+			logger -t g3modem -p notice "Interface $1 unknown SIM operator" 
 			fi
-			sleep 1
-			ifup $1
+			[ -n "$(ifconfig 3g-$1 | egrep -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')" ] || {
+				sleep 1
+				ifup $1
+			}
 		else
 			rm $tmpdir/tmpdata &> /dev/null
 			sh /usr/sbin/read3ginfo $dev -sim -show &> $tmpdir/tmpdata
@@ -53,11 +55,13 @@ set_if_up()
 				sim=$(cat $tmpdir/tmpdata | egrep -o "[0-9]{15}")
 			}
 			[ -z "$sim" ] && { 
-				sim=$(awk -F: '/SIMID:.*/{print $2}'  /var/g3modem/g3info$atdev  | egrep -o "[0-9]{15}")
+				sim=$(awk -F: '/SIMID:.*/{print $2}' $tmpdir/g3info${atdev##*/} | egrep -o "[0-9]{15}")
 			}
 			if [ -n "$sim" ] ; then
+			[ -n "$(ifconfig 3g-$1 | egrep -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')" ] || {
 				sleep 1
 				ifup $1
+			}
 			else
 				ifdown $1
 				#echo "Interface $1 no SIM card" 
