@@ -13,5 +13,5 @@ START=99
 {
 sh /usr/sbin/savelog
 #sleep 1
-sh /usr/sbin/g3modem
+sh /usr/sbin/g3modem -intel
 } &

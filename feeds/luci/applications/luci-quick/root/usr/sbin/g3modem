@@ -5,12 +5,51 @@ if [ ! -e $tmpdir ] ; then
 	mkdir -p $tmpdir &> /dev/null
 fi
 
+intel_modem_ifce=wwan1
+
+hw_intel_init()
+{
+	section=network.$1
+	dev=$(uci get $section.device 2> /dev/null)
+	atdev=$(uci get $section.atdevice 2> /dev/null)
+	if [ -n "$dev" ] && [ -n "$atdev" ] && [ -e $dev ] && [ -e $atdev ] ; then
+	tmp=$(sh /usr/sbin/g3command $dev -AT 'AT\^SYSCFGEX=\"00\",3FFFFFFF,1,2,7FFFFFFFFFFFFFFF,,' -show | egrep -o 'OK')
+	[ -z "$tmp" ] && {
+		trycnt=8
+		rm -f $tmpdir/tmpdata 2> /dev/null
+		tmp=$(sh /usr/sbin/g3command $atdev -AT 'AT\^SYSCFGEX=\"00\",3FFFFFFF,1,2,7FFFFFFFFFFFFFFF,,' -show | egrep -o 'OK')
+		while [ -z "$tmp" ] && [ $trycnt -gt 0 ] ;
+		do {
+		let trycnt--
+		sleep 1
+		tmp=$(sh /usr/sbin/g3command $atdev -AT 'AT\^SYSCFGEX=\"00\",3FFFFFFF,1,2,7FFFFFFFFFFFFFFF,,' -show | egrep -o 'OK')
+		}
+		done
+	}
+#	return $tmp
+#	else
+#	return 'Error'	
+	fi
+}
+
+g3modem_intel_init()
+{  #$1 interface
+	#HUAWEI LET initialize  $intel_modem_ifce
+	section=network.$1
+	dev=$(uci get $section.device 2> /dev/null)
+	atdev=$(uci get $section.atdevice 2> /dev/null)
+	if [ -n "$dev" ] && [ -n "$atdev" ] && [ -e $dev ] && [ -e $atdev ] ; then
+		hw_intel_init $1
+		tmp=$(sh /usr/sbin/g3command $dev -AT 'AT\^LEDCTRL=1' -show | egrep -o 'OK')
+		[ -z "$tmp" ] && {
+			sh /usr/sbin/g3command $atdev -AT 'AT\^LEDCTRL=1'
+		}
+	fi
+}
+
+
 set_if_up() 
 {  #$1 interface
-	ubus -S list "network.interface.$1" > /dev/null || {
-		echo "Interface $1 not found"
-		return 2
-	}
 	section=network.$1
 	dev=$(uci get $section.device 2> /dev/null)
 	atdev=$(uci get $section.atdevice 2> /dev/null)
@@ -18,6 +57,7 @@ set_if_up()
         if [ "$(uci get $section)" = "interface" ] && [ "$(uci get $section.proto)" = "3g" ]; then 
 		#ifdown $1
 		#sleep 8
+		
 		rm $tmpdir/tmpdata &> /dev/null
 		sh /usr/sbin/g3command $dev -operator -show &> $tmpdir/tmpdata
 		operator=$(cat $tmpdir/tmpdata | grep "COPS:" | awk -F, '{print $3}')
@@ -43,8 +83,9 @@ set_if_up()
 			logger -t g3modem -p notice "Interface $1 unknown SIM operator" 
 			fi
 			[ -n "$(ifconfig 3g-$1 | egrep -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')" ] || {
+				#[ "$1" = "$intel_modem_ifce" ] && hw_intel_init $1
 				sleep 1
-				ifup $1
+				ifup $1				
 			}
 		else
 			rm $tmpdir/tmpdata &> /dev/null
@@ -59,6 +100,7 @@ set_if_up()
 			}
 			if [ -n "$sim" ] ; then
 			[ -n "$(ifconfig 3g-$1 | egrep -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')" ] || {
+				#[ "$1" = "$intel_modem_ifce" ] && hw_intel_init $1
 				sleep 1
 				ifup $1
 			}
@@ -68,21 +110,37 @@ set_if_up()
 				logger -t g3modem -p notice "Interface $1 no SIM card" 
 			fi
 			#echo "Interface $1 can not get operator" 
-			logger -t g3modem -p notice "Interface $1 can\'t get SIM operator" 
+			logger -t g3modem -p notice "Interface $1 can't get SIM operator" 
 		fi #device
         fi 
 	fi
 
 } 
 
-
 if [ -n "$1" ]; then
-	set_if_up $1
-else
-	#xiugai
-	set_if_up wwan1
-	#HUAWEI
-	atdev=$(uci get network.wwan1.atdevice 2> /dev/null)
-	[ -n "$atdev" ] && sh /usr/sbin/g3command $atdev -AT 'AT\^LEDCTRL=1^m'
+	case $1 in
+	-intel)
+		#modem initialize
+		set_if_up $intel_modem_ifce
+		g3modem_intel_init $intel_modem_ifce
+		logger -t g3modem -p notice "Interface $intel_modem_ifce Internal Modem initialized" 
+	;;
+	-hwinit)
+		hw_intel_init $intel_modem_ifce
+	;;
+	-ifce) 
+		ubus -S list "network.interface.$2" > /dev/null || {
+			echo "Interface $2 not found"
+			return 2
+		}
+		set_if_up $2
+	;;
+	-help)
+		echo 'script -intel(default interface)'
+		echo 'script -ifce Interface'
+		echo 'script -hwinit(HW LET)'
+		echo 'script -help'
+	;;
+	esac
 fi
 

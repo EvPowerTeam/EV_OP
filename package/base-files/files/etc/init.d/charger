@@ -1,0 +1,16 @@
+#!/bin/sh /etc/rc.common
+#/init.d/charger
+
+START=97
+
+start()
+{
+	{
+		/bin/chargerTest 10
+	}&
+}
+
+stop()
+{
+	killall -9 chargerTest
+}

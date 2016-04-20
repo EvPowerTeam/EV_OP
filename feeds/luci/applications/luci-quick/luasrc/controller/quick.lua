@@ -112,7 +112,8 @@ function get_info3g(intfce3g, defdev)
 		extra = string.format("%s\"AT device\" is null\n", extra)
 	else
 		if ( string.len(luci.sys.exec("cat /usr/sbin/g3command")) > 0 ) then
-			luci.sys.exec(string.format("sh /usr/sbin/g3command %s -signal -sim -regist -operator", atdev)) 
+			--luci.sys.exec(string.format("sh /usr/sbin/g3command %s -signal -sim -regist -operator", atdev)) 
+			luci.sys.exec(string.format("sh /usr/sbin/g3command %s -all",atdev)) 
 			--fork_exec(string.format("sh /usr/sbin/g3command %s", atdev)) 
 			local path = string.format("/var/g3modem/g3info%s", string.match(atdev, "tty.+"))
 

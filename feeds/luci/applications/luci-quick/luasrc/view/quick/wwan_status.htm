@@ -1,22 +1,22 @@
 <script type="text/javascript">//<![CDATA[
-	function wprogressbar(v, m)
+	function g3progressbar(v, m, txt)
 	{
 		var vn = parseInt(v) || 0;
 		var mn = parseInt(m) || 100;
 		var pc = Math.floor((100 / mn) * vn);
-
+		var tn = txt || (pc + '%');
 		return String.format(
 			'<div style="width:200px; position:relative; border:1px solid #999999">' +
 				'<div style="background-color:#CCCCCC; width:%d%%; height:15px">' +
 					'<div style="position:absolute; left:0; top:0; text-align:center; width:100%%; color:#000000">' +
-						'<small>%d%%</small>' +
+						'<small>%s</small>' +
 					'</div>' +
 				'</div>' +
-			'</div>', pc, pc
+			'</div>', pc, tn
 		);
 	}
 	
-	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "quick", "wwan", "status")%>', null,
+	XHR.poll(8, '<%=luci.dispatcher.build_url("admin", "quick", "wwan", "status")%>', null,
 		function(x, st)
 		{
 			var tx = document.getElementById('wwan_status_text');
@@ -48,7 +48,7 @@
 									reg = '<%:Unregistered%>';
 								break;
 								case "3":
-									reg = '<%:Be rejected%>';
+									reg = '<%:Rejected%>';
 								break;
 								case "4":
 									reg = '<%:Unknown%>';
@@ -63,13 +63,7 @@
 						}
 						
 						if ( wnet.ifname ) {
-							if( wnet.ifname == 'wwan1' ) {
-								text += String.format('<strong><%:Interface%>: </strong>%s<br />', '3G/4G Modem');
-							}else if (wnet.ifname == 'wwan2' ) {
-								text += String.format('<strong><%:Interface%>: </strong>%s<br />', '3G/4G USB');
-							}else {
-								text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname);
-							}
+							text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname);
 						}else {
 							text += String.format('<strong><%:Interface%>: </strong>%s<br />', '');
 							err += 'ifname is null-';
@@ -107,13 +101,6 @@
 						}
 						
 						text += '<br />';						
-						/*if ( wnet.hsignal ) {
-							text += hsignal + '<br />';
-							//text += String.format('<strong><%:Network%>: </strong>%s<br />', reg);
-						}else {
-							//text += String.format('<strong><%:Network%>: </strong>%s<br />', '');
-							err += 'hsignal is null-';
-						}*/
 						//------^----------
 						if ( wnet.isup ) {
 							text += '<strong><%:Mobile data%>: </strong><%:linked%><br />';
@@ -124,12 +111,31 @@
 							text += String.format('<strong><%:Signal%>: </strong>%s<br />', wnet.signal);
 							var sig = wnet.signal;
 							var indx = sig.indexOf(",");
-							if (indx > 0) { sig = sig.substring(0, indx); indx = parseInt(sig); }
-							if (indx < 0 || indx > 31) indx = 0;
-							bar = wprogressbar(indx, 31);
+							var dat = '';
+							if (indx > 0) { sig = sig.substring(0, indx); dat = parseInt(sig); }
+							if (dat < 0 || dat > 31) dat = 0;
+							var hsig_txt = '';
+							if ( wnet.hsignal ) {
+								var hsig = wnet.hsignal;
+								var tmp = hsig.split(",")[0];
+								if ( tmp ) {
+									hsig_txt = tmp + ', ';
+									tmp = hsig.split(",")[1]; 
+									if (tmp > 0 && tmp < 96) { 
+										hsig_txt += 'rssi = -' + (121 - tmp) + 'dBm';
+									} else if (tmp = 96) {
+										hsig_txt += 'rssi ≥ -25dBm';
+									} else if (tmp = 0) {
+										hsig_txt += 'rssi < -120dBm';
+									}
+								} else {
+									hsig_txt = '';
+								}
+							}
+							bar = g3progressbar(dat, 31, hsig_txt);
 						}else {
 							text += String.format('<strong><%:Signal%>: </strong>%s<br />', '');
-							bar = wprogressbar(0, 31);
+							bar = g3progressbar(0, 31, '');
 							err += 'signal is null-';
 						}
 						
@@ -155,11 +161,14 @@
 						e.innerHTML = '';
 					}
 					if (!st)
-						tx.innerHTML = 'st - null';
+						if ( (tx.innerHTML).indexOf('null') == -1 )
+						tx.innerHTML += 'st - null';
 					else if (!st.wwans)
-						tx.innerHTML = 'st.wwans - null';
+						if ( (tx.innerHTML).indexOf('null') == -1 )
+						tx.innerHTML += 'st.wwans - null';
 					else
-						tx.innerHTML = 'st st.wwans - null';
+						if ( (tx.innerHTML).indexOf('null') == -1 )
+						tx.innerHTML += 'st st.wwans - null';
 				}
 			}
 		}
