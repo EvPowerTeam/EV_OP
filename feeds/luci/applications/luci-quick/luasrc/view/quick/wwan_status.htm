@@ -123,9 +123,9 @@
 									tmp = hsig.split(",")[1]; 
 									if (tmp > 0 && tmp < 96) { 
 										hsig_txt += 'rssi = -' + (121 - tmp) + 'dBm';
-									} else if (tmp = 96) {
+									} else if (tmp == 96) {
 										hsig_txt += 'rssi ≥ -25dBm';
-									} else if (tmp = 0) {
+									} else if (tmp == 0) {
 										hsig_txt += 'rssi < -120dBm';
 									}
 								} else {
