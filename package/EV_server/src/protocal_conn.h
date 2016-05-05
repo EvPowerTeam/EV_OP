@@ -15,7 +15,7 @@ extern CServer_FULL_UPDATE	*CS_FUP;
 extern DateTime		HB_DateTime[30];
 extern  int		HB_DateTime_cnt;
 
-int protocol_init(unsigned  int cid, int flag);
+int protocol_init(unsigned  int cid, int flag, char *);
 void protocol_comfirm_ready(struct connect_serv *conn_serv, u8 PresentMode, u16 SubMode);
 void protocol_req_ready(ConnectREQ_INFO *req);
 void protocol_CSREQ_ready(void);

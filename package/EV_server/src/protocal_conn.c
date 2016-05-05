@@ -341,7 +341,7 @@ void  protocol_req_ready(ConnectREQ_INFO * req)
 }
 
 
-int  protocol_init(unsigned int cid, int flag)
+int  protocol_init(unsigned int cid, int flag, char * addrname)
 {
 	unsigned char mac_addr[6] = {0};
 	unsigned char ip_addr[5] = {0};
@@ -350,12 +350,12 @@ int  protocol_init(unsigned int cid, int flag)
 	// 清零
 	memset(&ConnectREQ, 0, sizeof(ConnectREQ));
 	// 获取ip地址和mac地址
-	if(  !Get_ip(ip_addr) ){
+	if(  !Get_ip(ip_addr, addrname) ){
 		printf("获取IP地址失败...\n");
 		return 0;
 	}
 
-	if( !Get_mac(mac_addr) ){
+	if( !Get_mac(mac_addr, addrname) ){
 		printf("获取MAC地址失败...\n");
 		return 0;
 	}

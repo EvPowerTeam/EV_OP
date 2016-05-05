@@ -15,21 +15,26 @@ hw_intel_init()
 	if [ -n "$dev" ] && [ -n "$atdev" ] && [ -e $dev ] && [ -e $atdev ] ; then
 	#tmp=$(sh /usr/sbin/g3command $dev -AT 'AT\^SYSCFGEX=\"00\",3FFFFFFF,1,2,7FFFFFFFFFFFFFFF,,' -show | egrep -o 'OK')
 	#[ -z "$tmp" ] && {
-		trycnt=8
+		trycnt=0
 		rm -f $tmpdir/tmpdata 2> /dev/null
-		tmp=$(sh /usr/sbin/g3command $atdev -AT 'AT\^SYSCFGEX=\"00\",3FFFFFFF,1,2,7FFFFFFFFFFFFFFF,,' -show | egrep -o 'OK')
-		while [ -z "$tmp" ] && [ $trycnt -gt 0 ] ;
+		#tmp=$(sh /usr/sbin/g3command $atdev -AT 'AT\^SYSCFGEX=\"00\",3FFFFFFF,1,2,7FFFFFFFFFFFFFFF,,' -show | egrep -o 'OK')
+		#while [ -z "$tmp" ] && [ $trycnt -gt 0 ] ;
+		while [ $trycnt -lt 8 ] ;
 		do {
-		let trycnt--
-		sleep 1
-		tmp=$(sh /usr/sbin/g3command $atdev -AT 'AT\^SYSCFGEX=\"00\",3FFFFFFF,1,2,7FFFFFFFFFFFFFFF,,' -show | egrep -o 'OK')
+			let trycnt++
+			tmp=$(sh /usr/sbin/g3command $atdev -AT 'AT\^SYSCFGEX=\"00\",3FFFFFFF,1,2,7FFFFFFFFFFFFFFF,,' -show)
+			if [ -z "$(echo $tmp | egrep -o 'OK')" ] ; then
+				[ -n "$(echo $tmp | egrep -o 'ERROR')" ] && {
+				logger -t g3modem -p warn "Internal Modem($intel_modem_ifce) initialization failed($tmp)"
+				break
+				}
+			else
+				logger -t g3modem -p notice "Internal Modem($intel_modem_ifce) initialization successfully($trycnt)"
+				break 
+			fi
+			sleep 1
 		}
 		done
-		if [ -z "$tmp" ] ; then 
-			logger -t g3modem -p warn "Internal Modem($intel_modem_ifce) initialization failed" 
-		else
-			logger -t g3modem -p notice "Internal Modem($intel_modem_ifce) initialization successfully" 
-		fi
 	#}
 #	return $tmp
 #	else

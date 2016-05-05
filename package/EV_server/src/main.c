@@ -175,6 +175,7 @@ int   main(int   argc,   char   *argv[])
 	unsigned int cid = 47001001;
 	int savefd, Rid_fd;
 	char buff[5] ={0};
+	char buff_addr[20] ={0};
 	signal(SIGPIPE, sig_handler);
 	daemonize(argv[0]);
 
@@ -188,7 +189,22 @@ int   main(int   argc,   char   *argv[])
 	Rid_fd = open_Rid_file("/bin/saveRID");
 while(1)
 {
-	if(!protocol_init(cid, 0)){
+	memset(buff_addr,0,strlen(buff_addr));
+	strcpy(buff_addr,"3g-wwan1");
+	if(!protocol_init(cid, 0,buff_addr)){
+		system("echo 0 > /tmp/saveHB");
+		printf("协议初始化失败...\n");
+//		exit(1);
+		sleep(10);
+	}
+	else
+	{
+		break;
+	}
+
+	memset(buff_addr,0,strlen(buff_addr));
+	strcpy(buff_addr,"eth1");
+	if(!protocol_init(cid, 0,buff_addr)){
 		system("echo 0 > /tmp/saveHB");
 		printf("协议初始化失败...\n");
 //		exit(1);
@@ -202,9 +218,13 @@ while(1)
 {
 	system("echo 0 > /tmp/saveHB");
 	
-	if(!protocol_init(cid, 1))
+	if(!protocol_init(cid, 1, "3g-wwan1"))
 	{
-		goto waitTime_err;
+		sleep(1);
+		if(!protocol_init(cid, 1, "eth1"))
+		{
+			goto waitTime_err;
+		}
 	}	
 	
 	memcpy(IV, KEYA, 16);

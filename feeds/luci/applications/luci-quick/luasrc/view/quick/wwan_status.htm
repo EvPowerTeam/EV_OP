@@ -63,7 +63,13 @@
 						}
 						
 						if ( wnet.ifname ) {
-							text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname);
+							if(wnet.ifname == 'wwan1'){
+								text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname,"3G/4G Modem");
+							}else if(wnet.ifname == 'wwan2'){
+								text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname,"3G/4G USB");
+							}else {
+								text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname);
+							}
 						}else {
 							text += String.format('<strong><%:Interface%>: </strong>%s<br />', '');
 							err += 'ifname is null-';

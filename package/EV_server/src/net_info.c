@@ -511,7 +511,7 @@ void err_quit(char *msg)
 
 
 // 获取IP地址程序
-int Get_ip(unsigned char * ipaddr)
+int Get_ip(unsigned char * ipaddr,char *addrname)
 {
 
     int sock_get_ip;  
@@ -527,7 +527,7 @@ int Get_ip(unsigned char * ipaddr)
     }  
      
     memset(&ifr_ip, 0, sizeof(ifr_ip));     
-    strncpy(ifr_ip.ifr_name, "3g-wwan1", sizeof(ifr_ip.ifr_name) - 1);     
+    strncpy(ifr_ip.ifr_name, addrname, sizeof(ifr_ip.ifr_name) - 1);     
    
     if( ioctl( sock_get_ip, SIOCGIFADDR, &ifr_ip) < 0 )     
     {     
@@ -561,7 +561,7 @@ int Get_ip(unsigned char * ipaddr)
 }
 
 // 获取IP地址程序
-int Get_ip_str(unsigned char * ipaddr)
+int Get_ip_str(unsigned char * ipaddr,char *addrname)
 {
 
     int sock_get_ip;  
@@ -576,7 +576,7 @@ int Get_ip_str(unsigned char * ipaddr)
     }  
      
     memset(&ifr_ip, 0, sizeof(ifr_ip));     
-    strncpy(ifr_ip.ifr_name, "3g-wwan1", sizeof(ifr_ip.ifr_name) - 1);     
+    strncpy(ifr_ip.ifr_name, addrname, sizeof(ifr_ip.ifr_name) - 1);     
    
     if( ioctl( sock_get_ip, SIOCGIFADDR, &ifr_ip) < 0 )     
     {     
@@ -591,7 +591,7 @@ int Get_ip_str(unsigned char * ipaddr)
 
 
 // 获取MAC地址程序
-int Get_mac(unsigned  char *mac_addr)
+int Get_mac(unsigned  char *mac_addr,char *addrname)
 {
     struct   ifreq   ifreq; 
     int   sock; 
@@ -601,7 +601,7 @@ int Get_mac(unsigned  char *mac_addr)
   //      perror( "socket "); 
         return   0; 
     } 
-    strcpy(ifreq.ifr_name,"3g-wwan1"); 
+    strcpy(ifreq.ifr_name,addrname); 
     if(ioctl(sock,SIOCGIFHWADDR,&ifreq) <0) 
     { 
 //        perror( "ioctl "); 

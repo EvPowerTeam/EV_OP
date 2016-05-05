@@ -120,7 +120,7 @@ else
 		atdev=$(uci get $section.atdevice 2> /dev/null)
 		[ -n "$atdev" ] && [ -e $atdev ] && {
 			tmp=$(sh /usr/sbin/g3command $atdev -AT 'AT\^SYSCFGEX?' -show)
-			[ -n "$(echo $tmp | egrep -o 'OK')" ] && \ 
+			[ -n "$(echo $tmp | egrep -o 'OK')" ] && \
 			[ -z "$(echo $tmp | egrep -o '\"00\",3FFFFFFF,1,2,7FFFFFFFFFFFFFFF')" ] && {
 				logger -t 3gmonitor -p notice "Try to initialize the internal Modem($intel_modem_ifce)" 
 				sh /usr/sbin/g3modem -hwinit

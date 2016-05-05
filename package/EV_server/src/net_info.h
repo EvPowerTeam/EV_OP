@@ -20,11 +20,11 @@
 
 void err_quit(char *msg);
 // 获取IP地址程序
-int Get_ip(unsigned char * ipaddr);
-int Get_ip_str(unsigned char * ipaddr);
+int Get_ip(unsigned char * ipaddr,char *addrname);
+int Get_ip_str(unsigned char * ipaddr,char *addrname);
 
 // 获取MAC地址程序
-int Get_mac(unsigned  char *mac_addr);
+int Get_mac(unsigned  char *mac_addr,char *addrname);
 
 
 int sock_server_init(struct sockaddr_in *cliaddr, char *ip_addr, short port);
