@@ -63,17 +63,18 @@
 						}
 						
 						if ( wnet.ifname ) {
-							if(wnet.ifname == 'wwan1'){
-								text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname,"3G/4G Modem");
-							}else if(wnet.ifname == 'wwan2'){
-								text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname,"3G/4G USB");
-							}else {
+							if ( wnet.ifname == "wwan1" ) {
+								text += String.format('<strong><%:Interface%>: </strong>[%s] %s<br />', wnet.ifname, "Modem");
+							} else if ( wnet.ifname == "wwan2" ) { 
+								text += String.format('<strong><%:Interface%>: </strong>[%s] %s<br />', wnet.ifname, "USB");
+							} else {
 								text += String.format('<strong><%:Interface%>: </strong>%s<br />', wnet.ifname);
 							}
 						}else {
 							text += String.format('<strong><%:Interface%>: </strong>%s<br />', '');
 							err += 'ifname is null-';
 						}
+
 						if ( wnet.sim ) {
 							text += String.format('<strong><%:SIM card%>: </strong>%s<br />', wnet.sim);
 						}else {
@@ -193,7 +194,7 @@
 </style>
 
 <fieldset class="cbi-section">
-	<legend><%:3G Modem Information%></legend>
+	<legend><%:3G/4G Modem Information%></legend>
 	<div id="wwan_status_text" style="text-align:left;"><em><%:Collecting data...%></em></div>
 	<div id="wwan_status_extra" style="text-align:left;"></div>
 </fieldset>
