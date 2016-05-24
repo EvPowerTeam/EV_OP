@@ -561,12 +561,16 @@ You may obtain a copy of the License at
 
 	<table width="100%" cellspacing="10">
 		<tr><td width="33%"><%:Hostname%></td><td><%=luci.sys.hostname() or "?"%></td></tr>
-		<!-- <tr><td width="33%"><%:Model%></td><td><%=pcdata(model or "?")%></td></tr>
+
+		<tr><td width="33%"><%:Router Version%></td><td><%=luci.sys.exec("cat /etc/Router_version")%></td></tr>
+		<!--
+		<tr><td width="33%"><%:Model%></td><td><%=pcdata(model or "?")%></td></tr>
 		<tr><td width="33%"><%:Firmware Version%></td><td>
 			<%=pcdata(luci.version.distname)%> <%=pcdata(luci.version.distversion)%> /
 			<%=pcdata(luci.version.luciname)%> (<%=pcdata(luci.version.luciversion)%>)
 		</td></tr>
-		<tr><td width="33%"><%:Kernel Version%></td><td><%=luci.sys.exec("uname -r")%></td></tr> -->
+		<tr><td width="33%"><%:Kernel Version%></td><td><%=luci.sys.exec("uname -r")%></td></tr> 
+		-->
 		<tr><td width="33%"><%:Local Time%></td><td id="localtime">-</td></tr>
 		<tr><td width="33%"><%:Uptime%></td><td id="uptime">-</td></tr>
 		<tr><td width="33%"><%:Load Average%></td><td id="loadavg">-</td></tr>

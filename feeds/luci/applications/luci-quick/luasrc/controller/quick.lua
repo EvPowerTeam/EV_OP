@@ -23,6 +23,9 @@ entry({"admin", "quick", "vpn"}, cbi("quick/vpn"), _("VPN Configuration"), 5)
 page = entry({"admin","quick","wwan","evlink"},call("evlink_status"))
 page.leaf = true
 
+page = entry({"admin","quick","wwan","evlink1"},call("evlinkrid"))
+page.leaf = true
+
 page = entry({"admin", "quick", "wwan", "status"}, call("info_3gnet"))
 page.leaf = true
 page = entry({"admin", "quick", "wwan", "reset"}, call("g3net_reset"))
@@ -37,6 +40,17 @@ function evlink_status()
 	stat.id = luci.sys.exec("cat /bin/saveRID")
 	luci.http.prepare_content("application/json")
 	luci.http.write_json(stat)
+end
+
+function evlinkrid()
+
+	--change /bin/saveRID
+	if luci.http.formvalue("rid_flag") == "1" then
+		local saverid=luci.http.formvalue("is_rid")
+		local file=io.open("/bin/saveRID","w")
+		file:write(saverid)
+		return
+	end
 end
 
 function g3net_reset(iface)

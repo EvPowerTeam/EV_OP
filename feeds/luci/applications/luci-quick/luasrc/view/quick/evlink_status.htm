@@ -15,7 +15,25 @@
 			'</div>', pc, pc
 		);
 	}
-	
+
+	function input(obj)
+	{
+		var rid = prompt('Please Input A New Rid:');
+		rid = + rid;
+		var xhR = new XHR();
+		if( ! rid)
+		{
+			;
+		}else{
+			xhR.post('<%=luci.dispatcher.build_url("admin","quick","wwan","evlink1")%>',{
+				rid_flag : 1,
+				is_rid	: rid
+			},function(xhr){
+			
+			});
+		}
+	}
+
 	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "quick", "wwan", "evlink")%>', null,
 		function(x, st)
 		{
@@ -28,7 +46,7 @@
 				{
 					var bar = '';
 					sub_txt.innerHTML = "";
-					sub_id.innerHTML = st.id;
+					sub_id.innerHTML = '<input id=cid value =' + st.id + '><input type=button value="change" onclick=input(this);>';
 					if ( st.heartbeat ) {
 						if ( st.heartbeat>=0 && st.heartbeat<=100 )
 							bar = wprogressbar(st.heartbeat, 100);

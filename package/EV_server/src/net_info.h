@@ -13,7 +13,7 @@
 #include <net/if.h>
 #include "data.h"
 
-#define   JOIN_SERVER1_IP	"124.202.140.203"//"192.168.0.253"//"124.202.140.203"
+#define   JOIN_SERVER1_IP	"124.202.140.203"////"124.202.140.203"
 #define   JOIN_SERVER2_IP	"192.168.0.2"
 #define   JOIN_SERVER_PORT	8531//8500
 #define   SOCK_TIME_OUT		 10

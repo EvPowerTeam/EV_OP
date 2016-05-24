@@ -236,11 +236,7 @@ while(1)
 		// 连接失败，然后连接join_server2_ip
 		printf("jion server1 connect fail...\n");
 		close(sock_serv_fd);
-		if(!(sock_serv_fd = sock_server_init(&cliaddr, JOIN_SERVER2_IP, JOIN_SERVER_PORT))){
-			close(sock_serv_fd);
-		  	printf("join server2 connect fail...\n");
-			goto waitTime_err;
-		}
+		goto waitTime_err;
 	}
 
 	printf("客户端连接成功...\n"); 
@@ -260,7 +256,6 @@ while(1)
 //	sleep(2);
 
 //	break;
-
 
 	printf("\n    #############################################################\n");
 	printf("     #############################################################\n");
@@ -488,6 +483,7 @@ int already_running(void)
 		syslog(LOG_ERR, "can't open %s: %s", LOCKFILE, strerror(errno));
 		exit(1);
 	}
+/*
 	if(lockfile(fd) <0)
 	{
 		if(errno == EAGAIN || errno == EACCES)
@@ -498,7 +494,7 @@ int already_running(void)
 		syslog(LOG_ERR, "can't lock %s: %s", LOCKFILE, strerror(errno));
 		exit(1);
 	}
-
+*/
 	ftruncate(fd, 0);
 	sprintf(buff, "%ld", (long)getpid());
 	write(fd, buff, strlen(buff)+1);
