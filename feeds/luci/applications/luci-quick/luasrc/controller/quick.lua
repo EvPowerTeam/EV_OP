@@ -2,16 +2,6 @@ module("luci.controller.quick", package.seeall)
 
 function index()
 
---entry({"admin", "quick"}, call("preview"), _("Quick"), 20)
---arcombine(cbi("admin_network/network"), cbi("admin_network/ifaces"))
-
-
-
---entry({"admin", "quick", "wan"}, cbi("quick/wan"), _("WAN"), 1).dependent = false
---entry({"admin", "quick", "lan"}, cbi("quick/lan"), _("LAN"), 2).dependent = false
---entry({"admin", "quick", "wifi"}, cbi("quick/wifi"), _("WiFi"), 3).dependent = false
-
---entry({"admin", "quick"}, cbi("quick/overview"), _("Quick"), 20).dependent = true
 entry({"admin", "quick"}, cbi("quick/overview"), _("Quick"), 20).index = true
 entry({"admin", "quick", "wan"}, cbi("quick/wan"), _("WAN Configuration"), 1)
 entry({"admin", "quick", "lan"}, cbi("quick/lan"), _("LAN Configuration"), 2)
@@ -19,9 +9,6 @@ entry({"admin", "quick", "wifi"}, cbi("quick/wifi"), _("WiFi Configuration"), 3)
 entry({"admin", "quick", "wwan"}, cbi("quick/wwan"), _("3G/4G Configuration"), 4)
 
 entry({"admin", "quick", "vpn"}, cbi("quick/vpn"), _("VPN Configuration"), 5)
-
-page = entry({"admin","quick","wwan","evlink"},call("evlink_status"))
-page.leaf = true
 
 page = entry({"admin","quick","wwan","evlink1"},call("evlinkrid"))
 page.leaf = true
@@ -32,14 +19,6 @@ page = entry({"admin", "quick", "wwan", "reset"}, call("g3net_reset"))
 page.leaf = true
 
 
-end
-
-function evlink_status()
-	local stat = {}
-	stat.heartbeat = luci.sys.exec("cat /tmp/saveHB")
-	stat.id = luci.sys.exec("cat /bin/saveRID")
-	luci.http.prepare_content("application/json")
-	luci.http.write_json(stat)
 end
 
 function evlinkrid()
@@ -88,6 +67,10 @@ function info_3gnet()
 
 	local rv = {	}
 	rv.wwans = { }
+
+	rv.heartbeat = luci.sys.exec("cat /tmp/saveHB")
+	rv.id = luci.sys.exec("cat /bin/saveRID")
+
 	for i, net in ipairs(netlist) do 
 		rv.wwans[#rv.wwans+1] = get_info3g(net[1])
 		local nett = ntm:get_network(net[1])     

@@ -226,7 +226,7 @@ while(1)
 			goto waitTime_err;
 		}
 	}	
-	
+	read_Rid(Rid_fd, &cid);
 	memcpy(IV, KEYA, 16);
 
 	HB_DateTime_cnt = 0;
@@ -245,7 +245,6 @@ while(1)
 	// 连接join server
 	if( !join_conn_serv(sock_serv_fd, &conn_serv)){
 		printf("与通信JOIN server 失败, 重新初始化...\n");
-		sleep(2);
 		goto  waitTime_err;
 	}
 
@@ -280,11 +279,12 @@ while(1){
 	
 	// 发送新连接
 	 case  SOCK_CMD_REQ:
-		if(G_StopCnt == 10)   // 发送失败之后，次数到20次，执行goto，重新连接join server
+		if(G_StopCnt >= 10)   // 发送失败之后，次数到20次，执行goto，重新连接join server
 			goto	waitTime_err;
 		if((sock_serv_fd = sock_conn_server(&cliaddr, &conn_serv))<0)
 		{
-			G_StopCnt++;	
+			G_StopCnt++;
+			sleep(1);
 			continue;
 		}
 		protocol_CSREQ_ready();
@@ -292,7 +292,7 @@ while(1){
 			sock_close(sock_serv_fd);
 			memset(&cliaddr, 0, sizeof(cliaddr));
 			printf("发送新连接失败...\n");
-			sleep(2);
+			sleep(1);
 			G_StopCnt++;
 			continue;
 		}
@@ -304,11 +304,12 @@ while(1){
 	
 	case 	SOCK_CMD_FUP:
 	// 发送全更新
-		if(G_StopCnt == 10)
+		if(G_StopCnt >= 10)
 			goto	waitTime_err;
 		if((sock_serv_fd = sock_conn_server(&cliaddr, &conn_serv))<0)
 		{
-			G_StopCnt++;	
+			G_StopCnt++;
+			sleep(1);
 			continue;
 		}
 		protocol_CSFUP_ready();
@@ -316,7 +317,7 @@ while(1){
 			sock_close(sock_serv_fd);
 			memset(&cliaddr, 0, sizeof(cliaddr));
 			printf("发送全更新失败...\n");
-			sleep(10);
+			sleep(1);
 			G_StopCnt++;
 			continue;
 		}
@@ -330,18 +331,20 @@ while(1){
 
 	// 发送心跳
 		printf("未连接次数：%d\n", G_StopCnt);
-		if(read_Rid(Rid_fd, &cid))
-		{
-			goto waitTime_err;
-		}
-		if(G_StopCnt == 60)
+		if(G_StopCnt >= 40)
 		{
 			GetPresentHB(savefd, HB_FAILSE);
 			goto	waitTime_err;
 		}
+		if(read_Rid(Rid_fd, &cid))
+		{
+			G_StopCnt++;
+			break;
+		}
 		if((sock_serv_fd = sock_conn_server(&cliaddr, &conn_serv))<0)
 		{
-			G_StopCnt++;	
+			G_StopCnt++;
+			sleep(1);
 			break;
 		}
 		protocol_CSHB_ready();
@@ -350,7 +353,7 @@ while(1){
 			sock_close(sock_serv_fd);
 			memset(&cliaddr, 0, sizeof(cliaddr));
 			G_StopCnt++;
-//			sleep(2);
+			sleep(1);
 			break;
 		}
 		G_StopCnt = 0;
@@ -361,18 +364,12 @@ while(1){
 
  		continue;
 	 } // switch
-	GetPresentHB(savefd, HB_FAILSE); // 接收心跳失败，计算心跳率
-	
-
-      } //  while(1) of conn server
+	 GetPresentHB(savefd, HB_FAILSE); // 接收心跳失败，计算心跳率
+} //  while(1) of conn server
 
 waitTime_err:
-		sleep(5);
+		sleep(20);
 		printf("长时间连接connect timeout，返回join server reconnect...\n");
-		if(read_Rid(Rid_fd, &cid))
-		{
-			goto waitTime_err;
-		}
 //		free(CServer_req);
 //		free(ConnectCF);
 //		free(CS_FUP);
@@ -469,7 +466,7 @@ int lockfile(int fd)
 	lock.l_type = F_WRLCK;
 	lock.l_whence = SEEK_SET;
 	lock.l_start = 0;
-	lock.l_len = 20;
+	lock.l_len = 1;
 
 	return fcntl(fd, F_SETLK, &lock);
 }
@@ -483,7 +480,7 @@ int already_running(void)
 		syslog(LOG_ERR, "can't open %s: %s", LOCKFILE, strerror(errno));
 		exit(1);
 	}
-/*
+
 	if(lockfile(fd) <0)
 	{
 		if(errno == EAGAIN || errno == EACCES)
@@ -494,7 +491,7 @@ int already_running(void)
 		syslog(LOG_ERR, "can't lock %s: %s", LOCKFILE, strerror(errno));
 		exit(1);
 	}
-*/
+
 	ftruncate(fd, 0);
 	sprintf(buff, "%ld", (long)getpid());
 	write(fd, buff, strlen(buff)+1);
