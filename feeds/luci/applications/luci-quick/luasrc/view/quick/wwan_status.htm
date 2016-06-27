@@ -16,21 +16,21 @@
 		);
 	}
 
-	function g3progressbar(v, m, txt)
+	function wprogressbar(v, m)
 	{
 		var vn = parseInt(v) || 0;
 		var mn = parseInt(m) || 100;
 		var pc = Math.floor((100 / mn) * vn);
-		var tn = txt || (pc + '%');
+
 		return String.format(
-						'<div style="width:200px; position:relative; border:1px solid #999999">' +
-						'<div style="background-color:#CCCCCC; width:%d%%; height:15px">' +
-						'<div style="position:absolute; left:0; top:0; text-align:center; width:100%%; color:#000000">' +
-						'<small>%s</small>' +
-						'</div>' +
-						'</div>' +
-						'</div>', pc, tn
-						);
+				'<div style="width:200px; position:relative; border:1px solid #999999">' + 
+						'<div style="background-color:#CCCCCC; width:%d%%; height:15px">' + 
+						     '<div style="position:absolute; left:0; top:0; text-align:center; width:100%%; color:#000000">' + 
+							  	'<small>%d%%</small>' + 
+							  '</div>' + 
+						'</div>' + 
+				'</div>', pc, pc
+			);
 	}
 
 	function input(obj)
