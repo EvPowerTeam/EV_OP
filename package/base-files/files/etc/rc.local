@@ -4,6 +4,6 @@
 
 #sh /usr/sbin/3gmonitor
 
-/etc/init.d/network reload &
+/etc/init.d/network restart &
 
 exit 0
