@@ -88,7 +88,7 @@ if [ -n "$1" ] ; then
 	case $1 in
 	-reset)
 		if [ -n "$2" ] ; then
-			reset_modem $2
+			#reset_modem $2
 		else
 			echo "script -reset <(3g)interface>"
 		fi
@@ -154,7 +154,7 @@ else
 				#fi
 			else
 				if [ $run_cnt -ge 2 ]; then
-					reset_modem $intel_modem_ifce
+					# reset_modem $intel_modem_ifce
 					run_cnt=0		
 				fi
 			fi		
