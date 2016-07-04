@@ -88,7 +88,20 @@ $Id$
 			<div class="cbi-section-descr"><%:Sorry, there is no sysupgrade support present; a new firmware image must be flashed manually. Please refer to the OpenWrt wiki for device specific install instructions.%></div>
 		<% end %>
 	</fieldset>
+	
+	<fieldset class="cbi-section">
+		<legend><%:Upgrade Charger Firmware%></legend>
+		<form id="update" name="update" action="<%=luci.dispatcher.build_url("admin","system","chargerfw")%>"method="post" enctype="multipart/form-data">
+			<input type="hidden" name="act" value="update" />
+			<input type="file" id="updatePackage" name="updatePackage" />
+			<input type="submit" id="updateBtn" class="cbi-button cbi-button-apply" value="上传" />
+		</form>
+	</fieldset>
 
+	<fieldset class="cbi-section">
+		<legend><%:Charger Firmware Information%></legend>
+
+	</fieldset>
 </fieldset>
 
 <%+footer%>

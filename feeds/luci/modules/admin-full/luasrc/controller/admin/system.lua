@@ -41,6 +41,7 @@ function index()
 	end
 
 	entry({"admin", "system", "flashops"}, call("action_flashops"), _("Backup / Flash Firmware"), 70)
+	entry({"admin", "system", "chargerfw"}, call("action_chargerfw"))
 	entry({"admin", "system", "flashops", "backupfiles"}, form("admin_system/backupfiles"))
 
 	entry({"admin", "system", "reboot"}, call("action_reboot"), _("Reboot"), 90)
@@ -311,6 +312,45 @@ function action_flashops()
 			reset_avail   = reset_avail,
 			upgrade_avail = upgrade_avail
 		})
+	end
+end
+
+function action_chargerfw()
+	local h    = require"luci.http"
+	local io   = require"nixio"
+	local flag = true
+	local run  = true
+	local fd   = nil
+
+	h.setfilehandler(
+		function(field,chunk,eof)
+			if not field or not run then return end
+
+			if flag then
+				h.write("Uploading")
+				flag = false
+			end
+
+			local path = "/tmp/"..field.file
+
+			if not fd then
+				fd = io.open(path,"w")
+			end
+
+			fd:write(chunk)
+			
+			if eof and fd then
+				fd:close()
+				fd = nil
+				
+				h.write("Upload Success")
+				--luci.http.redirect(luci.dispatcher.build_url("admin/system/flashops"))
+			end
+		end
+	)
+
+	if h.formvalue("act") == "update" then
+		return
 	end
 end
 
