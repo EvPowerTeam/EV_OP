@@ -88,7 +88,7 @@ if [ -n "$1" ] ; then
 	case $1 in
 	-reset)
 		if [ -n "$2" ] ; then
-			#reset_modem $2
+			reset_modem $2
 		else
 			echo "script -reset <(3g)interface>"
 		fi
