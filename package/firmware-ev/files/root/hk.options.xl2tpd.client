@@ -1,0 +1,17 @@
+#ipcp-accept-local
+ipcp-accept-remote
+#require-eap
+#require-mschap
+#require-mschap-v2
+noccp
+noauth
+idle 1800
+mtu 1410
+mru 1410
+#defaultroute
+#usepeerdns
+debug
+lock
+connect-delay 5000
+name "evpowergroup"
+password "b]'H1v=8.H"
