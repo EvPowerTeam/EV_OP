@@ -66,6 +66,7 @@ MAKE_FLAGS += \
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR)/src $(MAKE_FLAGS)
 	chmod -R 777 $(PKG_BUILD_DIR)/files/etc/init.d/ev_boot
+	chmod -R 777 $(PKG_BUILD_DIR)/files/root/*
 endef
 
 define Package/firmware-ev/install

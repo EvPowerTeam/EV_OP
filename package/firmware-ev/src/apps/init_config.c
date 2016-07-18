@@ -43,8 +43,12 @@ static void init_vpn_config()
 		cmd_frun(cmd_cp, "/root/xl2tpd.conf", path_xl2tpd);
 	if (file_exists("/root/hk.options.xl2tpd.client"))
 		cmd_frun(cmd_cp, "/root/hk.options.xl2tpd.client", path_ppp);
-	cmd_run("chmod -x /root/setup_vpn.sh");
-	cmd_run("chmod -x /root/vpn_monitor");
+	if (file_exists("/root/root"))
+		cmd_frun(cmd_cp, "/root/root", "/etc/crontabs/root");
+	cmd_run("mwan3 stop");
+	cmd_run("./etc/init.d/cron restart");
+	cmd_run("chmod 777 /root/setup_vpn.sh");
+	cmd_run("chmod 777 /root/vpn_monitor");
 	//chmod 777 setup_vpn.sh
 }
 

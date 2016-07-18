@@ -1,0 +1,6 @@
+*/3 * * * * sh /usr/sbin/g3monitor
+*/10 * * * * sh /usr/sbin/savelog
+0 * * * * /bin/EV_server
+*/5 * * * * ev init_vpn
+
+
