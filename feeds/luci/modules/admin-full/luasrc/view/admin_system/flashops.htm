@@ -89,6 +89,20 @@ $Id$
 		<% end %>
 	</fieldset>
 
+	<fieldset class="cbi-section">
+		<legend><%:电桩固件总览%></legend>
+
+	</fieldset>
+	
+	<fieldset class="cbi-section">
+		<legend><%:更新电桩固件%></legend>
+		<form id="update" name="update" action="<%=luci.dispatcher.build_url("admin","system","chargerfw")%>"method="post" enctype="multipart/form-data">
+			<input type="hidden" name="act" value="update" />
+			<input type="file" id="updatePackage" name="updatePackage" />
+			<input type="submit" id="updateBtn" class="cbi-button cbi-button-apply" value="上传" />
+		</form>
+	</fieldset>
+
 </fieldset>
 
 <%+footer%>

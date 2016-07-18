@@ -4,6 +4,24 @@
 
 #sh /usr/sbin/3gmonitor
 
-/etc/init.d/network restart &
+if [ `uci get network.wwan1.device` == '/dev/ttyUSB0' ]
+then
+
+	dmesg | grep 'FTDI USB Serial Device converter now attached to ttyUSB0'
+
+	if [ $? -eq 0  ]
+	then
+
+		uci set network.wwan1.device=/dev/ttyUSB1
+
+		uci set network.wwan1.atdevice=/dev/ttyUSB3
+
+		uci commit network
+
+	fi
+
+fi
+
+#/etc/init.d/network restart &
 
 exit 0
