@@ -344,6 +344,7 @@ function action_chargerfw()
 				fd = nil
 				
 				h.write("Upload Success")
+				h.write("<script>location.href='flashops'</script>")
 			end
 		end
 	)

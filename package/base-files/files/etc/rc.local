@@ -1,27 +1,14 @@
-# Put your custom commands here that should be executed once
-# the system init finished. By default this file does nothing.
-
-
-#sh /usr/sbin/3gmonitor
-
+#sh /usr/sbin/g3monitor
 if [ `uci get network.wwan1.device` == '/dev/ttyUSB0' ]
 then
-
 	dmesg | grep 'FTDI USB Serial Device converter now attached to ttyUSB0'
-
-	if [ $? -eq 0  ]
+	if [ $? -eq 0 ]
 	then
-
 		uci set network.wwan1.device=/dev/ttyUSB1
-
 		uci set network.wwan1.atdevice=/dev/ttyUSB3
-
 		uci commit network
-
 	fi
-
 fi
-
-#/etc/init.d/network restart &
+/etc/init.d/network restart &
 
 exit 0
