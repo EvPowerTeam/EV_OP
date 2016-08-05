@@ -24,13 +24,14 @@ int tmp_buff_len = 100;
 static void boot_setup_network()
 {
 	cmd_run("echo 1 > /proc/sys/net/ipv4/ip_forward");
+	//bug
 	cmd_run("for each in /proc/sys/net/ipv4/conf/* \
 			do \
 				echo 0 > $each/accept_redirects \
 				echo 0 > $each/send_redirects \
 			done");
 	cmd_run("sysctl -p");
-
+	cmd_run("stty -F /dev/ttyUSB0 9600 clocal cread cs8 -cstopb -parenb");
 }
 
 static void boot_init_dir(void)
