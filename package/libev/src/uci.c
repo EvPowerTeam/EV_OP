@@ -90,13 +90,13 @@ int ev_uci_data_get_val(char *val_buff, int buff_len, const char *addr_fmt, ...)
 {
 	va_list args;
 	int ret;
-    char addr_tmp[100];
-    struct uci_context *ctx = NULL;
-    struct uci_ptr ptr;
+	char addr_tmp[100];
+	struct uci_context *ctx = NULL;
+	struct uci_ptr ptr;
 
 	va_start(args, addr_fmt);
 	vsnprintf(addr_tmp, sizeof(addr_tmp), addr_fmt, args);
-	printf("uci get val = %s\n", addr_tmp);
+	debug_msg("uci get val = %s\n", addr_tmp);
 	va_end(args);
 	ctx = uci_alloc_context();
 	if (!ctx) {
@@ -107,7 +107,7 @@ int ev_uci_data_get_val(char *val_buff, int buff_len, const char *addr_fmt, ...)
 	ret = uci_lookup_ptr(ctx, &ptr, addr_tmp, true);
 	if (ret != UCI_OK)
 		goto out;
-	printf("find ok...\n");
+	debug_msg("value found");
 	if (!(ptr.flags & UCI_LOOKUP_COMPLETE))
 		goto out;
 
@@ -122,7 +122,7 @@ int ev_uci_data_get_val(char *val_buff, int buff_len, const char *addr_fmt, ...)
 	if (buff_len)
 		val_buff[buff_len - 1] = '\0';
 
-	printf("find value = %s\n", val_buff);
+	debug_msg("find value = %s\n", val_buff);
 	uci_free_context(ctx);
 	return 0;
 
@@ -423,7 +423,7 @@ int ev_uci_save_val_int(int val, const char *addr_fmt, ...)
 }
 
 // 缓存区malloc 需要释放
-char * find_uci_tables(const char *TabName)
+char *find_uci_tables(const char *TabName)
 {
 	 char *buff = (char *)malloc(128);
 	if(!buff)

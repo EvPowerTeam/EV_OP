@@ -11,6 +11,10 @@ then
 		uci commit network
 	fi
 fi
+
 /etc/init.d/network restart &
+
+echo "`date "+%H:%M:%S"`: reboot EV Router" >> mnt/umemory/routerlog/`date "+%Y-%m-%d"`.log
+(/root/start.sh &)
 
 exit 0

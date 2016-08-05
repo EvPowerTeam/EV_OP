@@ -1,5 +1,7 @@
 
-#include "include/net_info.h"
+#include "./include/net_info.h"
+#include "./include/err.h"
+#include "./include/system_call.h"
 #include <sys/types.h>
 #include <signal.h>
 #include <sys/select.h>
@@ -42,35 +44,6 @@ void commu_alarm(int sig)
 	return ;
 }
 
-int  sock_server_init(struct sockaddr_in *cliaddr, char *ip_addr, short port)
-{
-	int sock_fd;
-	int reuseaddr = 1;
-
-	printf("--ip:%s  port:%d\n", ip_addr, port);
-	if( (sock_fd = socket(AF_INET, SOCK_STREAM, 0)) <0 ){
-		err_quit("client sock");
-	}
-//	setsockopt(sock_fd,  SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr));
-	
-	printf("创建套接字成功...\n");
-
-	bzero(cliaddr, sizeof(struct sockaddr));
-	cliaddr->sin_family = AF_INET;
-	cliaddr->sin_port = port;//htons(port);
-	if(!inet_pton(AF_INET, ip_addr, &cliaddr->sin_addr)){
-		err_quit("inet_pton ip addr");
-	}
-//	if(bind(sock_fd, (struct sockaddr *)cliaddr, sizeof(struct sockaddr_in)) <0)
-//	{
-//		return 0;
-//	}
-
-	printf("地址初始化成功...\n");
-	return sock_fd;
-}
-
-
 // 指数补偿算法，套接口连接
 int connect_retry(int sockfd, const struct sockaddr *addr, socklen_t alen)
 {
@@ -89,12 +62,6 @@ int connect_retry(int sockfd, const struct sockaddr *addr, socklen_t alen)
 	return 0;
 }
 
-
-void err_quit(char *msg)
-{
-	perror(msg);
-	exit(1);
-}
 
 
 // 获取IP地址程序

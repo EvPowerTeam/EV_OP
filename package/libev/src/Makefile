@@ -3,13 +3,13 @@ CC = gcc
 CFLAGS += -Wall -fno-strict-aliasing -W -std=gnu99
 CFLAGS += -Iinclude `pkg-config --cflags json-c`
 OFLAGS += -Os
-LDFLAGS += $(OFLAGS) -luci -lpolarssl -lcurl `pkg-config --libs json-c`
+LDFLAGS += $(OFLAGS) -luci -lpolarssl -lrt -lcurl `pkg-config --libs json-c`
 
 LIBNAME = libev.so
 
 EXTRA_CFLAGS += -DDEBUG_CONSOLE
-EXTRA_CFLAGS += -DDEBUG_FILE
-EXTRA_CFLAGS += -DDEBUG_SYSLOG
+# EXTRA_CFLAGS += -DDEBUG_FILE
+# EXTRA_CFLAGS += -DDEBUG_SYSLOG
 # EXTRA_CFLAGS += -DDEBUG_TRACE
 # EXTRA_CFLAGS += -DDEBUG_LOCK
 

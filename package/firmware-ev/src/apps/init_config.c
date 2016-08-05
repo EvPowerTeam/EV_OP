@@ -63,7 +63,7 @@ static void init_router_config()
 	//vpn IP
 }
 
-int init_config(int NG_UNUSED(argc), char NG_UNUSED(**argv), char NG_UNUSED(*extra_arg))
+int init_config(int EV_UNUSED(argc), char EV_UNUSED(**argv), char EV_UNUSED(*extra_arg))
 {
 	debug_msg("configuration initlization");
 	init_vpn_config();

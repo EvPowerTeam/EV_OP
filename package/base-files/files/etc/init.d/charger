@@ -6,7 +6,7 @@ START=97
 start()
 {
 	{
-		/bin/chargerTest 10
+		/bin/chargerTest
 	}&
 }
 

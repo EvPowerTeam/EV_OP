@@ -6,6 +6,7 @@
 #include <libev/file.h>
 #include <libev/system.h>
 #include <libev/const_strings.h>
+#include <libev/msgqueue.h>
 
 #include "init_config.h"
 
@@ -14,6 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <mqueue.h>
 
 char *tmp_buff = NULL;
 int tmp_buff_len = 100;
@@ -31,11 +33,29 @@ static void boot_setup_network()
 
 }
 
-int init_boot_boot(int NG_UNUSED(argc), char NG_UNUSED(**argv),
-		 char NG_UNUSED(*extra_arg))
+static void boot_init_dir(void)
+{
+    char    name[100];
+    //mkdir(WORK_DIR, 0777);
+    //sprintf(name, "%s/%s%c", WORK_DIR, CHAOBIAO_DIR, '\0');
+
+    //mkdir(name, 0777);
+    //sprintf(name, "%s/%s%c", WORK_DIR, CONFIG_DIR, '\0');
+    //mkdir(name, 0777);
+    //sprintf(name, "%s/%s%c", WORK_DIR, UPDATE_DIR, '\0');
+    //mkdir(name, 0777);
+    //sprintf(name, "%s/%s%c", WORK_DIR, RECORD_DIR, '\0');
+    //mkdir(name, 0777);
+}
+
+int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
+		 char EV_UNUSED(*extra_arg))
 {
 	debug_msg("module booting");
-	init_config(NULL, NULL, NULL);
+	init_config(0, NULL, NULL);
 	boot_setup_network();
-
+	boot_init_dir(); // 创建初始化目录
+	//mqcreate(O_RDONLY | O_NONBLOCK, 10, 10, "/dashboard.checkin");
+	mqcreate(O_RDONLY, 10, 100, "/dashboard.checkin");
+	return 0;
 }

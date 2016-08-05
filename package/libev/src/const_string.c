@@ -7,16 +7,7 @@
 
 #include <libev/system.h> /* for VIF_SSID_FMT */
 
-
-const char cmd_alfred[] = "/etc/init.d/alfred %s >&2";
-const char cmd_alfred_switchiface[] = "alfred -I %s%s%s >&2";
-const char cmd_alfred_switchmode[] = "alfred -M %s >&2";
-const char cmd_anyip[] = "/etc/init.d/anyip %s %s >&2";
-const char cmd_batctl[] = "batctl %s %s";
-const char cmd_batctl_gw[] = "batctl gwl -n 2>/dev/null | awk '/=>/ {tq=$3;if (tq == \"(\") tq=$4;gsub(/[()]/,\"\",tq);printf(\"%s %s\", $2, tq)}' >&2";
-const char cmd_batctl_td_ogm_scan[] = "batctl td -c -n -p 1 '%s' | grep 'tvlv gw' > %s 2>&- &";
-const char cmd_batctl_td_ogm2_scan[] = "batctl td -c -n -p 2 '%s' | grep 'tvlv gw' > %s 2>&- &";
-const char cmd_bridge_active[] = "brctl show | grep 'br-%s.*%s' >&2";
+const char cmd_get_vpn_interface[] = "/bin/ls /sys/class/net/ | grep ppp'[0-9]' >&2";
 const char cmd_broken_refcount[] = "dmesg | grep \"unregister_netdevice: waiting for.*to become free. Usage count\" | tr -d '[]' | awk '$12>0' |tail -n 1 >&2";
 const char cmd_configd[] = "/sbin/configd %s";
 const char cmd_connkeeper_checkin[] = "dashboard checkin";
@@ -247,7 +238,7 @@ const char path_uds_tmp_file[] = "/tmp/udshape";
 const char path_node_tmp_file[] = "/tmp/mesh_node_list";
 const char path_hostapd_pid_fmt[] = "/var/run/hostapd-phy%d.pid";
 const char path_batman_bat0_routing_algo[] = "/sys/module/batman_adv/parameters/routing_algo";
-const char path_netconfigd_dump[] = "/tmp/netconfigd-dump";
+const char path_router_id[] = "/etc/saveRID";
 const char str_netcfgd[] = "netconfigd";
 const char str_instacom[] = "instacom";
 const char str_parse_conf[] = "parse_config";

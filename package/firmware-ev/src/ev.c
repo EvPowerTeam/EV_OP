@@ -68,7 +68,7 @@ err:
 	return -1;
 }
 #else
-static int check_trace(char NG_UNUSED(*name))
+static int check_trace(char EV_UNUSED(*name))
 {
 	return 0;
 }

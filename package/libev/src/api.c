@@ -23,6 +23,7 @@
 #include <polarssl/sha256.h>
 #include <curl/curl.h>
 #include <linux/if_ether.h>
+#include <libev/msgqueue.h>
 
 #include <json-c/json.h>
 
@@ -36,7 +37,7 @@
 #define API_TIME_ENDPOINT		"/time"
 
 static char curl_err[CURL_ERROR_SIZE];
-static char tmp_buff[256];
+static char tmp_buff[1280];
 
 /**
  * api_write_output - print the server reply to a file or buffer
@@ -94,6 +95,7 @@ static size_t api_write_output(char *ptr, size_t size, size_t nmemb,
 		tmp[api_data->u.buff.len + len] = '\0';
 		api_data->u.buff.ptr = tmp;
 		api_data->u.buff.len += len + 1;
+		debug_msg("API_BUFF: %s", api_data->u.buff.ptr);
 
 		break;
 	}
@@ -223,28 +225,31 @@ void api_sign_gen(const char *secret, const char *auth, const char *path,
 	sha256_hmac_finish(&sha256_ctx, output);
 }
 
-#ifdef LIBNG_DEBUG
 static int api_debug_cb(CURL NG_UNUSED(*handle), curl_infotype type, char *data,
 			size_t size, void NG_UNUSED(*userptr))
 {
 	char *buff;
 
 	debug_msg("type: %d", type);
+	if (type == 3) {
+		debug_msg("server returns: %s", data);
+		//if (strncmp(data, "update", 5) != 0 && strncmp(data, "{", 1) != 0)
+		if (strncmp(data, "charging1", 9) == 0)
+			mqsend_timed("/dashboard.checkin", data + 8, 1, 10);
+	}
 
-	buff = malloc(size + 1);
-	if (!buff)
-		return 0;
+	//buff = malloc(size + 1);
+	//if (!buff)
+		//return 0;
 
-	memcpy(buff, data, size);
-	buff[size] = '\0';
+	//memcpy(buff, data, size);
+	//buff[size] = '\0';
 
-	debug_msg("data: %s", buff);
+	//debug_msg("data: %s", buff);
 
-	free(buff);
-
+	//free(buff);
 	return 0;
 }
-#endif
 
 /**
  * api_call - call an API and possibly send a body content
@@ -407,17 +412,18 @@ int api_send_buff(const char *proto, const char *host, const char *path,
 	struct api_return api_data;
 	api_data.type = API_BUFF;
 	return api_call(proto, host, path, "POST", "application/json", buff,
-			strlen(buff), &api_data, NULL, key, secret);
+			strlen(buff), &api_data, 
+			"application/x-www-form-urlencoded", key, 
+			secret);
 }
 
-int api_send_url(const char *proto, const char *host, const char *path, char *params)
+int api_send_url(const char *proto, const char *host, const char *path)
 {
 	struct api_return api_data;
-
-	api_data.type = API_FILE;
+	api_data.type = API_BUFF;
 
 	return api_call(proto, host, path, "POST", "application/json", NULL,
-			NULL, &api_data, NULL, NULL, NULL);
+			0, &api_data, NULL, NULL, NULL);
 }
 
 /**
@@ -488,9 +494,9 @@ struct api_conn *api_conn_create(const char *proto, const char *host,
 	curl_easy_setopt(conn->hdl, CURLOPT_WRITEFUNCTION, api_write_output);
 	curl_easy_setopt(conn->hdl, CURLOPT_TIMEOUT, timeout);
 	curl_easy_setopt(conn->hdl, CURLOPT_CONNECTTIMEOUT, 20);
+	curl_easy_setopt(conn->hdl, CURLOPT_DEBUGFUNCTION, api_debug_cb);
 #ifdef LIBNG_DEBUG
 	curl_easy_setopt(conn->hdl, CURLOPT_VERBOSE, true);
-	curl_easy_setopt(conn->hdl, CURLOPT_DEBUGFUNCTION, api_debug_cb);
 #endif
 
 	return conn;
@@ -614,14 +620,13 @@ retry:
 
 	curl_easy_setopt(conn->hdl, CURLOPT_HTTPHEADER, headers);
 	curl_easy_setopt(conn->hdl, CURLOPT_URL, tmp_buff);
-	curl_easy_setopt(conn->hdl, CURLOPT_CUSTOMREQUEST, method);
 	curl_easy_setopt(conn->hdl, CURLOPT_POSTFIELDS, body);
+	curl_easy_setopt(conn->hdl, CURLOPT_POSTFIELDSIZE, strlen(body));
 	curl_easy_setopt(conn->hdl, CURLOPT_WRITEDATA, api_data);
 
 	debug_msg("sending HTTP request..");
 	ret = curl_easy_perform(conn->hdl);
 	curl_slist_free_all(headers);
-
 	if (ret != CURLE_OK) {
 		sys_logger("API", "connection error to %s: %s (%d)", tmp_buff,
 			   curl_err, ret);

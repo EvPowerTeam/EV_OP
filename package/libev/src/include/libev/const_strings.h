@@ -1,14 +1,5 @@
 
-extern const char cmd_alfred[];
-extern const char cmd_alfred_switchiface[];
-extern const char cmd_alfred_switchmode[];
-extern const char cmd_anyip[];
-extern const char cmd_batctl[];
-extern const char cmd_batctl_gw[];
-extern const char cmd_batctl_neigh[];
-extern const char cmd_batctl_td_ogm_scan[];
-extern const char cmd_batctl_td_ogm2_scan[];
-extern const char cmd_bridge_active[];
+extern const char cmd_get_vpn_interface[];
 extern const char cmd_broken_refcount[];
 extern const char cmd_configd[];
 extern const char cmd_connkeeper[];
@@ -240,7 +231,7 @@ extern const char path_uds_tmp_file[];
 extern const char path_node_tmp_file[];
 extern const char path_hostapd_pid_fmt[];
 extern const char path_batman_bat0_routing_algo[];
-extern const char path_netconfigd_dump[];
+extern const char path_router_id[];
 extern const char str_netcfgd[];
 extern const char str_instacom[];
 extern const char str_parse_conf[];

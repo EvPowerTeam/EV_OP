@@ -19,7 +19,7 @@ define Package/libev
   SUBMENU:=Distributions
   TITLE:=zero-config network library
   #URL:=
-  DEPENDS:=+libuci +libpolarssl +libcurl +libjson-c +libnl-tiny
+  DEPENDS:=+libuci +libpolarssl +libcurl +librt +libjson-c +libnl-tiny
 endef
 
 define Package/libev/description

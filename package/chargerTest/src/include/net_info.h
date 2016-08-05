@@ -17,7 +17,6 @@
 //#define   JOIN_SERVER_PORT	  8500//8531//8500
 #define   SOCK_TIME_OUT		 8
 
-void err_quit(char *msg);
 // 获取IP地址程序
 int Get_ip(unsigned char * ipaddr);
 int Get_ip_str(unsigned char * ipaddr);
@@ -26,7 +25,6 @@ int Get_ip_str(unsigned char * ipaddr);
 int Get_mac(unsigned  char *mac_addr);
 
 
-int sock_server_init(struct sockaddr_in *cliaddr, char *ip_addr, short port);
 int connect_retry(int sockfd, const struct sockaddr *addr, socklen_t alen);
 int sock_close(int sockfd);
 

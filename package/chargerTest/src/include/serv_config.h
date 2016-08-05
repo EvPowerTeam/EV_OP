@@ -22,9 +22,9 @@ typedef  unsigned int   u32;
 #define   SERV_PORT	8888	// 服务器端口
 
 #define  MAXCLI		15	// 线程处理连接数
-
+#define	 LISTENMAXLEN	100
 // 守护进程文件锁位置
-#define  LOCKFILE 	"/var/run/EVserver_daemon.pid"
+#define  LOCKFILE 	"/var/run/chargerTest_daemon.pid"
 #define  LOCKMODE	(S_ISUID|S_ISGID|S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)
 
 // 数据库信息
@@ -36,9 +36,8 @@ typedef  unsigned int   u32;
 #define CMD_0X35_LEN	12
 #define CMD_0X55_LEN	34
 #define	CMD_0X57_LEN	29
-
-#define CMD_0XA2_LEN	11
-#define CMD_0XA4_LEN	11
+#define CMD_0XA2_LEN	13
+#define CMD_0XA4_LEN	21
 #define CMD_0X90_LEN	14
 #define	CMD_0X94_LEN	0	
 
@@ -53,6 +52,15 @@ unsigned int	ip;	// 客户端IP地址
 }SERV_INFO;
 
 
+// power bar 信息
+#define     POWER_BAR_PWN_1S        0x31
+#define     POWER_BAR_PWN_2S        0x32
+#define     POWER_BAR_PWN_3S        0x33
+#define     POWER_BAR_PWN_4S        0x34
+#define     POWER_BAR_PWN_5S        0x35
+
+#define     POWER_BAR_GREEN         0x32
+#define     POWER_BAR_RED           0x31
 
 // 线程类型定义
 typedef struct {
@@ -63,25 +71,51 @@ typedef struct {
 }Thread_Type;
 
 
-
 // 管理充电桩信息的数据结构，动态表单，用于查找每条充电桩
 typedef struct {
-	unsigned char  model;		
-	unsigned char 	flag;		// 用于判断每台电桩的连接状态
-	unsigned char  flag_cnt;
-	unsigned char 	IP[4];		// 电桩IP地址
-	unsigned char 	KEYB[16];		// keyb
-	unsigned char 	tab_name[10];
-	unsigned char   ev_linkid[16];	//evlink卡用户名
-	unsigned char	charger_way;
-	unsigned char	change_current_cnt;	//达到一定时间之后，进行电流改变
-	unsigned char   change_current;
+    unsigned char   way;                // WEB 命令还是后台命令
+    unsigned char   wait_cmd;           // 执行后台发送的命令
+    unsigned char   wait_cmd_errcode;       // 错误码
+    unsigned char   tell_have_chaobiao_flag;    //后台发送抄表命令标志
+    unsigned char   tell_have_update_file_flag; //告诉有更新，用于全部更新标志
+    unsigned char   tell_have_config_flag;      //后台发送推送配置标志
+    unsigned char   tell_have_subscribe_flag;    //后台发送预约命令标志
+    unsigned char   update_finish_flag;         //电桩完成软件更新标志
+    unsigned char   chaobiao_finish_flag;       //电桩完成抄表标志
+    unsigned char   config_finish_flag;         //电桩完成推送配置文件标志
+    unsigned char   yuyue_finish_flag;      
+    int             chaobiao_fd;                 //打开抄表文件的文件描述符，用于将抄表记录记录文件
+    int             config_file_fd;             //打开配置文件的文件描述符，用于读取配置文件内容发送给电桩
+    int             update_file_fd;
+    time_t          chaobiao_start_time;        //记录服务器发送的开始抄表时间戳
+    time_t          chaobiao_end_time;          //记录服务器发送的结束抄表时间戳
+    unsigned char	free_cnt;                   //联网的计数器，当计数达到15次(30s),此电桩认为已经断网
+	unsigned char	free_cnt_flag;              //联网计数器标志位，服务器接受一个信息时，设置该标志为1，联网计数器设置为0.
+	unsigned char	change_0x56_flag;           //服务器接收的电流与电桩电流相等的标志
+    unsigned char   config_frame_size;          //配置文件的包大小(文件大小/1024)
+    int             config_file_length;         //配置文件大小
+    int             update_file_length; 
+	unsigned char  model;		                //电桩信息，型号对应的电流大小 (EVG-32N--->32A)
+	unsigned char 	flag;		                // 电桩正在充电的标志
+	unsigned char   present_current;            //load_balance程序判断电流
+	unsigned char   real_current;               //load_balance程序分配的动态电流
+	unsigned char   no_match_current;               //load_balance程序分配的动态电流
+    unsigned char   real_time_current;
+    unsigned char   no_match_count;
+    unsigned char   no_change_cnt;
+	unsigned char   cmd;	                    //当前接受的命令
+	unsigned char 	IP[4];		                // 电桩IP地址
+	unsigned char 	KEYB[16];		            // keyb
+    unsigned char   MAC[20];                    //mac地址，字符串
+	unsigned char 	tab_name[10];               //当前数据库表名
+	unsigned char   ev_linkid[16];	            //evlink卡用户名
+	unsigned char	charger_way;                //电桩的充电方式，拍卡充电还是扫描充电
+	unsigned short  charging_code;	            //充电记录:
+	unsigned int    CID;		                // 电桩CID信息
+	unsigned int    start_time; 	            // 开始充电时间
+	unsigned int    end_time;	                // 结束充电时间
+	unsigned short  power;		                //充电电量
 	char		ev_linkidtmp[50];
-	unsigned short  charging_code;	//充电记录:
-	unsigned int    CID;		// 电桩CID信息
-	unsigned int    start_time; 	// 开始充电时间
-	unsigned int    end_time;	// 结束充电时间
-	unsigned short  power;		//充电电量
 }CHARGER_INFO_TABLE;
 
 
@@ -96,6 +130,7 @@ typedef enum {
 	CHARGER_CHARGING_COMPLETE = 0x0D,
 	CHARGER_OUT_OF_SERVICE = 0x0E,
 	CHARGER_CHARGING_COMPLETE_LOCK = 0x1E,
+    CHARGER_OFF_NET = 0x2E,
 	CHARGER_BOOT_UP = 0,
 	CHARGER_DEBUGGING = 0x65,
 	CHARGER_ESTOP = 0x66
@@ -140,6 +175,7 @@ typedef enum {
 }SystemMessage;
 
 #endif // serv_cmnfig.h
+
 
 
 

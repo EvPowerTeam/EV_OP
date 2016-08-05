@@ -67,7 +67,7 @@ static inline char *ev_time_str()
 #endif
 
 
-#if defined(NG_DEBUG)
+#if defined(EV_DEBUG)
 #define debug_msg(fmt, arg...) do {			\
 	debug_console(fmt, ## arg);			\
 	debug_file(fmt, ## arg);			\
@@ -77,7 +77,7 @@ static inline char *ev_time_str()
 #define debug_msg(fmt, arg...) do { } while (0)
 #endif
 
-#define NG_UNUSED(x) (x)__attribute__((unused))
+#define EV_UNUSED(x) (x)__attribute__((unused))
 
 #define DASHBOARD_SEP "### DASHBOARD_SEPARATOR"
 
