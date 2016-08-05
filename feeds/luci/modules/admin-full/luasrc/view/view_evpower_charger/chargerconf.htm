@@ -1,0 +1,294 @@
+<%#
+LuCI - Lua Configuration Interface
+Copyright 2008 Steven Barth <steven@midlink.org>
+Copyright 2008 Jo-Philipp Wich <xm@leipzig.freifunk.net>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+$Id$
+
+-%>
+
+<%+header%>
+
+<style>
+div.hide{display:none;}
+</style>
+
+<div class="hide" id="is_true1"><%=luci.sys.exec("uci get chargerinfo.charger1.CID")%></div>
+<div class="hide" id="is_true2"><%=luci.sys.exec("uci get chargerinfo.charger2.CID")%></div>
+<div class="hide" id="is_true3"><%=luci.sys.exec("uci get chargerinfo.charger3.CID")%></div>
+<div class="hide" id="is_true4"><%=luci.sys.exec("uci get chargerinfo.charger4.CID")%></div>
+<div class="hide" id="is_true5"><%=luci.sys.exec("uci get chargerinfo.charger5.CID")%></div>
+<div class="hide" id="is_true6"><%=luci.sys.exec("uci get chargerinfo.charger6.CID")%></div>
+<div class="hide" id="is_true7"><%=luci.sys.exec("uci get chargerinfo.charger7.CID")%></div>
+<div class="hide" id="is_true8"><%=luci.sys.exec("uci get chargerinfo.charger8.CID")%></div>
+<div class="hide" id="filelist"><%=luci.sys.exec("ls /mnt/umemory/power_bar/CONFIG/")%></div>
+<script type="text/javascript">
+	
+	function charger_conf(con)
+	{
+		con.disabled = true;
+		con.value    = '<%:推送中....%>';
+		var cid      = prompt("请输入要配置的CID：");
+		var cnum     = 0;
+		console.log(cid);
+		var cpath    = [];
+
+		var is_true1 = document.getElementById('is_true1').innerHTML.trim();
+		var is_true2 = document.getElementById('is_true2').innerHTML.trim();
+		var is_true3 = document.getElementById('is_true3').innerHTML.trim();
+		var is_true4 = document.getElementById('is_true4').innerHTML.trim();
+		var is_true5 = document.getElementById('is_true5').innerHTML.trim();
+		var is_true6 = document.getElementById('is_true6').innerHTML.trim();
+		var is_true7 = document.getElementById('is_true7').innerHTML.trim();
+		var is_true8 = document.getElementById('is_true8').innerHTML.trim();
+		console.log(is_true1)
+		console.log(is_true2)
+		console.log(is_true3)
+		console.log(is_true4)
+		console.log(is_true5)
+		console.log(is_true6);
+		console.log(is_true7);
+		console.log(is_true8);
+		if (is_true1)
+			cnum = 1;
+		if (is_true2)
+			cnum =2;
+                if(is_true3)                                                    
+                        cnum =3; 
+                if(is_true4)                                                    
+                        cnum =4; 
+                if(is_true5)                                                    
+                        cnum =5; 
+                if(is_true6)                                                    
+                        cnum =6; 
+                if(is_true7)                                                    
+                        cnum =7; 
+                if(is_true8)                                                    
+                        cnum =8; 
+		console.log(cnum);
+		switch(cnum)
+		{
+			case 1:
+				cpath[0] = is_true1;
+				break;
+			case 2:
+				cpath[0] = is_true1;
+				cpath[1] = is_true2;
+				break;
+			case 3:
+				cpath[0] = is_true1;
+				cpath[1] = is_true2;
+				cpath[2] = is_true3;
+				break;
+			case 4:
+				cpath[0] = is_true1;
+				cpath[1] = is_true2;
+				cpath[2] = is_true3;
+				cpath[3] = is_true4;
+				break;
+			case 5:
+				cpath[0] = is_true1;
+				cpath[1] = is_true2;
+				cpath[2] = is_true3;
+				cpath[3] = is_true4;
+				cpath[4] = is_true5;
+				break;
+			case 6:
+				cpath[0] = is_true1;
+				cpath[1] = is_true2;
+				cpath[2] = is_true3;
+				cpath[3] = is_true4;
+				cpath[4] = is_true5;
+				cpath[5] = is_true6;
+				break;
+			case 7:
+				cpath[0] = is_true1;
+				cpath[1] = is_true2;
+				cpath[2] = is_true3;
+				cpath[3] = is_true4;
+				cpath[4] = is_true5;
+				cpath[5] = is_true6;
+				cpath[6] = is_true7;
+				break;
+			case 8:
+				cpath[0] = is_true1;
+				cpath[1] = is_true2;
+				cpath[2] = is_true3;
+				cpath[3] = is_true4;
+				cpath[4] = is_true5;
+				cpath[5] = is_true6;
+				cpath[6] = is_true7;
+				cpath[7] = is_true8;
+				break;
+		}
+		console.log(cpath)
+		debugger;
+		var filelist = document.getElementById('filelist').innerHTML;
+		console.log(filelist);
+		if( cpath.indexOf(cid)>=0 && filelist.indexOf(cid) >=0 )
+		{
+			alert("匹配成功")
+			con.disable = false;
+			var xhR = new XHR();
+			xhR.post('<%=luci.dispatcher.build_url("admin","evpower","chargerconf")%>',
+				{is_cid:cid},
+				function(obj)
+				{
+				}
+			);
+			con.value   = '推送成功';
+			window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
+		}else{
+			if(cpath.indexOf(cid) < 0 && filelist.indexOf(cid) >=0)
+			{
+				alert("匹配不正确，请输入正确的CID");
+				window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
+			}else if(cpath.indexOf(cid) > 0 && filelist.indexOf(cid) < 0){
+				alert("匹配不成功，请上传正确的配置文件");
+				window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
+			}else if(cpath.indexOf(cid) < 0 && filelist.indexOf(cid) < 0){
+				alert("匹配不成功，请核对CID和配置文件名");
+				window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
+			}
+		}
+	}
+
+</script>
+
+<fieldset class="cbi-section">
+	<h2>电桩配置信息</h2>
+	
+	<fieldset class="cbi-section">
+		<legend><%:电桩配置总览%></legend>
+	<table class="cbi-section-table">
+		<tr class="cbi-section-table-titles">
+			<th class="cbi-section-table-cell"><%:电桩ID%></th>
+			<th class="cbi-section-table-cell"><%:更新时间%></th>
+		</tr>
+		<tr class="cbi-section-table-row">
+			<td align="left"><%=luci.sys.exec("uci get chargerinfo.charger1.CID")%></td>
+			<td align="left" id="charger1"><%=luci.sys.exec("uci get chargerinfo.charger1.CONF_END_TIME")%></td>
+		</tr>
+		<tr class="cbi-section-table-row">
+			<td align="left"><%=luci.sys.exec("uci get chargerinfo.charger2.CID")%></td>
+			<td align="left" id="charger2"><%=luci.sys.exec("uci get chargerinfo.charger2.CONF_END_TIME")%></td>
+		</tr>
+		<tr class="cbi-section-table-row">
+			<td align="left"><%=luci.sys.exec("uci get chargerinfo.charger3.CID")%></td>
+			<td align="left" id="charger3"><%=luci.sys.exec("uci get chargerinfo.charger3.CONF_END_TIME")%></td>
+		</tr>
+		<tr class="cbi-section-table-row">
+			<td align="left"><%=luci.sys.exec("uci get chargerinfo.charger4.CID")%></td>
+			<td align="left" id="charger4"><%=luci.sys.exec("uci get chargerinfo.charger4.CONF_END_TIME")%></td>
+		</tr>
+		<tr class="cbi-section-table-row">
+			<td align="left"><%=luci.sys.exec("uci get chargerinfo.charger5.CID")%></td>
+			<td align="left" id="charger5"><%=luci.sys.exec("uci get chargerinfo.charger5.CONF_END_TIME")%></td>
+		</tr>
+		<tr class="cbi-section-table-row">
+			<td align="left"><%=luci.sys.exec("uci get chargerinfo.charger6.CID")%></td>
+			<td align="left" id="charger6"><%=luci.sys.exec("uci get chargerinfo.charger6.CONF_END_TIME")%></td>
+		</tr>
+		<tr class="cbi-section-table-row">
+			<td align="left"><%=luci.sys.exec("uci get chargerinfo.charger7.CID")%></td>
+			<td align="left" id="charger7"><%=luci.sys.exec("uci get chargerinfo.charger7.CONF_END_TIME")%></td>
+		</tr>
+		<tr class="cbi-section-table-row">
+			<td align="left"><%=luci.sys.exec("uci get chargerinfo.charger8.CID")%></td>
+			<td align="left" id="charger8"><%=luci.sys.exec("uci get chargerinfo.charger8.CONF_END_TIME")%></td>
+		</tr>
+	</table>
+
+	</fieldset>
+
+	<fieldset class="cbi-section">
+		<legend><%:电桩配置文件%></legend>
+		上传推送配置文件格式：
+		</br>
+		要配置的电桩CID：75001100
+		</br>
+		上传该电桩的配置文件：75001100
+		<form id="update" name="update" action="<%=luci.dispatcher.build_url("admin","evpower","chargerconf")%>"method="post" enctype="multipart/form-data">
+			<input type="hidden" name="act" value="upconf" />
+			<input type="file" id="updatePackage" name="updatePackage" />
+			<input type="submit" id="updateBtn" class="cbi-button cbi-button-apply" value="上传" />	
+			<input type="button" id="updateCtn" class="cbi-button cbi-button-apply" value="<%:推送%>" onclick="return charger_conf(this)" />
+		</form>
+	</fieldset>
+
+</fieldset>
+
+<script type="text/javascript">//<![CDATA[
+	
+	var pre1 = <%=luci.sys.exec("uci get chargerinfo.charger1.CONF_END_TIME")%>
+	console.log(pre1)
+	pre1 =+ pre1;
+	var pretim1 = new Date(pre1*1000)
+	var pretime1 = pretim1.toLocaleString()
+	console.log(pretime1)
+	document.getElementById("charger1").innerText=pretime1;
+	
+	var pre2 = <%=luci.sys.exec("uci get chargerinfo.charger2.CONF_END_TIME")%>
+	console.log(pre2)
+	pre2 =+ pre2;
+	var pretim2 = new Date(pre2*1000)
+	var pretime2 = pretim2.toLocaleString()
+	console.log(pretime2)
+	document.getElementById("charger2").innerText=pretime2;
+	
+	var pre3 = <%=luci.sys.exec("uci get chargerinfo.charger3.CONF_END_TIME")%>
+	console.log(pre3)
+	pre3 =+ pre3;
+	var pretim3 = new Date(pre3*1000)
+	var pretime3 = pretim3.toLocaleString()
+	console.log(pretime3)
+	document.getElementById("charger3").innerText=pretime3;
+	
+	var pre4 = <%=luci.sys.exec("uci get chargerinfo.charger4.CONF_END_TIME")%>
+	console.log(pre4)
+	pre4 =+ pre4;
+	var pretim4 = new Date(pre4*1000)
+	var pretime4 = pretim4.toLocaleString()
+	console.log(pretime4)
+	document.getElementById("charger4").innerText=pretime4;
+
+	var pre5 = <%=luci.sys.exec("uci get chargerinfo.charger5.CONF_END_TIME")%>
+	console.log(pre5)
+	pre5 =+ pre5;
+	var pretim5 = new Date(pre5*1000)
+	var pretime5 = pretim5.toLocaleString()
+	console.log(pretime5)
+	document.getElementById("charger5").innerText=pretime5;
+	
+	var pre6 = <%=luci.sys.exec("uci get chargerinfo.charger6.CONF_END_TIME")%>
+	console.log(pre6)
+	pre6 =+ pre6;
+	var pretim6 = new Date(pre6*1000)
+	var pretime6 = pretim6.toLocaleString()
+	console.log(pretime6)
+	document.getElementById("charger6").innerText=pretime6;
+	
+	var pre7 = <%=luci.sys.exec("uci get chargerinfo.charger7.CONF_END_TIME")%>
+	console.log(pre7)
+	pre7 =+ pre7;
+	var pretim7 = new Date(pre7*1000)
+	var pretime7 = pretim7.toLocaleString()
+	console.log(pretime7)
+	document.getElementById("charger7").innerText=pretime7;
+	
+	var pre = <%=luci.sys.exec("uci get chargerinfo.charger8.CONF_END_TIME")%>
+	console.log(pre)
+	pre =+ pre;
+	var pretim = new Date(pre*1000)
+	var pretime = pretim.toLocaleString()
+	console.log(pretime)
+	document.getElementById("charger8").innerText=pretime;
+//]]></script>
+
+<%+footer%>
