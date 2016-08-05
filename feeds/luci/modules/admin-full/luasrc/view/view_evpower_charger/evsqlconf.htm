@@ -1,19 +1,6 @@
-
 <%+header%>
-<h2><a id="content" name="content"><%:Power Bar 信息%></a></h2>
+<h2><a id="content" name="content"><%:Power Bar 电桩信息%></a></h2>
 <fieldset class="cbi-section">
-<!--
-	<fieldset class="cbi-section">
-	
-		<legend><%:Power Bar 设定值%></legend>
-<p>Power Bar 电流值: <input type="text" name="fname" value="请输入电桩允许最大电流" 
-			onfocus="if(this.value=='请输入电桩允许最大电流')this.value=''" 
-			onblur="if(this.value=='')this.value='请输入电桩允许最大电流'" />A
-			<input type="button" value="提交" onclick="chargerinput()" /></p>
-	</fieldset>
--->
-	<fieldset class="cbi-section">
-		<legend><%:Power Bar 电桩信息%></legend>							
  <style>
       #div_body{
           width: 600px;
@@ -31,8 +18,11 @@
           border-collapse: collapse;
           padding: 5px;
       }
+      td{
+	  width: 100px
+      }
       #div_tabs{
-          height: 50px;
+          height: 5px;
       }
       #div_tabs span{
           display: inline-block;
@@ -51,7 +41,7 @@
  
 <script>
 
-setTimeout('refreshPage()',100000)
+//setTimeout('refreshPage()',5000)
 
 function refreshPage(){
 	window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","overview")%>';
@@ -62,21 +52,6 @@ var tbName = "table"
 var options = {};
 var tabBgColor = 'green';
 
-function chargerinput()
-{
-	var rid = prompt('Please Input A New Rid:');
-	rid = + rid;
-	var xhR = new XHR();
-	if( ! rid)
-	{
-	   ;
-	}else{
-		xhR.post('<%=luci.dispatcher.build_url("admin","evpower","overview","shuru")%>',{
-				rid_flag : 1,
-				is_rid  : rid
-			},function(xhr){});
-	}
-}
 //解析数据
 function parseData(){
     var txt = document.getElementsByClassName('info')[0].value;
@@ -206,19 +181,40 @@ function generateTable(){
 
 //要显示的key
 var toShowObjs = {
-	'SelectCurrent':'Select Current',
 	'CID':'CID',
-	'Series' : 'Series',
-	'PresentMode':'PresentMode'
+	'IP' : 'IP',
+	'Model':'型号',
+	'SelectCurrent':'手动选择电流',
+	'PresentMode':'充电桩状态',
+	'PresentOutputCurrent':'实际电流'
+}
+
+function sortKeys(options){
+	var retObj = {};
+	for(var optKey in options){
+		var obj = {};
+		var opt = options[optKey];
+		for(var sKey in toShowObjs){
+			var optValue = opt[sKey];
+			obj[sKey] = optValue;
+			console.log(sKey);
+			console.log(optValue);
+		}
+		retObj[optKey] = obj;
+	}
+	return retObj;
 }
 
 //生成表格
 function generateTable2(){
 	console.log(options)
+	options = sortKeys(options);
 	var str = '';
+	var count = 1;
 	for(var key in options){
-		console.log(key) 
-		str += '<h2>'+ key +'</h2>';
+		//console.log(key) 
+		str += '<h2>'+ '电桩'+ count +'</h2>';
+		count += 1;
 		str += '<table>';
 		var opt = options[key];
 		var tr1 = '<tr>', tr2 = '<tr>';
@@ -244,28 +240,28 @@ function generateTable2(){
 					v = + v;
 					var pmd = v.toString(16);
 					if(pmd == 1){
-						v = 'CHARGER_READY充电';
+						v = '就绪';
 					}else if(pmd == 4){
-						v = 'CHARGER_RESERVED';                                     
+						v = '预约';                                     
 					}else if(pmd == 9){                                            
-						v = 'CHARGER_PRE_CHARGING';                          
+						v = '准备充电';                          
 					}else if(pmd == 'a'){                          
-						v = 'CHARGER_CHARGING_IN_QUEUE';            
+						v = '拍卡未充电';            
 					}else if(pmd == 'b'){                                           
-						v = 'CHARGER_CHARGING';                                    
+						v = '充电中';                                    
 					}else if(pmd == 'd'){                                    
-						v = 'CHARGER_CHARGING_COMPLETE';           
+						v = '充电完成';
 					}else if(pmd == 'e'){                           
-						v = 'CHARGER_OUT_OF_SERVICE';                               
+						v = '暂停服务';                               
 					}else if(pmd == '1e'){                                         
-						v = 'CHARGER_CHARGING_COMPLETE_LOCK';                
+						v = '充电完成未解锁';
 					}else if(pmd == 65){                           
-						v = 'CHARGER_DEBUGGING';                    
+						v = '调试';
 					}else if(pmd == 66){                                            
-						v = 'CHARGER_ESTOP';                                       
+						v = '紧急制动';                                       
 					}
 				}else if(key == 'SubMode'){
-				var arr = ['Wiring','Charging','Charged',0,0,0,'Parking','Connecting',0,0,0,'13A Linking','20A Linking','32A Linking','63A Linking','16A Linking'];
+				var arr = ['已插线','充电中','充电完成',0,0,0,'有泊车','已连接服务器',0,0,0,'13A已插','20A已插','32A已插','63A已插','16A已插'];
 				v = + v;
 				var subm = v.toString(2);
 				v = '';
@@ -299,14 +295,14 @@ function generateTable2(){
 				}
 			}else if(key == 'ChargerWay'){
 				if(v == 1){
-					v = 'Scanning Code';
+					v = '扫码';
 				}else if(v == 2){
-					v = 'Laying Card';
+					v = '拍卡';
 				}else{
 					v = 'NULL';
 				}
 			}
-				tr1 += '<td>' + k + '</td>';
+				tr1 += '<td>' + toShowObjs[k] + '</td>';
 				tr2 += '<td>' + v + '</td>';
 			}
 		}
@@ -324,7 +320,6 @@ function isKeyToShow(tarKey){
 	return false;
 }
 
-console.log(isKeyToShow('k11'))
 
 //生成Tab
 function generateTabs(){
@@ -380,6 +375,3 @@ generateTable2();
 </script>
 
 </fieldset>
-
-</fieldset>
-

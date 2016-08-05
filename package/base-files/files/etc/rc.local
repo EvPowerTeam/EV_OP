@@ -6,6 +6,8 @@ then
 	then
 		uci set network.wwan1.device=/dev/ttyUSB1
 		uci set network.wwan1.atdevice=/dev/ttyUSB3
+		uci set network.wwan2.device=/dev/ttyUSB10
+		uci set network.wwan2.atdevice=/dev/ttyUSB13
 		uci commit network
 	fi
 fi
