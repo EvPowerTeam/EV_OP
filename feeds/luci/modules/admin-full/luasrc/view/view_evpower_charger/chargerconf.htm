@@ -29,10 +29,10 @@ div.hide{display:none;}
 <div class="hide" id="is_true8"><%=luci.sys.exec("uci get chargerinfo.charger8.CID")%></div>
 <div class="hide" id="filelist"><%=luci.sys.exec("ls /mnt/umemory/power_bar/CONFIG/")%></div>
 <script type="text/javascript">
+
 	
 	function charger_conf(con)
 	{
-		con.disabled = true;
 		con.value    = '<%:推送中....%>';
 		var cid      = prompt("请输入要配置的CID：");
 		var cnum     = 0;
@@ -128,15 +128,12 @@ div.hide{display:none;}
 				break;
 		}
 		console.log(cpath)
-		debugger;
 		var filelist = document.getElementById('filelist').innerHTML;
 		console.log(filelist);
 		if( cpath.indexOf(cid)>=0 && filelist.indexOf(cid) >=0 )
 		{
 			alert("匹配成功")
-			con.disable = false;
-			var xhR = new XHR();
-			xhR.post('<%=luci.dispatcher.build_url("admin","evpower","chargerconf")%>',
+			XHR.get('<%=luci.dispatcher.build_url("admin","evpower","confcomp")%>',
 				{is_cid:cid},
 				function(obj)
 				{
@@ -148,13 +145,16 @@ div.hide{display:none;}
 			if(cpath.indexOf(cid) < 0 && filelist.indexOf(cid) >=0)
 			{
 				alert("匹配不正确，请输入正确的CID");
-				window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
+				con.value = '推送';
+				//window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
 			}else if(cpath.indexOf(cid) > 0 && filelist.indexOf(cid) < 0){
 				alert("匹配不成功，请上传正确的配置文件");
-				window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
+				con.value = '推送';
+				//window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
 			}else if(cpath.indexOf(cid) < 0 && filelist.indexOf(cid) < 0){
 				alert("匹配不成功，请核对CID和配置文件名");
-				window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
+				con.value = '推送'
+				//window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","pushconf")%>';
 			}
 		}
 	}
@@ -218,7 +218,7 @@ div.hide{display:none;}
 			<input type="hidden" name="act" value="upconf" />
 			<input type="file" id="updatePackage" name="updatePackage" />
 			<input type="submit" id="updateBtn" class="cbi-button cbi-button-apply" value="上传" />	
-			<input type="button" id="updateCtn" class="cbi-button cbi-button-apply" value="<%:推送%>" onclick="return charger_conf(this)" />
+			<input type="button" id="updateCtn" class="cbi-button cbi-button-apply" value="<%:推送%>" style="display:none;"  onclick="charger_conf(this)" />
 		</form>
 	</fieldset>
 
@@ -226,6 +226,10 @@ div.hide{display:none;}
 
 <script type="text/javascript">//<![CDATA[
 	
+	console.log(window.location.href)
+	if(window.location.href.indexOf('uploaded')>=0 ){
+		document.getElementById('updateCtn').style.display = 'inline-block';
+	}
 	var pre1 = <%=luci.sys.exec("uci get chargerinfo.charger1.CONF_END_TIME")%>
 	console.log(pre1)
 	pre1 =+ pre1;

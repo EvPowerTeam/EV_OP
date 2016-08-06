@@ -26,7 +26,7 @@ function evlinkrid()
 	--change /bin/saveRID
 	if luci.http.formvalue("rid_flag") == "1" then
 		local saverid=luci.http.formvalue("is_rid")
-		local file=io.open("/bin/saveRID","w")
+		local file=io.open("/etc/saveRID","w")
 		file:write(saverid)
 		return
 	end

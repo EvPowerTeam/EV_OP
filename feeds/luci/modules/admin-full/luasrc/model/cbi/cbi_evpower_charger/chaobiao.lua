@@ -60,8 +60,12 @@ charger8cid = xuci:get("chargerinfo","charger8","CID")
     end
 
     time1 = s1:option(DummyValue,"CB_END_TIME","成功抄表时间:")
-
-    num1 = s1:option(DummyValue,"chargernum","上传充电记录数量:")
+    time1.cfgvalue = function(self,section)
+	local t1
+	t1 = xuci:get("chargerinfo","charger1","CB_END_TIME")
+	return os.date("%c",t1)
+    end
+    num1 = s1:option(DummyValue,"CB_NUM","上传充电记录数量:")
     
 ----charger2----
 
@@ -83,8 +87,13 @@ s2.anonymous = false
 	xuci:commit("chargerinfo")
     end
     time2 = s2:option(DummyValue,"CB_END_TIME","成功抄表时间:")
-    
-    num2 = s2:option(DummyValue,"chargernum","上传充电记录数量:")
+    time2.cfgvalue = function(self,section)
+	local t2
+	t2 = xuci:get("chargerinfo","charger2","CB_END_TIME")
+	return os.date("%c",t2)
+    end
+  
+    num2 = s2:option(DummyValue,"CB_NUM","上传充电记录数量:")
 
 ----charger3----
 
@@ -97,18 +106,23 @@ s3.anonymous = false
     start3 = s3:option(Button, "start", translate("抄表"))
     start3.inputstyle = "apply"
     start3.write = function(self, section)
-    	if ( tonumber(xuci:get("chargerinfo","SERVER","START_TIME")) ==0 )then
+	if ( tonumber(xuci:get("chargerinfo","SERVER","START_TIME")) ==0 )then
 		xuci:set("chargerinfo","SERVER","START_TIME",firsttime)
 		xuci:commit("chargerinfo")
 	end
-	xuci:set("chargerinfo","SERVER","CID",charger3cid)
+    	xuci:set("chargerinfo","SERVER","CID",charger3cid)
 	xuci:set("chargerinfo","SERVER","CMD",1)
 	xuci:commit("chargerinfo")
     end
 
     time3 = s3:option(DummyValue,"CB_END_TIME","成功抄表时间:")
+    time3.cfgvalue = function(self,section)
+	local t3
+	t3 = xuci:get("chargerinfo","charger3","CB_END_TIME")
+	return os.date("%c",t3)
+    end
 
-    num3 = s3:option(DummyValue,"chargernum","上传充电记录数量:")
+    num3 = s3:option(DummyValue,"CB_NUM","上传充电记录数量:")
 
 ----charger4----
 
@@ -131,8 +145,12 @@ s3.anonymous = false
     end
 
     time4 = s4:option(DummyValue,"CB_END_TIME","成功抄表时间:")
-
-    num4 = s4:option(DummyValue,"chargernum","上传充电记录数量:")
+    time4.cfgvalue = function(self,section)
+	local t4
+	t4 = xuci:get("chargerinfo","charger4","CB_END_TIME")
+	return os.date("%c",t4)
+    end
+    num4 = s4:option(DummyValue,"CB_NUM","上传充电记录数量:")
 ----charger5----
 
 s5 = m:section(NamedSection,"charger5","1",translate("电桩5"))
@@ -154,8 +172,13 @@ s5.anonymous = false
     end
 
     time5 = s5:option(DummyValue,"CB_END_TIME","成功抄表时间:")
+    time5.cfgvalue = function(self,section)
+	local t5
+	t5 = xuci:get("chargerinfo","charger5","CB_END_TIME")
+	return os.date("%c",t5)
+    end
 
-    num5 = s5:option(DummyValue,"chargernum","上传充电记录数量:")
+    num5 = s5:option(DummyValue,"CB_NUM","上传充电记录数量:")
 
 ----charger6----
 
@@ -171,15 +194,20 @@ s6.anonymous = false
 	if ( tonumber(xuci:get("chargerinfo","SERVER","START_TIME")) ==0 )then
 		xuci:set("chargerinfo","SERVER","START_TIME",firsttime)
 		xuci:commit("chargerinfo")
-	end 
-   	xuci:set("chargerinfo","SERVER","CID",charger6cid)
+	end
+    	xuci:set("chargerinfo","SERVER","CID",charger6cid)
 	xuci:set("chargerinfo","SERVER","CMD",1)
 	xuci:commit("chargerinfo")
     end
 
     time6 = s6:option(DummyValue,"CB_END_TIME","成功抄表时间:")
+    time6.cfgvalue = function(self,section)
+	local t6
+	t6 = xuci:get("chargerinfo","charger6","CB_END_TIME")
+	return os.date("%c",t6)
+    end
 
-    num6 = s6:option(DummyValue,"chargernum","上传充电记录数量:")
+    num6 = s6:option(DummyValue,"CB_NUM","上传充电记录数量:")
 
 ----charger7----
 
@@ -202,8 +230,13 @@ s7.anonymous = false
     end
 
     time7 = s7:option(DummyValue,"CB_END_TIME","成功抄表时间:")
+    time7.cfgvalue = function(self,section)
+	local t7
+	t7 = xuci:get("chargerinfo","charger7","CB_END_TIME")
+	return os.date("%c",t7)
+    end
 
-    num7 = s7:option(DummyValue,"chargernum","上传充电记录数量:")
+    num7 = s7:option(DummyValue,"CB_NUM","上传充电记录数量:")
 
 ----charger8----
 
@@ -225,7 +258,12 @@ s8.anonymous = false
     end
 
     time8 = s8:option(DummyValue,"CB_END_TIME","成功抄表时间:")
- 
-    num8 = s8:option(DummyValue,"chargernum","上传充电记录数量:")
+    time8.cfgvalue = function(self,section)
+	local t8
+	t8 = xuci:get("chargerinfo","charger8","CB_END_TIME")
+	return os.date("%c",t8)
+    end
+
+    num8 = s8:option(DummyValue,"CB_NUM","上传充电记录数量:")
 
 return m
