@@ -2,6 +2,7 @@
 */10 * * * * sh /usr/sbin/savelog
 */5 * * * * ev init_vpn
 */3 * * * * dashboard checkin_now
+*/4 * * * * /bin/chargerTest
 */8 * * * * /bin/sync; /bin/echo 3 > /proc/sys/vm/drop_caches
 
 
