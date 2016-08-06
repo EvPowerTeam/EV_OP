@@ -11,6 +11,7 @@ function index()
 	entry({"admin","evpower","chargerdata"},alias("admin","evpower","overview"),"电桩充电数据总览",5)
 	entry({"admin","evpower","pushconf"},template("view_evpower_charger/chargerconf"),"推送配置",6)
 	entry({"admin","evpower","chargerconf"},call("action_chargerconf"))
+	entry({"admin","evpower","confcomp"},call("action_confcomp"))
 end
 
 function action_evsqlconf()
@@ -164,7 +165,7 @@ function action_chargerconf()
 				fd = nil
 
 				h.write("<br />Upload Success")
-				h.write("<script>location.href='pushconf'</script>")
+				h.write("<script>location.href='pushconf?uploaded=1'</script>")
 			end
 		end
 	)
@@ -173,19 +174,18 @@ function action_chargerconf()
 	then
 		return
 	end
+end
+
+function action_confcomp()
+	require("uci");
+	x = uci.cursor()
 	local setconf = tonumber(luci.http.formvalue("is_cid"))
 	if setconf ~= nil and setconf > 0 
 	then
-		if ( 0 ~= luci.sys.exec("cat /root/cid") )
-		then
-			luci.sys.exec("touch /root/cid")
-		end
-		local cidfile=io.open("/root/cid","w")
-		cidfile:write(setconf)
-		if( 0 == luci.sys.call("ls /mnt/umemory/power_bar/CONFIG/ | grep `cat /root/cid`") )
-		then
-			luci.sys.exec("uci set chargerinfo.SERVER.CMD=3;uci set chargerinfo.SERVER.CID=`cat /root/cid`;uci commit chargerinfo")
-		end
-		return
+		x:set("chargerinfo","SERVER","CMD",'3');
+		x:commit("chargerinfo");
+		x:set("chargerinfo","SERVER","CID",setconf);
+		x:commit("chargerinfo");
 	end
+	
 end
