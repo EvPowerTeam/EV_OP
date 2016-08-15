@@ -47,6 +47,7 @@ static char *dashboard_checkin_string(void)
 
 	tab_name = calloc(9, sizeof(char *));
 	rid = calloc(10, sizeof(char *));
+	version = calloc(10, sizeof(char *));
 	tmp_buff[0] = '\0';
 	json_str[0] = '\0';
 
@@ -67,11 +68,15 @@ static char *dashboard_checkin_string(void)
 	vpn_ip[sizeof(vpn_ip) - 1] = '\0';
 
 	ret = file_read_string(path_router_id, rid, 10);
-	if (ret < 0)
+	if (ret <= 0)
 		strcpy(rid, "ID missing");
 
+	ret = file_read_string(path_router_version, version, 10);
+	if (ret <= 0)
+		strcpy(version, "0.0000");
+
 	snprintf(json_str, JSON_MAX, "%s?key={routerid:\'%s\',firmware_version:%s,remote_server:\'%s\',chargers:[",
-		 API_UPDATE_FMT, rid, "'0.001'", vpn_ip);
+		 API_UPDATE_FMT, rid, version, vpn_ip);
 
 	for (i = 1; i < 9; i++)
 	{
@@ -173,9 +178,7 @@ int dashboard_checkin(void *arg)
 	debug_msg("performing checkin");
 	//cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI /Charging/canStartCharging?chargerID=75001149'&'privateID=2142a36aaa08040001c75b6a3e789e1d");
 	api_send_buff("http", API_CHECKIN_URL_FMT, dashboard_checkin_string(),
-		      "key={routerid:'4010001',firmware_version:'0.001',remote_server:'192.168.1.1', \
-		      chargers:[{chargerID:'00001004',status:1},{chargerID:'00001005',status:2},{chargerID: \
-		      '00001006',status:1}]}", NULL, NULL);
+		      "", NULL, NULL);
 	return 0;
 }
 

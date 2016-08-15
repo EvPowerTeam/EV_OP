@@ -239,6 +239,7 @@ const char path_node_tmp_file[] = "/tmp/mesh_node_list";
 const char path_hostapd_pid_fmt[] = "/var/run/hostapd-phy%d.pid";
 const char path_batman_bat0_routing_algo[] = "/sys/module/batman_adv/parameters/routing_algo";
 const char path_router_id[] = "/etc/saveRID";
+const char path_router_version[] = "/etc/Router_version";
 const char str_netcfgd[] = "netconfigd";
 const char str_instacom[] = "instacom";
 const char str_parse_conf[] = "parse_config";

@@ -232,6 +232,7 @@ extern const char path_node_tmp_file[];
 extern const char path_hostapd_pid_fmt[];
 extern const char path_batman_bat0_routing_algo[];
 extern const char path_router_id[];
+extern const char path_router_version[];
 extern const char str_netcfgd[];
 extern const char str_instacom[];
 extern const char str_parse_conf[];
