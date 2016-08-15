@@ -63,7 +63,11 @@ charger8cid = xuci:get("chargerinfo","charger8","CID")
     time1.cfgvalue = function(self,section)
 	local t1
 	t1 = xuci:get("chargerinfo","charger1","CB_END_TIME")
-	return os.date("%c",t1)
+	if ( t1 ) then
+		return os.date("%c",t1)
+	else
+		return os.date("%c",firsttime)
+	end
     end
     num1 = s1:option(DummyValue,"CB_NUM","上传充电记录数量:")
     
@@ -90,7 +94,11 @@ s2.anonymous = false
     time2.cfgvalue = function(self,section)
 	local t2
 	t2 = xuci:get("chargerinfo","charger2","CB_END_TIME")
-	return os.date("%c",t2)
+	if ( t2 ) then
+		return os.date("%c",t2)
+	else
+		return os.date("%c",firsttime)
+	end
     end
   
     num2 = s2:option(DummyValue,"CB_NUM","上传充电记录数量:")
@@ -119,7 +127,11 @@ s3.anonymous = false
     time3.cfgvalue = function(self,section)
 	local t3
 	t3 = xuci:get("chargerinfo","charger3","CB_END_TIME")
-	return os.date("%c",t3)
+	if ( t3 ) then
+		return os.date("%c",t3)
+	else
+		return os.date("%c",firsttime)
+	end
     end
 
     num3 = s3:option(DummyValue,"CB_NUM","上传充电记录数量:")
@@ -148,7 +160,11 @@ s3.anonymous = false
     time4.cfgvalue = function(self,section)
 	local t4
 	t4 = xuci:get("chargerinfo","charger4","CB_END_TIME")
-	return os.date("%c",t4)
+	if ( t4 ) then
+		return os.date("%c",t4)
+	else
+		return os.date("%c",firsttime)
+	end
     end
     num4 = s4:option(DummyValue,"CB_NUM","上传充电记录数量:")
 ----charger5----
@@ -175,7 +191,11 @@ s5.anonymous = false
     time5.cfgvalue = function(self,section)
 	local t5
 	t5 = xuci:get("chargerinfo","charger5","CB_END_TIME")
-	return os.date("%c",t5)
+	if ( t5 ) then
+		return os.date("%c",t5)
+	else
+		return os.date("%c",firsttime)
+	end
     end
 
     num5 = s5:option(DummyValue,"CB_NUM","上传充电记录数量:")
@@ -204,7 +224,11 @@ s6.anonymous = false
     time6.cfgvalue = function(self,section)
 	local t6
 	t6 = xuci:get("chargerinfo","charger6","CB_END_TIME")
-	return os.date("%c",t6)
+	if ( t6 ) then
+		return os.date("%c",t6)
+	else
+		return os.date("%c",firsttime)
+	end
     end
 
     num6 = s6:option(DummyValue,"CB_NUM","上传充电记录数量:")
@@ -233,7 +257,11 @@ s7.anonymous = false
     time7.cfgvalue = function(self,section)
 	local t7
 	t7 = xuci:get("chargerinfo","charger7","CB_END_TIME")
-	return os.date("%c",t7)
+	if ( t7 ) then
+		return os.date("%c",t7)
+	else
+		return os.date("%c",firsttime)
+	end
     end
 
     num7 = s7:option(DummyValue,"CB_NUM","上传充电记录数量:")
@@ -261,7 +289,11 @@ s8.anonymous = false
     time8.cfgvalue = function(self,section)
 	local t8
 	t8 = xuci:get("chargerinfo","charger8","CB_END_TIME")
-	return os.date("%c",t8)
+	if ( t8 ) then
+		return os.date("%c",t8)
+	else
+		return os.date("%c",firsttime)
+	end
     end
 
     num8 = s8:option(DummyValue,"CB_NUM","上传充电记录数量:")

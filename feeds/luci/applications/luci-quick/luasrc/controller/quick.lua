@@ -10,6 +10,9 @@ entry({"admin", "quick", "wwan"}, cbi("quick/wwan"), _("3G/4G Configuration"), 4
 
 entry({"admin", "quick", "vpn"}, cbi("quick/vpn"), _("VPN Configuration"), 5)
 
+page = entry({"admin","quick","wwan","evlink"},call("evlink_status"))
+page.leaf = true
+
 page = entry({"admin","quick","wwan","evlink1"},call("evlinkrid"))
 page.leaf = true
 
@@ -21,13 +24,21 @@ page.leaf = true
 
 end
 
+function evlink_status()
+	local stat = {}
+	stat.heartbeat = luci.sys.exec("cat /tmp/saveHB")
+	stat.id = luci.sys.exec("cat /etc/saveRID")
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(stat)
+end
+
 function evlinkrid()
 
 	--change /bin/saveRID
 	if luci.http.formvalue("rid_flag") == "1" then
 		local saverid=luci.http.formvalue("is_rid")
 		local file=io.open("/etc/saveRID","w")
-		file:write(saverid)
+		file:write(saverid.."\n")
 		return
 	end
 end
@@ -67,9 +78,6 @@ function info_3gnet()
 
 	local rv = {	}
 	rv.wwans = { }
-
-	rv.heartbeat = luci.sys.exec("cat /tmp/saveHB")
-	rv.id = luci.sys.exec("cat /bin/saveRID")
 
 	for i, net in ipairs(netlist) do 
 		rv.wwans[#rv.wwans+1] = get_info3g(net[1])
