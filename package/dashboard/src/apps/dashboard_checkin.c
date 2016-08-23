@@ -113,17 +113,7 @@ static char *dashboard_checkin_string(void)
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
 
-		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Power", tab_name) == 0) {
-			sprintf(json_sub, "power:%s,", tmp_buff);
-			strncat(json_str, json_sub, sizeof(json_sub));
-		}
-
-		/*if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.SubMode", tab_name) == 0) {
-		        sprintf(json_sub, "chargingSubmode:%s,", tmp_buff);
-		        strncat(json_str, json_sub, sizeof(json_sub));
-		}
-
-		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.start_time", tab_name) == 0) {
+		/*if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.start_time", tab_name) == 0) {
 			sprintf(json_sub, "startTime:%s,", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
@@ -131,8 +121,17 @@ static char *dashboard_checkin_string(void)
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.end_time", tab_name) == 0) {
 			sprintf(json_sub, "endTime:%s,", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
+		}*/
+
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Power", tab_name) == 0) {
+			sprintf(json_sub, "power:%s,", tmp_buff);
+			strncat(json_str, json_sub, sizeof(json_sub));
 		}
-		* */
+
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.SubMode", tab_name) == 0) {
+		        sprintf(json_sub, "chargingSubmode:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
 
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.ChargingCode", tab_name) == 0) {
 		        sprintf(json_sub, "chargingRecord:%s,", tmp_buff);
@@ -143,11 +142,12 @@ static char *dashboard_checkin_string(void)
 			sprintf(json_sub, "status:%s}", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
+		debug_msg("str %s", json_str);
 	}
 	free(tab_name);
 	free(rid);
 
-	strcat(json_str, "\]}");
+	strcat(json_str, "]}");
 	json_str[strlen(json_str)] = '\0';
 	debug_msg("length %d content: %s", strlen(json_str), json_str);
 	return json_str;
@@ -175,11 +175,11 @@ int new_config_wrapper(int argc, char **argv)
 
 int dashboard_checkin(void *arg)
 {
+	int ret;
 	debug_msg("performing checkin");
-	//cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI /Charging/canStartCharging?chargerID=75001149'&'privateID=2142a36aaa08040001c75b6a3e789e1d");
-	api_send_buff("http", API_CHECKIN_URL_FMT, dashboard_checkin_string(),
+	ret = api_send_buff("http", API_CHECKIN_URL_FMT, dashboard_checkin_string(),
 		      "", NULL, NULL);
-	return 0;
+	return ret;
 }
 
 int dashboard_url_post(int argc, char **argv, char DASH_UNUSED(*extra_arg))
@@ -193,7 +193,18 @@ int dashboard_url_post(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 	return 0;
 }
 
+int dashboard_post_file(int argc, char **argv, char DASH_UNUSED(*extra_arg))
+{
+	if (argc != 1) {
+		printf("file name missing \n");
+		exit(0);
+	}
+	debug_msg("input %s",argv[0]);
+	return api_post_file_glassfish("http", API_CHECKIN_URL_FMT,
+					API_CHARGING_RECORD_FMT, argv[0]);
+}
+
 int dashboard_stop_charging()
 {
-	
+	return 0;
 }

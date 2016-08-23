@@ -12,7 +12,7 @@ EXTRA_CFLAGS += -DDEBUG_FILE
 EXTRA_CFLAGS += -DDEBUG_SYSLOG
 # EXTRA_CFLAGS += -DDEBUG_TRACE
 
-SRC_C = main.c net_info.c AES.c CRC.c err.c system_call.c serial.c
+SRC_C = main.c net_info.c AES.c CRC.c err.c system_call.c serial.c protocal_charger.c list.c
 SRC_H =
 SRC_O = $(SRC_C:.c=.o)
 

@@ -4,6 +4,7 @@
 
 /* path used when calling the checkin API */
 #define API_CHECKIN_URL_FMT "10.9.8.2:8080/ChargerAPI"
+#define API_CHECKIN_URL_FMT_INT "124.202.140.226:8080/ChargerAPI"
 #define API_UPDATE_FMT "/ChargerState/updateState"
 #define API_START_CHARGING_FMT "/Charging/canStartCharging"
 #define API_CHARGING_RECORD_FMT "/ChargingRecord/uploadRecord"
@@ -19,3 +20,5 @@ int dashboard_checkin_now(int argc, char **argv);
 int dashboard_checkin(void *arg);
 
 int dashboard_url_post(int argc, char **argv, char *extra_arg);
+
+int dashboard_post_file(int argc, char **argv, char *extra_arg);

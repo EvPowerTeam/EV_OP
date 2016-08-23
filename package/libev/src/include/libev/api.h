@@ -51,6 +51,8 @@ int api_send_file(const char *proto, const char *host, const char *path,
 		  const char *key, const char *secret);
 int api_send_buff(const char *proto, const char *host, const char *path,
 		  const char *buff, const char *key, const char *secret);
+int api_post_file_glassfish(const char *proto, const char *host, const char *url,
+			    const char *file_path);
 int api_send_url(const char *proto, const char *host, const char *path);
 int api_send_request(const char *proto, const char *host, const char *path,
 		     char **reply, const char *key, const char *secret);

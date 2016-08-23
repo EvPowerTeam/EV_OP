@@ -5,6 +5,8 @@ LOG_FILE="/var/log/syslog"
 isdown=0            # indicate whether the interface is up or down
                    # start assuming interface is up
 
+	route add -net 10.9.8.0 gateway 10.9.8.100 netmask 255.255.248.0 dev ppp1
+	route add -net 10.9.8.0 gateway 10.9.8.100 netmask 255.255.248.0 dev ppp2
     if ping -q -c 2 "$pingip" >> /dev/null ; then      # ping is good - bring iface up
         if [ "$isdown" -ne 0 ] ; then
             echo "vpn is up"

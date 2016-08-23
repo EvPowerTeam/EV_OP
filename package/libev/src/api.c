@@ -37,7 +37,7 @@
 #define API_TIME_ENDPOINT		"/time"
 
 static char curl_err[CURL_ERROR_SIZE];
-static char tmp_buff[1280];
+static char tmp_buff[1200];
 
 /**
  * api_write_output - print the server reply to a file or buffer
@@ -233,21 +233,20 @@ static int api_debug_cb(CURL NG_UNUSED(*handle), curl_infotype type, char *data,
 	debug_msg("type: %d", type);
 	if (type == 3) {
 		debug_msg("server returns: %s", data);
-		//if (strncmp(data, "update", 5) != 0 && strncmp(data, "{", 1) != 0)
-		if (strncmp(data, "charging1", 9) == 0)
-			mqsend_timed("/dashboard.checkin", data + 8, 1, 10);
+		if (strncmp(data, "update", 5) != 0)
+			mqsend("/dashboard.checkin", data, strlen(data), 10);
 	}
 
-	//buff = malloc(size + 1);
-	//if (!buff)
-		//return 0;
+	buff = malloc(size + 1);
+	if (!buff)
+		return 0;
 
-	//memcpy(buff, data, size);
-	//buff[size] = '\0';
+	memcpy(buff, data, size);
+	buff[size] = '\0';
 
-	//debug_msg("data: %s", buff);
+	debug_msg("data: %s", buff);
 
-	//free(buff);
+	free(buff);
 	return 0;
 }
 
@@ -279,7 +278,7 @@ int api_call(const char *proto, const char *host, const char *path,
 	if (!conn)
 		return -1;
 
-	run_ret = api_conn_run(conn, api_data, true, path, method,
+	run_ret = api_conn_run(conn, api_data, false, path, method,
 			       content_type, additional_headers, body,
 			       body_len);
 
@@ -292,6 +291,80 @@ int api_call(const char *proto, const char *host, const char *path,
 		return -1;
 
 	return 0;
+}
+
+/**
+ * api_post_file_glassfish - call an API and pass a file as content with POST
+ * only applys to EV's glassfish API server
+ * @url: url to request includes server hostname and uri path
+ * @file_path: the path of the file to be send  
+ */
+int api_post_file_glassfish(const char *proto, const char *host,
+			    const char *url, const char *file_path)
+{
+	struct curl_httppost *post=NULL;
+	struct curl_httppost *last=NULL;
+	struct stat st;
+	char buff[256];
+	CURL *curl;
+	int res;
+
+	if (!proto) {
+		debug_msg("No protocol provided!");
+		return NULL;
+	}
+
+	if (!host) {
+		debug_msg("No host provided!");
+		return NULL;
+	}
+
+	if ((strcmp(proto, "http") != 0) && (strcmp(proto, "https") != 0)) {
+		debug_msg("invalid proto: %s", proto);
+		return NULL;
+	}
+
+	/* get the size in byte of the file so that a buffer that will contain
+	 * the whole content can be allocated
+	 */
+	if (stat(file_path, &st) < 0) {
+		debug_msg("cannot run stat() on file '%s': %s",
+			  file_path, strerror(errno));
+		return -1;
+	}
+
+	debug_msg("allocate file size %jd bytes", (intmax_t)st.st_size + 1);
+
+	curl = curl_easy_init();
+	if(curl)
+	{
+		curl_formadd(&post, &last,
+		CURLFORM_COPYNAME, "upload",
+		CURLFORM_FILE, file_path,
+		CURLFORM_END);
+ 
+		curl_formadd(&post, &last, CURLFORM_COPYNAME, "name", 
+			     CURLFORM_COPYCONTENTS, "123", CURLFORM_END);
+
+		sprintf(buff, "%s://%s%s", proto, host, url);
+		debug_msg("post file %s to %s", file_path, buff);
+		curl_easy_setopt(curl, CURLOPT_URL, buff);
+		curl_easy_setopt(curl, CURLOPT_HTTPPOST, post);
+ 
+		res = curl_easy_perform(curl);
+		if(res)
+		{
+			return 0;
+		}
+		curl_formfree(post);
+	}
+	else
+	{
+		return 0;
+	}
+ 
+	curl_easy_cleanup(curl);
+	return res;
 }
 
 /**
@@ -630,7 +703,7 @@ retry:
 	if (ret != CURLE_OK) {
 		sys_logger("API", "connection error to %s: %s (%d)", tmp_buff,
 			   curl_err, ret);
-		debug_msg("curl error (%d): %s", ret, curl_err);
+		debug_msg("curl error (%ld): %s", ret, curl_err);
 		/* Return negative curl error code */
 		ret = -ret;
 		goto out;

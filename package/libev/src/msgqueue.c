@@ -38,7 +38,7 @@ int mqcreate(int flag, int maxmsg, long int msgsize, const char *name)
 
 	attr.mq_maxmsg = maxmsg;
 	attr.mq_msgsize = msgsize;
-
+    
 	if ((attr.mq_maxmsg != 0 && attr.mq_msgsize == 0) || (attr.mq_maxmsg == 0 && attr.mq_msgsize !=0)){
 		debug_msg("must specify both maxmsg and msgsize");
 		return -1;
@@ -120,24 +120,3 @@ char *mqreceive_timed(const char *name, int lenth)
 	return result;
 }
 
-int mqsend_timed(const char *name, char *msg, long int msglen, unsigned int prio)
-{
-	mqd_t mqd;
-	struct mq_attr attr;
-	struct timespec abs_timeout;
-
-	if (strlen(msg) != msglen || !name || !msg) {
-		debug_msg("params wrong");
-		return -1;
-	}
-
-	if ((mqd = mq_open(name, O_WRONLY)) == -1){
-		debug_msg("open error: %d", errno);
-		return -1;
-	}
-	mq_getattr(mqd, &attr);
-	clock_gettime(CLOCK_REALTIME, &abs_timeout);
-	abs_timeout.tv_sec+=4;
-
-	return  mq_timedsend(mqd, msg, msglen, prio, &abs_timeout);
-}
