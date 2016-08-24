@@ -87,8 +87,8 @@ error_hander(int handle, CHARGER_INFO_TABLE *charger, BUFF *bf, int errnum)
         return;
     }
 
-    debug_msg("操作IO出错,CID[%d], recv_cid:%d, errcode:%d ...", charger->CID, *(unsigned int *)(bf->recv_buff +5), errnum);
-    printf("操作IO出错,CID[%d], recv_cid:%d, errcode...", charger->CID, *(unsigned int *)(bf->recv_buff + 5), errnum);
+    debug_msg("操作IO出错,CID[%d], errcode:%d ...",  *(unsigned int *)(bf->recv_buff +5), errnum);
+    printf("操作IO出错,CID[%d], errcode...",  *(unsigned int *)(bf->recv_buff + 5), errnum);
     // 操作失败代码部分
 
     if        (ESERVER_API_ERR   == errnum)

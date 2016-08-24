@@ -7,7 +7,6 @@
 #include <libev/cmd.h>
 #include <libev/file.h>
 #include <libev/api.h>
-#include <libev/const_strings.h>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -113,7 +112,7 @@ static char *dashboard_checkin_string(void)
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
 
-		/*if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.start_time", tab_name) == 0) {
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.start_time", tab_name) == 0) {
 			sprintf(json_sub, "startTime:%s,", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
@@ -121,7 +120,7 @@ static char *dashboard_checkin_string(void)
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.end_time", tab_name) == 0) {
 			sprintf(json_sub, "endTime:%s,", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
-		}*/
+		}
 
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Power", tab_name) == 0) {
 			sprintf(json_sub, "power:%s,", tmp_buff);

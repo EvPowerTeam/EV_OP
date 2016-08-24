@@ -163,6 +163,7 @@ extern const char msg_out_of_mem[];
 extern const char msg_wrong_channel[];
 extern const char msg_no_def_route[];
 extern const char msg_wifi_not_up[];
+extern const char path_charging_record[];
 extern const char path_reboot_reason[];
 extern const char path_batctl_bin[];
 extern const char path_bat_hosts[];

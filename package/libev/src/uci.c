@@ -15,6 +15,7 @@
 //static struct uci_context *ctx;
 //static struct uci_ptr ptr;
 //static char addr_tmp[100];
+pthread_mutex_t uci_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* the value of a 32bit int variable can be at most 4billion (more or less)
  * which requires 10 digits (plus the final null char) when printing the number
@@ -44,6 +45,7 @@ static int ev_uci_save_action_var(const char action_type, bool commit, const  ch
 	}
 
 	ptr.value = val;
+	pthread_mutex_lock(&uci_mutex);
 
 	switch (action_type) {
 	case UCI_SAVE_OPT:
@@ -75,10 +77,12 @@ static int ev_uci_save_action_var(const char action_type, bool commit, const  ch
 			goto out;
 	}
 
+	pthread_mutex_unlock(&uci_mutex);
 	uci_free_context(ctx);
 	return 1;
 
 out:
+	pthread_mutex_unlock(&uci_mutex);
 	uci_free_context(ctx);
 	return 0;
 

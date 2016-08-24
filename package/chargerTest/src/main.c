@@ -1,5 +1,3 @@
-
-
 //基于TCP的EV充电桩与EV_Router通信 服务器端
 #include "./include/protocal_charger.h"
 #include "./include/net_info.h"
@@ -11,6 +9,8 @@
 #include "./include/serial.h"
 #include "./include/list.h"
 
+#include <libev/const_strings.h>
+#include <libev/cmd.h>
 
 // 定义出错信息结构
 char    *err_string[] = {
@@ -28,7 +28,7 @@ pthread_cond_t		serv_cond = PTHREAD_COND_INITIALIZER;		// 线程条件变量初�
 pthread_rwlock_t	charger_rwlock;
 
 // 充电桩信息，数组
-CHARGER_INFO_TABLE	ChargerInfo[10] = {0};  	// 用于存入每台电桩信息	
+CHARGER_INFO_TABLE	ChargerInfo[20] = {0};  	// 用于存入每台电桩信息	
 
 unsigned char average_current_compare;
 typedef struct {
@@ -179,7 +179,7 @@ int main(int argc , char * argv[])
 	struct  sigaction   sa;
 
     mallopt(M_ARENA_MAX, 1);
-#if  0
+#if  1
 	daemonize(argv[0]);
 	if(already_running())
 	{
@@ -695,8 +695,6 @@ cmd_0x10:
             charger_manager.timeout_cnt = 0;
 			// 统计充电请求个数
 			//记录客户信息
-			ChargerInfo[(*index)].start_time = time(0);	//开始充电时间
-			ChargerInfo[(*index)].charging_code = *(unsigned short *)(bf->recv_buff+33);			//赋值charging_code
 			// load  balance 处理
 //			if( (bf->recv_buff[29] !=  0 )&& (bf->recv_buff[29]%16 == 0))
 //			{
@@ -742,6 +740,8 @@ cmd_0x10:
 		    pthread_mutex_unlock(&serv_mutex);
 		    charger->system_message = 0x01;
             charger->target_mode = CHARGER_CHARGING;
+		    charger->start_time = time(0);	//开始充电时间
+			charger->charging_code = *(unsigned short *)(bf->recv_buff+34);			//赋值charging_code
             debug_msg("后台超时，允许充电 ...\n");
 		    //tell charger not to wait
 		    goto reply_to_charger;
@@ -754,6 +754,8 @@ cmd_0x10:
                     ev_uci_save_action(UCI_SAVE_OPT, true, bf->send_buff,
 				       "chargerinfo.%s.privateID", charger->tab_name);
 			        charger->system_message = 0x01;			// systemMessage
+		            charger->start_time = time(0);	//开始充电时间
+			        charger->charging_code = *(unsigned short *)(bf->recv_buff+34);			//赋值charging_code
             break;
             case    SYM_Charging_Is_Stopping:
                     debug_msg("后台不允许充电...");
@@ -852,7 +854,7 @@ reply_to_charger:
             tmp_4_val = *(unsigned int *)(bf->recv_buff + 30);
 			sprintf(bf->val_buff, "%d%c", tmp_4_val, '\0');
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Power", charger->tab_name);
-			sprintf(bf->val_buff, "%d%c", bf->recv_buff[51], '\0');
+			sprintf(bf->val_buff, "%d%c", bf->recv_buff[52], '\0');
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargerWay", charger->tab_name);
             bf->val_buff[0] = '\0';
             for (i = 0; i < 16; i++)
@@ -937,7 +939,7 @@ reply_to_charger:
 
             if (charger->start_time != 0)
             {
-			    sprintf(bf->val_buff, "%08d,%ld,%ld,%d,%d,%d,",  CID, charger->start_time, 
+			    sprintf(bf->val_buff, "cid:%08d,start_tm:%ld,end_tm:%ld,pow:%d,way:%d,cycid:%d, uid:",  CID, charger->start_time, 
                         charger->end_time, charger->power,bf->recv_buff[59], (bf->recv_buff[60] << 8 | bf->recv_buff[61]));
                 for (i = 0; i < 16; i++)
                 {
@@ -951,9 +953,9 @@ reply_to_charger:
                 fclose(file);
             }
 replay_0x58:
-            sprintf(bf->val_buff, "%d%c", bf->recv_buff[17], '\0');
 			//写入数据库，更新相应表信息
 			//当前模式
+            sprintf(bf->val_buff, "%d%c", bf->recv_buff[17], '\0');
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.PresentMode", charger->tab_name);
 //			tmp_2_val = *(unsigned short*)(bf->recv_buff+18);
 //			sprintf(bf->val_buff, "%d", tmp_2_val);
@@ -1551,7 +1553,7 @@ void *pthread_service_send(void *arg)
            {
                if (task->cid == ChargerInfo[i].CID)
                {
-	                 ev_uci_save_action(UCI_SAVE_OPT, true, "1", "chargerinfo.%s.STATUS", ChargerInfo[i].tab_name); 
+	                 ev_uci_save_action(UCI_SAVE_OPT, true, "1", "chargerinfo.%s.STATUS", ChargerInfo[i].tab_name);
                     // 来自页面的操作
                     switch (task->cmd)
                     {
@@ -1560,7 +1562,7 @@ void *pthread_service_send(void *arg)
 	                            ev_uci_save_action(UCI_SAVE_OPT, true, val_buff, "chargerinfo.%s.CB_END_TIME", ChargerInfo[i].tab_name); 
 	                            sprintf(val_buff, "%d%c", task->u.chaobiao.chargercode, '\0');
                                 ev_uci_save_action(UCI_SAVE_OPT, true, val_buff, "chargerinfo.%s.CB_NUM", ChargerInfo[i].tab_name);
-                                cmd_frun("");
+                                cmd_frun("dashboard post_file %s%d_web", path_charging_record, task->cid);
                         break;
                         case    WAIT_CMD_ONE_UPDATE:
                         break;
@@ -1589,6 +1591,31 @@ void *pthread_service_send(void *arg)
         }
         free(task); 
     }
+}
+
+
+struct upt *read_update_file_version(char *name)
+{
+    static  struct upt  update;
+    char    main_v[5] = {0}, second_v[5] = {0},  *v1,  *v2,  *v3;
+
+    if (( v1 = strchr(name, 'V')) != NULL)
+    {
+        v2 = strchr(name, '.');
+    }else if ( ( v1 = strchr(name, 'v')) != NULL)
+    {
+        v2 = strchr(name, '.');
+    }
+    v3 = strchr(v2 + 1, '.');
+    if (v3 == NULL || v2 == NULL)
+        return NULL;
+    strncpy(main_v, v1+1, v2 - v1 - 1);
+    strncpy(second_v, v2+1, v3 - v2 - 1);
+    update.version[0] = atoi(main_v);
+    update.version[1] = atoi(second_v);
+    strcpy(update.name, name);
+   
+    return &update;
 }
 
 void * pthread_service_receive(void *arg)
@@ -1749,24 +1776,28 @@ void * pthread_service_receive(void *arg)
                     printf("read file = %s\n", val_buff);
                     //strtok(bf->val_buff, ".");
                     //cmd.version[1] = atoi(strtok(NULL, "."));
+                    struct upt *update = read_update_file_version(val_buff);
+                    if (update == NULL)
+                            goto set_zero;
                     for (i = 0; i < charger_manager.present_charger_cnt; i++)
                     {
                         if (ChargerInfo[i].free_cnt_flag == 1)
                         {
                             // 主版本
-                            name[0] = val_buff[6];
-                            name[1] = '\0';
-                            cmd.u.update.version[0] = atoi(name);//atoi(val_buff + 1);
+//                            name[0] = val_buff[6];
+//                            name[1] = '\0';
+//                            cmd.u.update.version[0] = atoi(name);//atoi(val_buff + 1);
 
                             // 次版本
-                            name[0] = val_buff[8];
-                            name[1] = '\0';
-                            cmd.u.update.version[1] = atoi(name);
+//                            name[0] = val_buff[8];
+//                            name[1] = '\0';
+//                            cmd.u.update.version[1] = atoi(name);
                             // CID
                             cmd.cid = ChargerInfo[i].CID;
                             // 文件名
-                            sprintf(val_buff, "%s%c", val_buff, '\0');
-                            strcpy(cmd.u.update.name, val_buff);
+//                            sprintf(val_buff, "%s%c", val_buff, '\0');
+//                            strcpy(cmd.u.update.name, val_buff);
+                             memcpy(&cmd.u.update, update, sizeof(struct upt));
                             wait_task_add(WEB_WAY, &cmd);
                             printf("将要更新的CID = %d\n", ChargerInfo[i]);
                         }

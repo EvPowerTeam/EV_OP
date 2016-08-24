@@ -170,6 +170,7 @@ const char msg_out_of_mem[] = "out of memory";
 const char msg_wrong_channel[] = "mesh wifi runs on wrong channel";
 const char msg_no_def_route[] = "3 health checks with no default route";
 const char msg_wifi_not_up[] = "wifi iface is not up";
+const char path_charging_record[] = "/mnt/umemory/power_bar/DATA/";
 const char path_reboot_reason[] = "/etc/reboot_reason";
 const char path_batctl_bin[] = "/usr/sbin/batctl";
 const char path_bat_hosts[] = "/etc/bat-hosts";
