@@ -51,11 +51,17 @@ static void boot_init_dir(void)
 int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 		 char EV_UNUSED(*extra_arg))
 {
-	debug_msg("module booting");
+	int ret;
+
+	debug_syslog("module booting");
 	init_config(0, NULL, NULL);
-	boot_setup_network();
+	//boot_setup_network();
 	boot_init_dir(); // 创建初始化目录
 	//mqcreate(O_RDONLY | O_NONBLOCK, 10, 10, "/dashboard.checkin");
-	mqcreate(O_RDONLY, 10, 100, "/dashboard.checkin");
+	ret = mqcreate(O_EXCL, 10, 100, "/dashboard.checkin");
+	debug_msg("ret: %s errno: %s", ret, errno);
+	sleep(2);
+	ret = mqcreate(O_EXCL, 10, 200, "/server.cmd");
+	debug_msg("ret: %s errno: %s", ret, errno);
 	return 0;
 }

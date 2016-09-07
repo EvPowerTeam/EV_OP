@@ -6,7 +6,7 @@
  ***/
 
 #include "include/dashboard.h"
-#include "include/dashboard_controller.h"
+#include "dashboard_controller.h"
 #include <libev/cmd.h>
 #include <libev/file.h>
 #include <libev/system.h>

@@ -27,7 +27,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <time.h>
-#include <mqueue.h>
+//#include <mqueue.h>
 
 //#define  	NDEBUG
 #ifndef   NDEBUG
@@ -84,7 +84,7 @@ typedef  unsigned int   u32;
 #define     CHARGER_CMD_STATE_UPDATE        0x56
 #define     CHARGER_CMD_STOP_REQ            0x58
 #define     CHARGER_CMD_STOP_REQ_R          0x57
-#define     CHARGER_CMD_CTRL_R              0x21
+#define     CHARGER_CMD_CTRL_R              0xa2
 #define     CHARGER_CMD_CTRL                0xa3
 #define     CHARGER_CMD_CHAOBIAO            0xa5
 #define     CHARGER_CMD_CHAOBIAO_R          0xa4
@@ -227,6 +227,7 @@ typedef struct  chargerinfo{
 	char 	        tab_name[10];               //当前数据库表名
 	char 	        is_charging_flag;		      // 电桩正在充电的标志
 	unsigned char   present_cmd;	            //当前接受的命令
+	unsigned char   load_balance_cmd;	            //是否有load—balance充电请求的命令
     unsigned char   way;                // WEB 命令还是后台命令
     unsigned char   wait_cmd;           // 执行后台发送的命令
     unsigned char 	IP[4];		                // 电桩IP地址

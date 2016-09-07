@@ -68,15 +68,9 @@ int mqreceive_debug(int argc, char **argv, char DASH_UNUSED(*extra_arg))
     flags = O_RDONLY;
         clock_gettime(CLOCK_REALTIME, &abs_timeout);
         abs_timeout.tv_sec+=4;
-    while((c = getopt(argc, argv, "n")) != -1){
-        switch(c) {
-            case 'n':
-                //flags |= O_NONBLOCK;
-                break;
-        }
-    }
+
     if (optind != argc-1) {
-        debug_msg("usage: mqreceive [-n] <name>");
+        debug_msg("usage: mqreceive <name>");
         exit(0);
     }
 
@@ -97,23 +91,23 @@ int mqreceive_debug(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 int mqsend_debug(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 {
     mqd_t mqd;
-    const char *ptr = "message 1";
-    size_t len;
+    char *ptr;
     unsigned int prio;
 
     if (argc != 4) {
-        printf("usage: mqsend <name> <#bytes> <priority>");
-        exit(0);
+		printf("usage: mqsend <name> <bytes> <priority>");
+		exit(0);
 	}
-	len = atoi(argv[2]);
+	ptr =  argv[2];
 	prio = atoi(argv[3]);
+	
 
-	if ((mqd = mq_open(argv[1], O_WRONLY)) == -1){
+	if ((mqd = mq_open(argv[1], O_WRONLY)) == -1) {
 		printf("open error");
 		exit(0);
 	}
 	//ptr = calloc(len, sizeof(char));
 
-	mq_send(mqd, ptr, len, prio);
+	mq_send(mqd, ptr, strlen(argv[2]), prio);
 	return 0;
 }

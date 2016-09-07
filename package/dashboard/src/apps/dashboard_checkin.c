@@ -176,7 +176,7 @@ int dashboard_checkin(void *arg)
 {
 	int ret;
 	debug_msg("performing checkin");
-	ret = api_send_buff("http", API_CHECKIN_URL_FMT, dashboard_checkin_string(),
+	ret = api_send_buff("http", API_TEST_CHECKIN_URL_FMT, dashboard_checkin_string(),
 		      "", NULL, NULL);
 	return ret;
 }
@@ -199,7 +199,7 @@ int dashboard_post_file(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 		exit(0);
 	}
 	debug_msg("input %s",argv[0]);
-	return api_post_file_glassfish("http", API_CHECKIN_URL_FMT,
+	return api_post_file_glassfish("http", API_TEST_CHECKIN_URL_FMT,
 					API_CHARGING_RECORD_FMT, argv[0]);
 }
 

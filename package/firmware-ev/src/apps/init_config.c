@@ -49,7 +49,6 @@ static void init_vpn_config()
 	cmd_run("./etc/init.d/cron restart");
 	cmd_run("chmod 777 /root/setup_vpn.sh");
 	cmd_run("chmod 777 /root/vpn_monitor");
-	//chmod 777 setup_vpn.sh
 }
 
 /**

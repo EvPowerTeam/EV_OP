@@ -10,7 +10,9 @@
 #include <linux/nl80211.h>
 
 #define CHECKIN_NAME "checkin"
-#define DEBUG_FILE_PATH "/tmp/debug_dash.log"
+#define DEBUG_FILE_PATH "/mnt/umemory/routerlog/debug_dash.log"
+#define API_SERVER_IP "10.9.8.2"
+#define API_SERVER_PORT "8080"
 #define CHECKIN_FLAG_MAX 20
 
 #undef DASH_DEBUG
@@ -65,7 +67,7 @@ static inline char *dash_time_str()
 
 #if defined(DEBUG_SYSLOG)
 #define debug_syslog(fmt, arg...) do {\
-	openlog("dashboard-ng", LOG_PID, LOG_DAEMON | LOG_EMERG);\
+	openlog("dashboard-ev", LOG_PID, LOG_DAEMON | LOG_EMERG);\
 	syslog(0, "%s: " fmt, __FUNCTION__, ## arg);\
 	closelog();\
 } while (0)

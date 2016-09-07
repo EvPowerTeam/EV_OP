@@ -234,9 +234,12 @@ static int api_debug_cb(CURL NG_UNUSED(*handle), curl_infotype type, char *data,
 	if (type == 3) {
 		debug_msg("server returns: %s", data);
 		if (strncmp(data, "charging", 8) == 0)
-			mqsend("/dashboard.checkin", data + 8, 1, 10);
+		{
+			data[9] = '\0';
+			mqsend("/dashboard.checkin", data, strlen(data), 10);
+		}
 	}
-
+#if 0
 	buff = malloc(size + 1);
 	if (!buff)
 		return 0;
@@ -247,6 +250,7 @@ static int api_debug_cb(CURL NG_UNUSED(*handle), curl_infotype type, char *data,
 	debug_msg("data: %s", buff);
 
 	free(buff);
+#endif
 	return 0;
 }
 

@@ -34,7 +34,6 @@ int mqcreate(int flag, int maxmsg, long int msgsize, const char *name)
 	}
 
 	flags = O_RDWR | O_CREAT | flag;
-	//flags |= O_EXCL;
 
 	attr.mq_maxmsg = maxmsg;
 	attr.mq_msgsize = msgsize;
@@ -52,6 +51,7 @@ int mqcreate(int flag, int maxmsg, long int msgsize, const char *name)
 
 int mqsend(const char *name, char *msg, long int msglen, unsigned int prio)
 {
+	int ret;
 	mqd_t mqd;
 	struct mq_attr attr;
 
@@ -65,8 +65,10 @@ int mqsend(const char *name, char *msg, long int msglen, unsigned int prio)
 		return -1;
 	}
 	mq_getattr(mqd, &attr);
-
-	return mq_send(mqd, msg, msglen, prio);		//print errno?
+	ret = mq_send(mqd, msg, msglen, prio);
+	//debug_msg("ret: %s, errno: %s", ret, errno);
+	mq_close(mqd);
+	return ret;
 }
 
 
@@ -79,7 +81,6 @@ char *mqreceive(const char *name)
 	char *msg;
 	struct mq_attr attr;
 	flags = O_RDONLY | O_NONBLOCK;
-	//flags = O_RDONLY;
 	mqd = mq_open(name, flags);
 	mq_getattr(mqd, &attr);
 
@@ -87,6 +88,7 @@ char *mqreceive(const char *name)
 
 	n = mq_receive(mqd, msg, attr.mq_msgsize, &prio);
 	debug_msg("read %ld bytes, priority = %u buffer = %s\n",(long) n, prio, msg);
+	mq_close(mqd);
 	return msg;
 }
 
@@ -104,19 +106,24 @@ char *mqreceive_timed(const char *name, int lenth)
 	abs_timeout.tv_sec+=4;
 
 	mqd = mq_open(name, flags);
-	mq_getattr(mqd, &attr);
+	if ( mqd < 0 || mq_getattr(mqd, &attr) < 0)
+		goto exit;
 
 	if (lenth > attr.mq_msgsize)
-		return NULL;
+		goto exit;
 
 	msg = malloc(attr.mq_msgsize);
-	if ( (mq_timedreceive(mqd, msg, attr.mq_msgsize, &prio, &abs_timeout))  < 0) {
+	if ((mq_timedreceive(mqd, msg, attr.mq_msgsize, &prio, &abs_timeout)) < 0) {
 		free(msg);
-		return NULL;
+		goto exit;
 	}
 	debug_msg("read %ld bytes, priority = %u buffer = %s\n",(long) n, prio, msg);
 	result = strndup(msg, lenth);
 	free(msg);
+	mq_close(mqd);
 	return result;
+exit:
+	mq_close(mqd);
+	return NULL;
 }
 

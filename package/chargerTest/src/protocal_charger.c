@@ -13,6 +13,7 @@ error_hander(int handle, CHARGER_INFO_TABLE *charger, BUFF *bf, int errnum)
     // 操作成功
     if ( !handle )
     {
+        printf("本次通信成功:CID[%d] ...\n", *(unsigned int *)(bf->recv_buff + 5));
         if (errnum == ESERVER_SEND_SUCCESS)
             return;
         
@@ -143,7 +144,7 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
              return 0;
              // 如果有控制命令，直接丢弃
          charger->way = wait->way;
-         switch(wait->cmd) 
+         switch (wait->cmd) 
          {
             case   WAIT_CMD_CONFIG:
                    sprintf(bf->val_buff, "%s/%s/%s", WORK_DIR, CONFIG_DIR, wait->u.config.name);
@@ -263,6 +264,29 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
                  charger->start_charge_current = wait->u.start_charge.current;
                  charger->wait_cmd = WAIT_CMD_START_CHARGE;
                  charger->present_cmd = CHARGER_CMD_START_CHARGE_R;
+            break;
+            case WAIT_CMD_STOP_CHARGE:
+                 My_AES_CBC_Decrypt(charger->KEYB, bf->recv_buff+9, bf->recv_cnt-9, bf->send_buff);
+                 debug_msg("present_mode:%#x", bf->send_buff[0]);
+                 if (bf->send_buff[0] != CHARGER_CHARGING) // 在空闲的时候，处理扫码充电
+                     goto err;
+                 debug_msg("接收到停止充电命令:CID[%08d] ...", charger->CID);
+                 if ( (charger->uid = (char *)malloc(sizeof(wait->u.stop_charge.uid) )) == NULL)
+                  {
+                        debug_msg("stop charge malloc failed, CID[%d] ...", charger->CID);
+                        goto err;
+                  }
+                 memcpy(charger->uid, wait->u.stop_charge.uid, sizeof(wait->u.stop_charge.uid));
+                 charger->wait_cmd = WAIT_CMD_STOP_CHARGE;
+                 charger->present_cmd = CHARGER_CMD_STOP_CHARGE_R;
+                 
+            break;
+            case WAIT_CMD_CTRL:
+                  debug_msg("接收到控制命令:CID[%08d] ...", charger->CID);
+                  charger->wait_cmd = WAIT_CMD_CTRL;
+                  charger->control_cmd =  wait->u.control.value; 
+                  charger->present_cmd = CHARGER_CMD_CTRL_R;
+                    
             break;
             default:   // 控制命令，直接丢弃
                        
@@ -470,8 +494,13 @@ gernal_command(int fd, const int cmd, const CHARGER_INFO_TABLE *charger, BUFF *b
             n = 27;
       break;
       case  CHARGER_CMD_CTRL_R:
-            bf->send_buff[9] = charger->control_cmd;
-            n = 12;
+            tm = time(0);
+            bf->send_buff[9]  = (char)tm;
+            bf->send_buff[10] = (char)(tm >> 8);
+            bf->send_buff[11] = (char)(tm >> 16);
+            bf->send_buff[12] = (char)(tm >> 24);
+            bf->send_buff[13] = charger->control_cmd;
+            n = 16;
       break;
       case  CHARGER_CMD_START_CHARGE_R:
             memcpy(bf->send_buff + 9, charger->start_charge_order, 25);
