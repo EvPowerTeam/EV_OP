@@ -37,7 +37,7 @@
 #define API_TIME_ENDPOINT		"/time"
 
 static char curl_err[CURL_ERROR_SIZE];
-static char tmp_buff[1200];
+static char tmp_buff[1500];
 
 /**
  * api_write_output - print the server reply to a file or buffer
@@ -489,9 +489,8 @@ int api_send_buff(const char *proto, const char *host, const char *path,
 	struct api_return api_data;
 	api_data.type = API_BUFF;
 	return api_call(proto, host, path, "POST", "application/json", buff,
-			strlen(buff), &api_data, 
-			"application/x-www-form-urlencoded", key, 
-			secret);
+			strlen(buff), &api_data,
+			"application/x-www-form-urlencoded", key, secret);
 }
 
 int api_send_url(const char *proto, const char *host, const char *path)

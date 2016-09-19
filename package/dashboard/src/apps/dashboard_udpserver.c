@@ -5,8 +5,6 @@
 #include <libev/cmd.h>
 #include <libev/file.h>
 #include <libev/api.h>
-
-
 #include <stdio.h>
 #include <sys/socket.h>
 #include <errno.h> //errno
@@ -15,11 +13,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 
-static const char *getlocalip()
+static char *getlocalip()
 {
 	struct sockaddr_in serv;
-	const char *ip;
+	char *ip;
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
 	//Socket could not be created
@@ -35,7 +34,7 @@ static const char *getlocalip()
 	serv.sin_port = (int)htons(API_SERVER_PORT);
 
 	int err = connect(sock, (const struct sockaddr*)&serv, sizeof(serv));
-
+	debug_syslog("Error while connecting: %d\n", err);
 	struct sockaddr_in name;
 	socklen_t namelen = sizeof(name);
 	err = getsockname(sock, (struct sockaddr*)&name, &namelen);
@@ -57,10 +56,22 @@ static const char *getlocalip()
 	return ip;
 }
 
+static void kill_running_server(void)
+{
+	int child_pid = file_read_int(path_udpserver_pid);
+
+	if (child_pid == 0)
+		return;
+
+	process_send_signal(child_pid, SIGTERM);
+	wait(NULL);
+	file_delete(path_udpserver_pid);
+}
+
 static int udpserver_init() {
 	int udpSocket, nBytes;
-	unsigned char *buffer;
-	const char *local_ip;
+	char *buffer;
+	char *local_ip;
 	struct sockaddr_in serverAddr, clientAddr;
 	struct sockaddr_storage serverStorage;
 	socklen_t addr_size, client_addr_size;
@@ -102,10 +113,18 @@ static int udpserver_init() {
 	return 0;
 }
 
-int dashboard_udpserver(int argc, char **argv, char DASH_UNUSED(*extra_arg))
+int dashboard_udpserver(int DASH_UNUSED(argc), char DASH_UNUSED(**argv),
+			char DASH_UNUSED(*extra_arg))
 {
+	int ret;
 	debug_msg("server started");
+	ret = process_is_alive(file_read_int(path_udpserver_pid));
+	if (ret == 1)
+		kill_running_server();
+	process_daemonize();
+	file_write_int(getpid(), path_udpserver_pid);
 	udpserver_init();
+err:
 	debug_msg("server stopped");
 	return 0;
 }

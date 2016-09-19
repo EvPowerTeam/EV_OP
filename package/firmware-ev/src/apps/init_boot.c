@@ -35,7 +35,7 @@ static void boot_setup_network()
 
 static void boot_init_dir(void)
 {
-    char    name[100];
+    //char    name[100];
     //mkdir(WORK_DIR, 0777);
     //sprintf(name, "%s/%s%c", WORK_DIR, CHAOBIAO_DIR, '\0');
 
@@ -54,14 +54,17 @@ int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 	int ret;
 
 	debug_syslog("module booting");
+	cmd_run("echo \"`date` \"+\": reboot EV Router\" >> /mnt/umemory/routerlog/`date \"+%Y-%m-%d\"`.log");
 	init_config(0, NULL, NULL);
+	cmd_run("sh /root/setup_sangfor start");
 	//boot_setup_network();
-	boot_init_dir(); // 创建初始化目录
+	//boot_init_dir(); // 创建初始化目录
 	//mqcreate(O_RDONLY | O_NONBLOCK, 10, 10, "/dashboard.checkin");
 	ret = mqcreate(O_EXCL, 10, 100, "/dashboard.checkin");
-	debug_msg("ret: %s errno: %s", ret, errno);
+	debug_msg("ret: %d errno: %d", ret, errno);
 	sleep(2);
 	ret = mqcreate(O_EXCL, 10, 200, "/server.cmd");
-	debug_msg("ret: %s errno: %s", ret, errno);
+	debug_msg("ret: %d errno: %d", ret, errno);
+	cmd_run("mwan3 stop");
 	return 0;
 }

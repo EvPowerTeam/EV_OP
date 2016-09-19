@@ -36,9 +36,17 @@
 #define DEBUG(...)		printf(__VA_ARGS__)
 #endif
 
+
 typedef	 unsigned char	u8;
 typedef  unsigned short u16;
 typedef  unsigned int   u32;
+typedef  unsigned char      ev_uchar;
+typedef  char               ev_char;
+typedef  unsigned short     EV_USHORT;
+typedef  short              EV_SHORT;
+typedef  unsigned int       EV_UINT;
+typedef  int                EV_INT;
+
 
 
 /******************************************************
@@ -46,6 +54,8 @@ typedef  unsigned int   u32;
  *      充电协议相关
  *
  *****************************************************/
+#define  NORMAL_ENV         1
+#define  USE_DAEMONIZE      1
 
 // 错误码定义,未完善
 #define     ESERVER_RESTART         0x1
@@ -92,6 +102,7 @@ typedef  unsigned int   u32;
 #define     CHARGER_CMD_UPDATE              0x95
 #define     CHARGER_CMD_UPDATE_R            0x94
 #define     CHARGER_CMD_YUYUE_R             0x41
+#define     CHARGER_CMD_YUYUE               0x42
 #define     CHARGER_CMD_CONFIG              0x50
 #define     CHARGER_CMD_CONFIG_R            0x51
 #define     CHARGER_CMD_EXCEPTION           0xee
@@ -179,7 +190,7 @@ typedef struct {
 
 // 链表接收命令的数据结构
 struct cb   { time_t  start_time;   time_t  end_time;  int chargercode;                                         };
-struct upt  { char    version[2];   char    name[20];                                                           };
+struct upt  { char    version[2];   char    name[40];                                                           };
 struct cfg  { char    name[20];                                                                                 };
 struct yy   { int     time;         char uid[32];                                                               };
 struct ctl   {  unsigned char  value;   unsigned char status;                                                   };
@@ -214,6 +225,7 @@ struct  finish_task {
         struct cb   chaobiao;
         struct ctl  control;
         struct stop stop_charge;
+        struct yy   yuyue;
     }u;
     struct  finish_task *next;
     struct  finish_task *pre_next;
@@ -227,6 +239,7 @@ typedef struct  chargerinfo{
 	char 	        tab_name[10];               //当前数据库表名
 	char 	        is_charging_flag;		      // 电桩正在充电的标志
 	unsigned char   present_cmd;	            //当前接受的命令
+    unsigned char   present_mode;
 	unsigned char   load_balance_cmd;	            //是否有load—balance充电请求的命令
     unsigned char   way;                // WEB 命令还是后台命令
     unsigned char   wait_cmd;           // 执行后台发送的命令
@@ -254,6 +267,7 @@ typedef struct  chargerinfo{
     short            start_charge_energy;        // 电量
     char            *uid;
     char            *start_charge_order;        // 订单号
+    char            *file_name;
     char            *start_charge_package;      // 套餐
     int             file_length; 
     int             file_fd;                    //打开配置文件的文件描述符，抄表描符，更新描述符

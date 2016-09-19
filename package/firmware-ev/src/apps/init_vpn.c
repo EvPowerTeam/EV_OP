@@ -46,7 +46,7 @@ int init_vpn_check(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 		  inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
 	
 	/* I want IP address attached to "ppp2" */
-	strncpy(ifr.ifr_name, "ppp1", IFNAMSIZ-1);
+	strncpy(ifr.ifr_name, "ppp2", IFNAMSIZ-1);
 
 	ioctl(fd, SIOCGIFADDR, &ifr);
 

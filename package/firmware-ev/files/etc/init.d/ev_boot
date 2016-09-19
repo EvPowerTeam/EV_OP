@@ -12,5 +12,4 @@ START=12
 
 boot() {
 	/bin/ev init_boot
-	/bin/sh /root/setup_sangfor.sh start
 }

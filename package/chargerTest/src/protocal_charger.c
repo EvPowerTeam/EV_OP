@@ -5,17 +5,71 @@
 #include "./include/CRC.h"
 #include "./include/err.h"
 
+
+void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
+{
+        
+        unsigned char   new_mode = 0, cmd = bf->recv_buff[4];
+        char     *val;
+
+        if ( cmd == CHARGER_CMD_HB )
+            new_mode = bf->recv_buff[9];
+        else if ( cmd == CHARGER_CMD_CHARGE_REQ || cmd == CHARGER_CMD_STATE_UPDATE || cmd == CHARGER_CMD_STOP_REQ)
+            new_mode = bf->recv_buff[17];
+            
+//        printf("recv_cmd:%#x, cmd:%#x, present_mode:%d, new_mode:%d\n", bf->recv_buff[4], cmd, charger->present_mode, new_mode);
+
+        if ( new_mode ==0 ||  new_mode == charger->present_mode )
+            return ;
+       
+        debug_msg("检查状态有没有改变, CID[%d] ...", charger->CID); 
+        if ( charger->present_mode > 0 &&  (( val = (char *)calloc(100, sizeof(char))) != NULL) )
+        {
+            sprintf(val, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",status:%d}", charger->CID, new_mode);
+#if NORMAL_ENV
+            cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI %s", val);
+#else
+            cmd_frun("dashboard url_post 10.9.8.2:8080/test %s", val);
+#endif
+            debug_msg("发送改变状态, CID[%d], %s ...", charger->CID, val);
+            free(val);
+        }
+        charger->present_mode = new_mode;
+        return ; 
+}
+
+void 
+uci_clean_charge_finish(const CHARGER_INFO_TABLE *charger)
+{
+
+            ev_uci_delete( "chargerinfo.%s.privateID", charger->tab_name);
+			ev_uci_delete( "chargerinfo.%s.ChargingCode", charger->tab_name);
+			ev_uci_delete( "chargerinfo.%s.PresentOutputVoltage", charger->tab_name);
+			ev_uci_delete( "chargerinfo.%s.ChargerWay", charger->tab_name);
+			ev_uci_delete( "chargerinfo.%s.Power", charger->tab_name);
+			ev_uci_delete( "chargerinfo.%s.Duration", charger->tab_name);
+    
+            if (charger->charger_type == 2 || charger->charger_type == 4)
+            {
+			    ev_uci_delete( "chargerinfo.%s.Soc", charger->tab_name);
+			    ev_uci_delete( "chargerinfo.%s.Tilltime", charger->tab_name);
+            }
+}
 void 
 error_hander(int handle, CHARGER_INFO_TABLE *charger, BUFF *bf, int errnum)
 {
     struct finish_task    task;
-
+    int     i;
     // 操作成功
     if ( !handle )
     {
-        printf("本次通信成功:CID[%d] ...\n", *(unsigned int *)(bf->recv_buff + 5));
+//        printf("本次通信成功:CID[%d] ...\n", *(unsigned int *)(bf->recv_buff + 5));
         if (errnum == ESERVER_SEND_SUCCESS)
-            return;
+         { 
+                if (bf->recv_buff[4] != 0x10) 
+                    SendServer_charger_status(charger, bf);
+                return;
+         }
         
         if (errnum == ECHAOBIAO_FINISH)     //抄表完成
         {
@@ -52,8 +106,14 @@ error_hander(int handle, CHARGER_INFO_TABLE *charger, BUFF *bf, int errnum)
         {
                task.cmd = charger->wait_cmd;
                task.cid = charger->CID;
-               task.errcode = EYUYUE_FINISH;
+               task.errcode = CHARGER_RESERVED;
                charger->wait_cmd = WAIT_CMD_NONE;
+               bf->val_buff[0] = '\0';
+               for (i = 0; i < 16; i++)
+               {
+                    sprintf(bf->val_buff + strlen(bf->val_buff), "%02x", bf->recv_buff[9 + i]);
+               }
+               strncpy(task.u.yuyue.uid, bf->val_buff, 32);
                finish_task_add(charger->way, &task);
         } else if (ECONTROL_FINISH == errnum)
         {
@@ -124,6 +184,19 @@ error_hander(int handle, CHARGER_INFO_TABLE *charger, BUFF *bf, int errnum)
     return;
 }    
 
+#if 0
+static void 
+check_run_before(const CHARGER_INFO_TABLE *charger)
+{
+        if (charger->file_fd != 0)
+            close(charger->file_fd);
+        if (charger->file_name != NULL)
+        {
+            free(charger->file_name);
+            charger->file_name = NULL;
+        }
+}
+#endif
 int 
 have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
 {
@@ -139,7 +212,7 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
      else if ( charger->present_cmd == 0x34)
      {
          // 可以发送任何命令
-          charger->wait_cmd = WAIT_CMD_NONE;
+//          charger->wait_cmd = WAIT_CMD_NONE;
          if ( (wait = wait_task_remove_cid(charger->CID)) == NULL)
              return 0;
              // 如果有控制命令，直接丢弃

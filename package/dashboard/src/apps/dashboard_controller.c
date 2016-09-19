@@ -222,12 +222,6 @@ int dshbrd_controller_start(int DASH_UNUSED(argc), char DASH_UNUSED(**argv))
 	struct timespec now, last_checkin_time;
 	uint8_t cmd;
 	fd_set fds;
-	debug_msg("here1");
-	
-	ret = ev_uci_data_get_val(pid_path_buff, sizeof(pid_path_buff),
-				    uci_addr_dshbrd_controller_pid);
-	if (ret != 0)
-		goto err;
 
 	ret = process_is_alive(file_read_int(pid_path_buff));
 	if (ret == 1)

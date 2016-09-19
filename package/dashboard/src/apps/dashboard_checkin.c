@@ -32,11 +32,11 @@
 
 /**
  *      func    :   char *json_to_string(unsigned int)
- *      param   :   none
+ *      param   :   int type (0: all chargers 1: only fast chargers)
  *      return  :   返回一个电桩信息拼接的字符串，json格式，失败返回NULL
  */
 
-static char *dashboard_checkin_string(void)
+static char *dashboard_checkin_string(int type)
 {
 	static char json_str[JSON_MAX];
 	char *tab_name, *rid, *version;
@@ -68,7 +68,7 @@ static char *dashboard_checkin_string(void)
 
 	ret = file_read_string(path_router_id, rid, 10);
 	if (ret <= 0)
-		strcpy(rid, "ID missing");
+		strcpy(rid, "00000000");
 
 	ret = file_read_string(path_router_version, version, 10);
 	if (ret <= 0)
@@ -81,6 +81,12 @@ static char *dashboard_checkin_string(void)
 	{
 		snprintf(tab_name, 9, "charger%d", i);
 		debug_msg("%s", tab_name);
+		if (type && ev_uci_data_get_val(tmp_buff, 20,
+			                        "chargerinfo.%s.ChargerType",
+						tab_name) == 0)
+			if(strcmp(tmp_buff, "1")==0 || strcmp(tmp_buff, "3")==0)	//not fast charger
+				continue;
+
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.CID", tab_name) < 0)
 			continue;
 		else {
@@ -89,18 +95,12 @@ static char *dashboard_checkin_string(void)
 			cnt ++;
 			sprintf(json_sub, "{chargerId:\'%s\',", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
-			//sprintf(tab_info[i], "{chargerId:\'%s\',", tmp_buff);
 		}
 
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.MAC", tab_name) == 0) {
 			sprintf(json_sub, "mac:'%s',", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
-
-		//if (ev_uci_data_get_val(tmp, 20, "chargerinfo.%s.Model", tab_name) < 0)
-		//sprintf(tab_info[i] + strlen(tab_info[i]), "Model:failure,");
-		//else
-	        //sprintf(tab_info[i] + strlen(tab_info[i]), "Model:%s,", tmp);
 
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.ChargerWay", tab_name) == 0) {
 			sprintf(json_sub, "chargingType:%s,", tmp_buff);
@@ -111,7 +111,7 @@ static char *dashboard_checkin_string(void)
 			sprintf(json_sub, "privateID:'%s',", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
-
+/*
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.start_time", tab_name) == 0) {
 			sprintf(json_sub, "startTime:%s,", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
@@ -121,7 +121,7 @@ static char *dashboard_checkin_string(void)
 			sprintf(json_sub, "endTime:%s,", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
-
+*/
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Power", tab_name) == 0) {
 			sprintf(json_sub, "power:%s,", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
@@ -134,6 +134,31 @@ static char *dashboard_checkin_string(void)
 
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.ChargingCode", tab_name) == 0) {
 		        sprintf(json_sub, "chargingRecord:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Soc", tab_name) == 0) {
+		        sprintf(json_sub, "soc:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Duration", tab_name) == 0) {
+		        sprintf(json_sub, "elapsedTime:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Tilltime", tab_name) == 0) {
+		        sprintf(json_sub, "tillTime:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.PresentOutputCurrent", tab_name) == 0) {
+		        sprintf(json_sub, "outputCurrent:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.PresentOutputVoltage", tab_name) == 0) {
+		        sprintf(json_sub, "outputVoltage:%s,", tmp_buff);
 		        strncat(json_str, json_sub, sizeof(json_sub));
 		}
 
@@ -176,7 +201,7 @@ int dashboard_checkin(void *arg)
 {
 	int ret;
 	debug_msg("performing checkin");
-	ret = api_send_buff("http", API_TEST_CHECKIN_URL_FMT, dashboard_checkin_string(),
+	ret = api_send_buff("http", API_CHECKIN_URL_FMT, dashboard_checkin_string(0),
 		      "", NULL, NULL);
 	return ret;
 }
@@ -199,8 +224,17 @@ int dashboard_post_file(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 		exit(0);
 	}
 	debug_msg("input %s",argv[0]);
-	return api_post_file_glassfish("http", API_TEST_CHECKIN_URL_FMT,
+	return api_post_file_glassfish("http", API_CHECKIN_URL_FMT,
 					API_CHARGING_RECORD_FMT, argv[0]);
+}
+
+int dashboard_update_fastcharger(void *arg)
+{
+	int ret;
+	debug_msg("update realtime information of fast charger");
+	ret = api_send_buff("http", API_CHECKIN_URL_FMT,
+			    dashboard_checkin_string(1), "", NULL, NULL);
+	return ret;
 }
 
 int dashboard_stop_charging()

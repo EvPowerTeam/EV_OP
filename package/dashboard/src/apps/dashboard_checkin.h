@@ -23,3 +23,5 @@ int dashboard_checkin(void *arg);
 int dashboard_url_post(int argc, char **argv, char *extra_arg);
 
 int dashboard_post_file(int argc, char **argv, char *extra_arg);
+
+int dashboard_update_fastcharger(void *arg);
