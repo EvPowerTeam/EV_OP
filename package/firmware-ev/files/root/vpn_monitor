@@ -1,7 +1,7 @@
 #!/bin/sh                                                                             
 
 pingip='10.9.8.2'   # ping DB server                                                  
-pingip2='www.1-chong.com'                                                               
+pingip2='124.202.140.34'                                                               
 LOG_FILE="/var/log/syslog"                                                            
 isdown=0            # indicate whether the interface is up or down  start assuming interface is up                    
 
@@ -27,7 +27,7 @@ isdown=0            # indicate whether the interface is up or down  start assumi
     else                                 # ping is bad, iface is down
         if [ "$isdown" -ne 1 ] ;  then
             echo "network is down"
-            echo "network is down" >> /mnt/umemory/routerlog/vpn.log 
+            echo "`date`: network is down" >> /mnt/umemory/routerlog/network.log 
         fi
     fi
 

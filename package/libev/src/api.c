@@ -45,7 +45,7 @@ static char tmp_buff[1500];
 static size_t api_write_output(char *ptr, size_t size, size_t nmemb,
 			       void *data)
 {
-	struct api_return *api_data = data;
+	struct api_return *api_data = (struct api_return *)data;
 	size_t len = size * nmemb;
 	char *tmp;
 	FILE *fp;
@@ -77,26 +77,7 @@ static size_t api_write_output(char *ptr, size_t size, size_t nmemb,
 		/* if this is not the first chunk consider that one byte is used
 		 * for the final NULL char
 		 */
-		if (api_data->u.buff.ptr)
-			api_data->u.buff.len--;
-		tmp = realloc(api_data->u.buff.ptr,
-			      api_data->u.buff.len + len + 1);
-		if (!tmp) {
-			debug_msg("cannot allocate buffer for output");
-			/* free any possible memory allocated by previous calls
-			 * to this function
-			 */
-			free(api_data->u.buff.ptr);
-			return 0;
-		}
-
-		/* copy the new data after what we already have */
-		memcpy(tmp + api_data->u.buff.len, ptr, len);
-		tmp[api_data->u.buff.len + len] = '\0';
-		api_data->u.buff.ptr = tmp;
-		api_data->u.buff.len += len + 1;
-		debug_msg("API_BUFF: %s", api_data->u.buff.ptr);
-
+		debug_msg("%s %d", ptr, len);
 		break;
 	}
 

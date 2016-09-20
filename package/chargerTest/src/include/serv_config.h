@@ -54,7 +54,7 @@ typedef  int                EV_INT;
  *      充电协议相关
  *
  *****************************************************/
-#define  NORMAL_ENV         1
+#define  FORMAL_ENV         0
 #define  USE_DAEMONIZE      1
 
 // 错误码定义,未完善
@@ -238,6 +238,7 @@ typedef struct  chargerinfo{
     char            MAC[20];                    //mac地址，字符串
 	char 	        tab_name[10];               //当前数据库表名
 	char 	        is_charging_flag;		      // 电桩正在充电的标志
+	unsigned char   model;		                //电桩信息，型号对应的电流大小 (EVG-32N--->32A)
 	unsigned char   present_cmd;	            //当前接受的命令
     unsigned char   present_mode;
 	unsigned char   load_balance_cmd;	            //是否有load—balance充电请求的命令
@@ -246,7 +247,6 @@ typedef struct  chargerinfo{
     unsigned char 	IP[4];		                // 电桩IP地址
 	unsigned char 	KEYB[16];		            // keyb
 	unsigned char   ev_linkid[16];	            //evlink卡用户名
-	unsigned char   model;		                //电桩信息，型号对应的电流大小 (EVG-32N--->32A)
 	unsigned char   real_current;               //load_balance程序分配的动态电流
     unsigned char   real_time_current;
     unsigned char	free_cnt;                   //联网的计数器，当计数达到15次(30s),此电桩认为已经断网

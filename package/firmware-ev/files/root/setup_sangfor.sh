@@ -47,17 +47,10 @@ start_vpn()
         SafeExec ln -f -s ${HOME_PATH}/.svpn/l3vpn/libs/libstdc++.so.6 /lib/libstdc++.so.6
     fi
 
-(crontab -l ; echo "* * * * * /root/.svpn/l3vpn/l3vpn_check.sh > /dev/null 2>&1 &") | crontab -
-        if [ 0 -ne $? ]
-        then
-            echo "crontab_set failed"
-            return 1
-        fi
-        echo "crontab_set success"
-
     kill -9 `pgrep l3vpnd` > /dev/null  2>&1 &
     ${HOME_PATH}/.svpn/l3vpn/l3vpn_check.sh >/dev/null 2>&1 &
     #./l3vpnd > /dev/null & 2>&1
+    SafeExec kill -6 `pidof l3vpnd`
     if [ 0 -ne $? ]
     then
         echo "start l3vpnd failed"
@@ -86,5 +79,5 @@ then
     fi
         echo "---------install l3vpn failed--------"
 else
-    echo "usage: sh l3vpn.sh install/uninstall"
+    echo "usage: sh l3vpn.sh start"
 fi

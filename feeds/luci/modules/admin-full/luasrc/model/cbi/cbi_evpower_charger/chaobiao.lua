@@ -39,6 +39,19 @@ charger6cid = xuci:get("chargerinfo","charger6","CID")
 charger7cid = xuci:get("chargerinfo","charger7","CID")
 charger8cid = xuci:get("chargerinfo","charger8","CID")
 
+----All Reading----
+
+s = m:section(NamedSection,"SERVER","issued",translate("......"))
+s.addremove = false
+s.anonymous = false
+
+start = s:option(Button,"start",translate("......"))
+start.inputstyle = "apply"
+start.write = function(self,section)
+	xuci:set("chargerinfo","SERVER","CMD",9)
+	xuci:commit("chargerinfo")
+end
+
 ----charger1----
 
     s1 = m:section(NamedSection,"charger1","1",translate("电桩1"))

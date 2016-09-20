@@ -26,7 +26,7 @@ void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
         if ( charger->present_mode > 0 &&  (( val = (char *)calloc(100, sizeof(char))) != NULL) )
         {
             sprintf(val, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",status:%d}", charger->CID, new_mode);
-#if NORMAL_ENV
+#if FORMAL_ENV
             cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI %s", val);
 #else
             cmd_frun("dashboard url_post 10.9.8.2:8080/test %s", val);

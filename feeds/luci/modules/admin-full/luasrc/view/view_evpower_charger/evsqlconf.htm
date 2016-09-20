@@ -41,7 +41,7 @@
  
 <script>
 
-setTimeout('refreshPage()',5000)
+//setTimeout('refreshPage()',5000)
 
 function refreshPage(){
 	window.location.href = '<%=luci.dispatcher.build_url("admin","evpower","overview")%>';
@@ -79,104 +79,6 @@ function parseData(){
     }
     //console.log(options)
     //console.log(tbs)
-}
-
-//生成表格
-function generateTable(){
-    var count = 1;
-    var str = '';
-    for(var key in options){
-        var display = count++===1?'block':'none' + ';';
-        str += '<table class=table id='+ key +' style="display:'+ display +'">';
-        var tb = options[key];
-        for(var key in tb){
-            var v = tb[key];
-            if(key === 'Power'){
-                v = (v/1000).toFixed(3) + ' Kwh';
-            }else if(key === 'Duration'){
-                var s = '';
-                var hour = parseInt(v/60);
-                if(hour > 0){
-                    s = hour + '时' 
-                }
-                var min = v-hour*60;
-                if(min > 0) s += min + '分'
-                v = s;
-            }else if(key === 'SelectCurrent' || key === 'PresentOutputCurrent'){
-                v = v + 'A'
-            }else if(key === 'ChargStartTime' || key === 'ChargEndTime'){
-                v = new Date(v*1000).toLocaleString();
-            }else if(key == 'PresentMode'){
-				v = + v;
-				var pmd = v.toString(16);
-				if(pmd == 1){
-					v = '就绪';
-				}else if(pmd == 4){
-						v = '预约';                                     
-				}else if(pmd == 9){                                            
-						v = '准备充电';                          
-				}else if(pmd == 'a'){                          
-						v = '拍卡未充电';            
-				}else if(pmd == 'b'){                                           
-						v = '充电中';                                    
-				}else if(pmd == 'd'){                                    
-						v = '充电完成';           
-				}else if(pmd == 'e'){                           
-						v = '暂停服务';                               
-				}else if(pmd == '1e'){                                         
-						v = '充电完成未解锁';                
-				}else if(pmd == 65){                           
-						v = '调试';                    
-				}else if(pmd == 66){                                            
-						v = '紧急制动';                                       
-				}
-			}else if(key == 'SubMode'){
-				var arr = ['已插线','充电中','充电完成',0,0,0,'有泊车','已连接服务器',0,0,0,'13A线已插','20A线已插','32A线已插','63A线已插','16A线已插'];
-				v = + v;
-				var subm = v.toString(2);
-				v = '';
-				for(var i=0; i<subm.length; i++){
-					var c = subm.charAt(i);
-					if(c == 1){
-						v += arr[i] + ',';
-					}
-				}
-			}else if(key == 'SelectSocket'){
-				v = + v;
-				var skt = v.toString(16);
-				if(skt == 1){                                                                                                        
-					v='BS1363';                                                                                                    
-				}else if(skt == 2){                                                                                                  
-					v = 'SAEJ1772';                                                                                                  
-				}else if(skt == 3){                                                                                                  
-					v = 'IEC62196(1 Phase)';                                                                                         
-				}else if(skt == 4){                                                                                                  
-					v = 'GB20234(1 Phase)';                                                                                          
-				}else if(skt == 5){                                                                                                  
-					v = 'IEC62196(3 Phase)';                                                                                         
-				}else if(skt == 6){                                                                                                  
-					v = 'GB20234(3 Phase)';                                                                                          
-				}else if(skt == 8){                                                                                                  
-					v = 'CHAdeMo';                                                                                                   
-				}else if(skt == 9){                                                                                                  
-					v = 'IEC Combo';                                                                                                 
-				}else if(skt == 'a'){                                                                                                
-					v = 'GB QUICK CHARGER';                                                                                          
-				}
-			}else if(key == 'ChargerWay'){
-				if(v == 1){
-					v = '扫码';
-				}else if(v == 2){
-					v = '拍卡';
-				}else{
-					v = 'NULL';
-				}
-			}
-            str += '<tr><td>'+ key +'</td><td>'+ v +'</td></tr>'
-        }
-        str += '</table>';
-    }
-    document.getElementById('div_tb').innerHTML = str;
 }
 
 //要显示的key
@@ -255,10 +157,12 @@ function generateTable2(){
 						v = '暂停服务';                               
 					}else if(pmd == '1e'){                                         
 						v = '充电完成未解锁';
-					}else if(pmd == 65){                           
+					}else if(pmd == '2e'){
+						v = '断网';
+					}else if(pmd == 65){
 						v = '调试';
-					}else if(pmd == 66){                                            
-						v = '紧急制动';                                       
+					}else if(pmd == 66){
+						v = '紧急制动';
 					}
 				}else if(key == 'SubMode'){
 				var arr = ['已插线','充电中','充电完成',0,0,0,'有泊车','已连接服务器',0,0,0,'13A已插','20A已插','32A已插','63A已插','16A已插'];
@@ -274,24 +178,24 @@ function generateTable2(){
 			}else if(key == 'SelectSocket'){
 				v = + v;
 				var skt = v.toString(16);
-				if(skt == 1){                                                                                                        
-					v='BS1363';                                                                                                    
-				}else if(skt == 2){                                                                                                  
-					v = 'SAEJ1772';                                                                                                  
-				}else if(skt == 3){                                                                                                  
-					v = 'IEC62196(1 Phase)';                                                                                         
-				}else if(skt == 4){                                                                                                  
-					v = 'GB20234(1 Phase)';                                                                                          
-				}else if(skt == 5){                                                                                                  
-					v = 'IEC62196(3 Phase)';                                                                                         
-				}else if(skt == 6){                                                                                                  
-					v = 'GB20234(3 Phase)';                                                                                          
-				}else if(skt == 8){                                                                                                  
-					v = 'CHAdeMo';                                                                                                   
-				}else if(skt == 9){                                                                                                  
-					v = 'IEC Combo';                                                                                                 
-				}else if(skt == 'a'){                                                                                                
-					v = 'GB QUICK CHARGER';                                                                                          
+				if(skt == 1){
+					v='BS1363';
+				}else if(skt == 2){
+					v = 'SAEJ1772';
+				}else if(skt == 3){
+					v = 'IEC62196(1 Phase)';
+				}else if(skt == 4){
+					v = 'GB20234(1 Phase)';
+				}else if(skt == 5){
+					v = 'IEC62196(3 Phase)';
+				}else if(skt == 6){
+					v = 'GB20234(3 Phase)';
+				}else if(skt == 8){
+					v = 'CHAdeMo';
+				}else if(skt == 9){
+					v = 'IEC Combo';
+				}else if(skt == 'a'){
+					v = 'GB QUICK CHARGER';
 				}
 			}else if(key == 'ChargerWay'){
 				if(v == 1){
@@ -320,17 +224,6 @@ function isKeyToShow(tarKey){
 	return false;
 }
 
-
-//生成Tab
-function generateTabs(){
-    var str = '';
-    for(var i in tbs){
-        var tb = tbs[i];
-        var bgColor = i==0?tabBgColor:'white';
-        str += '<span class=tab id=tab'+ tb +' style="background-color:'+ bgColor +'" onclick="clickTab(this.innerHTML)">'+ tb +'</span>';
-    }
-    document.getElementById('div_tabs').innerHTML = str;
-}
 
 //点击Tab事件
 function clickTab(tabName){
@@ -367,8 +260,6 @@ function setTabBgColor(tabName){
 }
 
 parseData();
-//generateTabs();
-//generateTable();
 
 generateTable2();
 

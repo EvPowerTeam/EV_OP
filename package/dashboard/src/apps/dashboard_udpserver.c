@@ -72,6 +72,7 @@ static int udpserver_init() {
 	int udpSocket, nBytes;
 	char *buffer;
 	char *local_ip;
+
 	struct sockaddr_in serverAddr, clientAddr;
 	struct sockaddr_storage serverStorage;
 	socklen_t addr_size, client_addr_size;
@@ -96,15 +97,15 @@ static int udpserver_init() {
 
 	while(1) {
 		buffer = calloc(100, sizeof(unsigned char *));
-		/* Try to receive any incoming UDP datagram. Address and port of
-		requesting client will be stored on serverStorage variable */
+	/* Try to receive any incoming UDP datagram. Address and port of
+	requesting client will be stored on serverStorage variable */
 		nBytes = recvfrom(udpSocket, buffer, 100, 0,
 				 (struct sockaddr *)&serverStorage, &addr_size);
-		debug_msg("%s", buffer);
+		debug_msg("receive from server: %s", buffer);
 	/*Send server command to msg queue*/
 		mqsend("/server.cmd", buffer, strlen(buffer), 10);
 
-	/*Send uppercase message back to client, using serverStorage as the address*/
+	/*Send message back to client, using serverStorage as the address*/
 		sendto(udpSocket,buffer,nBytes, 0,
 		      (struct sockaddr *)&serverStorage, addr_size);
 		free(buffer);
