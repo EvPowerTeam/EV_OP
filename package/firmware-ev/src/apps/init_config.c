@@ -58,6 +58,8 @@ static void init_router_config()
 {
 	debug_msg("router setup");
 	file_trunc_to_zero(path_udpserver_pid);
+	if (file_exists(path_config_charger))
+		file_delete(path_config_charger);
 	//router id
 	//ev_uci_save_val_int();
 	//vpn IP

@@ -4,17 +4,18 @@ pingip='192.168.168.168'   # ping DB server
 LOG_FILE="/var/log/syslog"
 isdown=0            # indicate whether the interface is up or down
                    # start assuming interface is up
-
+	route add -net 192.168.168.0 gateway 192.168.168.168 netmask 255.255.255.0 dev ppp3
         route add -net 192.168.168.0 gateway 192.168.168.168 netmask 255.255.255.0 dev ppp2
         route add -net 192.168.168.0 gateway 192.168.168.168 netmask 255.255.255.0 dev ppp1
-    if ping -q -c 2 "$pingip" >> /dev/null ; then      # ping is good - bring iface up
-        if [ "$isdown" -ne 0 ] ; then
+	sleep 5
+
+if ping -q -c 2 "$pingip" >> /dev/null ; then      # ping is good - bring iface up
+        if [ $? -eq 0 ] ; then
             echo "vpn is up"
         fi
-    else                                 # ping is bad, iface is down
-        if [ "$isdown" -ne 1 ] ;  then
+    else                                # ping is bad, iface is down
+        if [ $? -eq 1 ] ;  then
             echo "vpn is down"
             /bin/sh /root/setup_vpn2.sh
         fi
     fi
-

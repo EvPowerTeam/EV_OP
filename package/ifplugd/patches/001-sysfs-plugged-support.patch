@@ -1,0 +1,140 @@
+--- a/src/ifplugd.c	2005-06-05 03:21:51.000000000 +0800
++++ b/src/ifplugd.c	2010-05-02 17:54:26.000000000 +0800
+@@ -86,7 +86,7 @@
+ 
+ interface_status_t failure_status = IFSTATUS_ERR;
+ 
+-enum { API_AUTO, API_ETHTOOL, API_MII, API_PRIVATE, API_WLAN, API_IFF } api_mode = API_AUTO;
++enum { API_AUTO, API_ETHTOOL, API_MII, API_PRIVATE, API_WLAN, API_IFF, API_SYSFS } api_mode = API_AUTO;
+ 
+ interface_status_t (*detect_beat_func)(int, char*);
+ interface_status_t (*cached_detect_beat_func)(int, char*) = NULL;
+@@ -280,6 +280,12 @@
+         return status;
+     }
+ 
++    if ((status = interface_detect_beat_sysfs(fd, iface)) != IFSTATUS_ERR) {
++        cached_detect_beat_func = interface_detect_beat_sysfs;
++        daemon_log(LOG_INFO, "Using detection mode: sysfs");
++        return status;
++    }
++
+     return IFSTATUS_ERR;
+ }
+ 
+@@ -402,6 +408,7 @@
+         case API_PRIVATE: detect_beat_func = interface_detect_beat_priv; break;
+         case API_WLAN: detect_beat_func = interface_detect_beat_wlan; break;
+         case API_IFF: detect_beat_func = interface_detect_beat_iff; break;
++        case API_SYSFS: detect_beat_func = interface_detect_beat_sysfs; break;
+             
+         default:
+             detect_beat_func = detect_beat_auto; 
+@@ -615,6 +622,7 @@
+         case API_PRIVATE: m = "priv"; break;
+         case API_WLAN: m = "wlan"; break;
+         case API_IFF: m = "iff"; break;
++        case API_SYSFS: m = "sysfs"; break;
+         default: m = "auto";
+     }
+     
+@@ -636,7 +644,7 @@
+            "   -t --poll-time=SECS       Specify poll time in seconds (%i)\n"
+            "   -u --delay-up=SECS        Specify delay for configuring interface (%i)\n"
+            "   -d --delay-down=SECS      Specify delay for deconfiguring interface (%i)\n"
+-           "   -m --api-mode=MODE        Force API mode (mii, priv, ethtool, wlan, auto) (%s)\n"
++           "   -m --api-mode=MODE        Force API mode (mii, priv, ethtool, wlan, sysfs, auto) (%s)\n"
+            "   -p --no-startup           Don't run script on daemon startup (%s)\n"
+            "   -q --no-shutdown          Don't run script on daemon quit (%s)\n"
+            "   -l --initial-down         Run \"down\" script on startup if no cable is detected (%s)\n"
+@@ -773,6 +781,7 @@
+                     case 'w': api_mode = API_WLAN; break;
+                     case 'a': api_mode = API_AUTO; break;
+                     case 'i': api_mode = API_IFF; break;
++                    case 's': api_mode = API_SYSFS; break;
+                     default:
+                         daemon_log(LOG_ERR, "Unknown API mode: %s", optarg);
+                         exit(2);
+--- a/src/ifplugstatus.c   2005-01-05 08:25:31.000000000 +0800
++++ b/src/ifplugstatus.c   2010-05-02 17:55:46.000000000 +0800
+@@ -76,12 +76,18 @@
+         else
+             printf("    SIOCDEVPRIVATE: %s\n", s == IFSTATUS_UP ? "link beat detected" : "unplugged");
+ 
++        if ((s = interface_detect_beat_sysfs(fd, iface)) == IFSTATUS_ERR)
++            printf("    sysfs failed (%s)\n", strerror(errno));
++        else
++            printf("    sysfs: %s\n", s == IFSTATUS_UP ? "link beat detected" : "unplugged");
++
+     } else {
+         
+         if ((s = interface_detect_beat_ethtool(fd, iface)) == IFSTATUS_ERR)
+             if ((s = interface_detect_beat_mii(fd, iface)) == IFSTATUS_ERR)
+                 if ((s = interface_detect_beat_wlan(fd, iface)) == IFSTATUS_ERR)
+-                    s = interface_detect_beat_iff(fd, iface);
++                    if ((s = interface_detect_beat_iff(fd, iface)) == IFSTATUS_ERR)
++                        s = interface_detect_beat_sysfs(fd, iface);
+ 
+         switch(s) {
+             case IFSTATUS_UP:
+--- a/src/interface.c	2005-01-05 08:25:31.000000000 +0800
++++ b/src/interface.c	2010-05-02 17:57:04.000000000 +0800
+@@ -35,7 +35,10 @@
+ #include <stdio.h>
+ #include <ctype.h>
+ #include <stdlib.h>
++#include <unistd.h>
+ #include <assert.h>
++#include <sys/stat.h>
++#include <fcntl.h>
+ 
+ #include "ethtool-local.h"
+ #include "interface.h"
+@@ -187,6 +190,38 @@
+     return ifr.ifr_flags & IFF_RUNNING ? IFSTATUS_UP : IFSTATUS_DOWN;
+ }
+ 
++interface_status_t interface_detect_beat_sysfs(int fd, char *iface) {
++
++    int fd_tmp, len;
++    char *path_buff, data_buff[4];
++
++    if (interface_auto_up)
++        interface_up(fd, iface);
++
++    path_buff = malloc(100);
++    if (!path_buff)
++       goto err;
++
++    snprintf(path_buff, 100, "/sys/class/net/%s/plugged", iface);
++
++    fd_tmp = open(path_buff, O_RDONLY);
++    if (fd_tmp < 0)
++        goto err;
++
++    len = read(fd_tmp, data_buff, sizeof(data_buff));
++    close(fd_tmp);
++
++    if (len < 1)
++        goto err;
++
++    free(path_buff);
++    return data_buff[0] == '1' ? IFSTATUS_UP : IFSTATUS_DOWN;
++
++err:
++    free(path_buff);
++    return IFSTATUS_ERR;
++}
++
+ static int get_wlan_qual_old(char *iface) {
+     FILE *f;
+     char buf[256];
+--- a/src/interface.h	2004-05-10 07:20:56.000000000 +0800
++++ b/src/interface.h	2010-05-02 17:28:40.000000000 +0800
+@@ -33,5 +33,6 @@
+ interface_status_t interface_detect_beat_ethtool(int fd, char *iface);
+ interface_status_t interface_detect_beat_wlan(int fd, char *iface);
+ interface_status_t interface_detect_beat_iff(int fd, char *iface);
++interface_status_t interface_detect_beat_sysfs(int fd, char *iface);
+ 
+ #endif

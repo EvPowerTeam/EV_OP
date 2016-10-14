@@ -5,14 +5,12 @@
                 echo 0 > $each/send_redirects
         done
         sysctl -p
-	echo "`date` "+":Windcloud VPN reconnected" >> /mnt/umemory/routerlog/vpn.log
+	echo "`date` "+":Windcloud VPN reconnected" >> /mnt/umemory/routerlog/vpn.log 
         sleep 3
-        ipsec restart
-        /etc/init.d/xl2tpd restart
-        ipsec down evpowergroup
-        sleep 1
         echo "d evpowergroup" > ../var/run/xl2tpd/l2tp-control
-        sleep 1
+        sleep 3
+        ipsec down evpowergroup
+	sleep 2
         ipsec up evpowergroup
         sleep 2
         echo "c evpowergroup" > ../var/run/xl2tpd/l2tp-control
@@ -22,9 +20,10 @@
         sleep 1
         PPP_GW_ADD=`./root/getip.sh $PPP_INT`
         echo $PPP_GW_ADD
-	dashboard udpserver
+	sleep 2
         route add -net 10.9.8.0 gateway $PPP_GW_ADD netmask 255.255.248.0 dev $PPP_INT
-        route add -net 10.9.8.0 gateway 10.9.8.100 netmask 255.255.248.0 dev ppp0
+        route add -net 10.9.8.0 gateway 10.9.8.100 netmask 255.255.248.0 dev ppp3
 	route add -net 10.9.8.0 gateway 10.9.8.100 netmask 255.255.248.0 dev ppp1
 	route add -net 10.9.8.0 gateway 10.9.8.100 netmask 255.255.248.0 dev ppp2
-
+	sleep 6 
+	/bin/dashboard udpserver

@@ -8,8 +8,6 @@
 #include <libev/const_strings.h>
 #include <libev/msgqueue.h>
 
-#include "init_config.h"
-
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
@@ -35,17 +33,6 @@ static void boot_setup_network()
 
 static void boot_init_dir(void)
 {
-    //char    name[100];
-    //mkdir(WORK_DIR, 0777);
-    //sprintf(name, "%s/%s%c", WORK_DIR, CHAOBIAO_DIR, '\0');
-
-    //mkdir(name, 0777);
-    //sprintf(name, "%s/%s%c", WORK_DIR, CONFIG_DIR, '\0');
-    //mkdir(name, 0777);
-    //sprintf(name, "%s/%s%c", WORK_DIR, UPDATE_DIR, '\0');
-    //mkdir(name, 0777);
-    //sprintf(name, "%s/%s%c", WORK_DIR, RECORD_DIR, '\0');
-    //mkdir(name, 0777);
 }
 
 int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
@@ -54,9 +41,14 @@ int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 	int ret;
 
 	debug_syslog("module booting");
-	cmd_run("echo \"`date` \"+\": reboot EV Router\" >> /mnt/umemory/routerlog/`date \"+%Y-%m-%d\"`.log");
-	init_config(0, NULL, NULL);
+	if (!file_exists(path_router_reboot_log))
+		file_trunc_to_zero(path_router_reboot_log);
+
+	cmd_frun("echo \"`date` Router reboot\" >> %s", path_router_reboot_log);
 	cmd_run("sh /root/setup_sangfor start");
+	sleep(3);
+	cmd_run("kill -6 `pidof l3vpnd`");
+	init_config(0, NULL, NULL);
 	//boot_setup_network();
 	//boot_init_dir(); // 创建初始化目录
 	//mqcreate(O_RDONLY | O_NONBLOCK, 10, 10, "/dashboard.checkin");

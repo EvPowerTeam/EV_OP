@@ -1,0 +1,44 @@
+--- a/src/ifplugd.c	2012-03-12 19:41:00.000000000 +0800
++++ b/src/ifplugd.c	2012-03-16 22:36:07.000000000 +0800
+@@ -138,7 +138,8 @@
+     unsigned n = 0;
+     static char buf[256];
+     char *arg = (status == IFSTATUS_UP ? "up" : "down");
+-    int sigfd, r;
++    int sigfd, r, ret, sig_chld_rcvd = 0;
++    struct timeval tv;
+     fd_set rfds;
+ 
+     daemon_log(LOG_INFO, "Executing '%s %s %s'.", run, interface, arg);
+@@ -180,13 +181,20 @@
+ 
+     for (;;) {
+         fd_set wrfds = rfds;
++        tv.tv_sec = 1;
++        tv.tv_usec = 0;
++
++        ret = select(FD_SETSIZE, &wrfds, NULL, NULL, &tv);
+ 
+-        if (select(FD_SETSIZE, &wrfds, NULL, NULL, NULL) < 0) {
++        if (ret < 0) {
+ 
+             if (errno == EINTR)
+                 continue;
+ 
+             break;
++        } else if (ret == 0) {
++            if (sig_chld_rcvd)
++               break;
+         }
+ 
+ 
+@@ -221,6 +229,9 @@
+             if (sig != SIGCHLD) {
+                 daemon_log(LOG_WARNING, "Killing child.");
+                 kill(pid, SIGTERM);
++            } else {
++                /* child exited */
++                sig_chld_rcvd = 1;
+             }
+         }
+         

@@ -3,7 +3,8 @@
 #define TAB_POS	"chargerinfo.TABS.tables"
 
 /* path used when calling the checkin API */
-#define API_CHECKIN_URL_FMT "10.9.8.2:8080/ChargerAPI"
+#define API_CHECKIN_URL_FMT"10.9.8.2:8080/ChargerAPI"
+#define API_CHECKIN_URL_FMT_SONIC "192.168.168.28:8080/test"
 #define API_CHECKIN_URL_FMT_INT "124.202.140.226:8080/ChargerAPI"
 #define API_TEST_CHECKIN_URL_FMT "10.9.8.2:8080/test"
 #define API_TEST_CHECKIN_URL_FMT_INT "124.202.140.226:8080/test"

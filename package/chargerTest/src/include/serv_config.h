@@ -36,16 +36,17 @@
 #define DEBUG(...)		printf(__VA_ARGS__)
 #endif
 
-
-typedef	 unsigned char	u8;
+typedef  unsigned char  u8;
 typedef  unsigned short u16;
 typedef  unsigned int   u32;
-typedef  unsigned char      ev_uchar;
-typedef  char               ev_char;
-typedef  unsigned short     EV_USHORT;
-typedef  short              EV_SHORT;
-typedef  unsigned int       EV_UINT;
-typedef  int                EV_INT;
+typedef  unsigned char  ev_uchar;
+typedef  unsigned short ev_ushort;
+typedef  unsigned int   ev_uint;
+typedef  unsigned long  ev_ulong;
+typedef  char           ev_char;
+typedef  short          ev_short;
+typedef  int            ev_int;
+typedef  long           ev_long;
 
 
 
@@ -54,8 +55,10 @@ typedef  int                EV_INT;
  *      充电协议相关
  *
  *****************************************************/
-#define  FORMAL_ENV         0
+#define  FORMAL_ENV         1
 #define  USE_DAEMONIZE      1
+#define  SOCK_LONG_CONNECT  0
+
 
 // 错误码定义,未完善
 #define     ESERVER_RESTART         0x1
@@ -81,8 +84,9 @@ typedef  int                EV_INT;
 #define     ECONTROL_API_ERR        0x72
 #define     ESTART_CHARGE_FINISH    0x80
 #define     ESTART_CHARGE_API_ERR   0x81
-#define     ESTOP_CHARGE_FINISH     0x82
-#define     ESTOP_CHARGE_API_ERR    0x83
+#define     ESTART_CHARGE_ERR       0x82
+#define     ESTOP_CHARGE_FINISH     0x83
+#define     ESTOP_CHARGE_API_ERR    0x84
 
 // 命令定义
 #define     CHARGER_CMD_CONNECT             0x10
@@ -136,6 +140,7 @@ typedef  int                EV_INT;
 #define     RECORD_DIR              "RECORD"
 #define     EXCEPTION_DIR           "exception"
 #define     LOG_DIR                 "log"
+#define     ROUTER_LOG_DIR          "routerlog"
 #define     CONFIG_FILE             "/etc/chargerserver.conf"
 #define     FILEPERM                (S_IRUSR | S_IWUSR)
 
@@ -194,7 +199,7 @@ struct upt  { char    version[2];   char    name[40];                           
 struct cfg  { char    name[20];                                                                                 };
 struct yy   { int     time;         char uid[32];                                                               };
 struct ctl   {  unsigned char  value;   unsigned char status;                                                   };
-struct stp { char   uid[32];                                                                                    };
+struct stp { int username; char   uid[32];                                                                                    };
 struct stg { char order_num[25]; char package[15]; char uid[32]; short current; short energy;                   };
 // 待处理命令队列
 struct  wait_task {
@@ -224,7 +229,7 @@ struct  finish_task {
     union {
         struct cb   chaobiao;
         struct ctl  control;
-        struct stop stop_charge;
+        struct stp stop_charge;
         struct yy   yuyue;
     }u;
     struct  finish_task *next;
@@ -269,6 +274,7 @@ typedef struct  chargerinfo{
     char            *start_charge_order;        // 订单号
     char            *file_name;
     char            *start_charge_package;      // 套餐
+    int             stop_charge_username;       // 停止充电用户名代号
     int             file_length; 
     int             file_fd;                    //打开配置文件的文件描述符，抄表描符，更新描述符
     time_t          cb_start_time;        //记录服务器发送的开始抄表时间戳

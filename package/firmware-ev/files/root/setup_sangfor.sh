@@ -63,7 +63,7 @@ start_vpn()
 
 if [ $# -lt 1 ]
 then
-    echo "usage: sh l3vpn.sh install/uninstall"
+    echo "usage: sh l3vpn.sh start"
     exit 1
 fi
 

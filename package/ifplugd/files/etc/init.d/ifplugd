@@ -1,0 +1,93 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+start_ifplugd() {
+	local cfg="$1"
+	local extra_arg=""
+
+	config_get ifname "$cfg" ifname
+	[ -n "$ifname" ] || return 0
+
+	config_get device "$cfg" device
+	[ -n "$device" ] || device=$ifname
+
+	# only 'real' ethernet interfaces allowed
+	eth_test=${device##eth[0-9]}
+	[ -n "$eth_test" ] && return 0
+
+	config_get plug_event "$cfg" plug_event
+
+	if [ -z "$plug_event" ]
+	   then
+	      logger -s -t "ifplugd" -p "daemon.warn" "Ignoring interface $device - plug_event not configured"
+	      return 0
+	fi
+
+	ifplugd -b -q -d 0 -i $device -r $plug_event $extra_arg
+}
+
+start () {
+	config_load network
+	config_foreach start_ifplugd interface
+}
+
+stop () {
+	active_ifaces=$(ls /var/run/ifplugd.*.pid 2>/dev/null | sed -e 's@/var/run/ifplugd.\(.*\).pid@\1@g')
+
+	for iface in $active_ifaces
+	   do
+	      ifplugd -i $iface -k -W 2>/dev/null
+	      # sometimes a second go is necessary
+	      [ $? -ne 0 ] && ifplugd -i $iface -k -W
+	   done
+}
+
+plugged () {
+	local device=$1
+
+	[ -z "$device" ] && echo "Error - need to specify an interface" && exit 1
+
+	if [ -f "/sys/class/net/${device}/plugged" ]
+	   then
+	      res=$(cat /sys/class/net/${device}/plugged)
+	   else
+	      res=$(ifplugstatus $device | grep -q 'unplugged')
+	fi
+
+	return $res
+}
+
+case $1 in
+	start|boot)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		stop
+		sleep 2
+		start
+		;;
+	disable)
+		name="ifplugd"
+		rm -f "$IPKG_INSTROOT"/etc/rc.d/S??$name
+		rm -f "$IPKG_INSTROOT"/etc/rc.d/K??$name
+		;;
+	plugged)
+		plugged $2
+		;;
+	*)
+		echo "Syntax: $0 [command]"
+		echo ""
+		echo "Available commands:"
+		echo "	start   Start the service"
+		echo "	stop    Stop the service"
+		echo "	restart Restart the service"
+		echo "	disable Disable the service"
+		echo "	plugged check if iface is plugged"
+		;;
+esac
+
+

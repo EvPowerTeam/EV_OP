@@ -5,11 +5,10 @@
 #include "./include/CRC.h"
 #include "./include/err.h"
 
-
 void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
 {
         
-        unsigned char   new_mode = 0, cmd = bf->recv_buff[4];
+        unsigned char  i, new_mode = 0, cmd = bf->recv_buff[4];
         char     *val;
 
         if ( cmd == CHARGER_CMD_HB )
@@ -25,6 +24,29 @@ void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
         debug_msg("检查状态有没有改变, CID[%d] ...", charger->CID); 
         if ( charger->present_mode > 0 &&  (( val = (char *)calloc(100, sizeof(char))) != NULL) )
         {
+            if (new_mode == CHARGER_CHARGING && bf->recv_buff[4] == CHARGER_CMD_STATE_UPDATE)
+            {
+                sprintf(bf->val_buff, "/ChargerState/stopState?");
+                sprintf(bf->val_buff + strlen(bf->val_buff), "key={chargers:[{chargerId:\\\"%08d\\\",", charger->CID);
+                bf->send_buff[0] = 0;
+                for (i = 0; i < 16; i++)
+                {
+                        sprintf(bf->send_buff + strlen(bf->send_buff), "%02x", bf->recv_buff[36 + i]);
+                }
+                sprintf(bf->val_buff + strlen(bf->val_buff), "privateID:\\\"%s\\\",", bf->send_buff);
+                sprintf(bf->val_buff + strlen(bf->val_buff), "power:%d,", ((bf->recv_buff[30]<<24)|(bf->recv_buff[31]<<16)|(bf->recv_buff[32]<<8)|bf->recv_buff[33]));
+                sprintf(bf->val_buff + strlen(bf->val_buff), "chargingRecord:%d,", (bf->recv_buff[53] << 8 | bf->recv_buff[54]));
+                sprintf(bf->val_buff + strlen(bf->val_buff), "mac:\\\"%s\\\",", charger->MAC);
+                sprintf(bf->val_buff + strlen(bf->val_buff), "chargingType:%d,", bf->recv_buff[52]);
+                sprintf(bf->val_buff + strlen(bf->val_buff), "status:%d}]}", CHARGER_CHARGING);
+                printf("send:%s\n", bf->val_buff);;
+#if FORMAL_ENV
+                cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI %s", bf->val_buff);
+#else
+                cmd_frun("dashboard url_post 10.9.8.2:8080/test %s", bf->val_buff);
+#endif
+            }
+
             sprintf(val, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",status:%d}", charger->CID, new_mode);
 #if FORMAL_ENV
             cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI %s", val);
@@ -140,9 +162,23 @@ error_hander(int handle, CHARGER_INFO_TABLE *charger, BUFF *bf, int errnum)
         {
                 task.cmd = charger->wait_cmd;
                 task.cid = charger->CID;
-                task.u.stop_charge.value = charger->stop_charge_value;
+//                task.u.stop_charge.value = charger->stop_charge_value;
                 task.errcode = ESTOP_CHARGE_FINISH;
                 charger->wait_cmd = WAIT_CMD_NONE;
+                finish_task_add(charger->way, &task);
+        } else if (ESTART_CHARGE_ERR == errnum)
+        {
+                task.cmd = WAIT_CMD_START_CHARGE;
+                task.cid = charger->CID;
+                if (bf->recv_buff[9] == 1)
+                {
+                        task.errcode = 101;
+                }
+//                task.errcode = 5; //bf->recv_buff[9];
+                for (i = 0; i < 16; i++)
+                {
+                    sprintf(task.u.stop_charge.uid + 2 * i, "%02x", bf->recv_buff[10 + i]);
+                }
                 finish_task_add(charger->way, &task);
         }
         return;
@@ -249,6 +285,7 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
                    charger->present_cmd = CHARGER_CMD_CONFIG_R;
             break;
             case  WAIT_CMD_CHAOBIAO:
+            case  WAIT_CMD_ALL_CHAOBIAO:
                   if (wait->way == SERVER_WAY)
                       sprintf(bf->val_buff, "%s/%s/%08d_server", WORK_DIR, CHAOBIAO_DIR, wait->cid);  
                    else
@@ -349,6 +386,7 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
                         debug_msg("stop charge malloc failed, CID[%d] ...", charger->CID);
                         goto err;
                   }
+                 charger->stop_charge_username = wait->u.stop_charge.username;
                  memcpy(charger->uid, wait->u.stop_charge.uid, sizeof(wait->u.stop_charge.uid));
                  charger->wait_cmd = WAIT_CMD_STOP_CHARGE;
                  charger->present_cmd = CHARGER_CMD_STOP_CHARGE_R;
@@ -404,6 +442,7 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
                         debug_msg("stop charge malloc failed, CID[%d] ...", charger->CID);
                         goto err;
                   }
+                 charger->stop_charge_username = wait->u.stop_charge.username;
                  memcpy(charger->uid, wait->u.stop_charge.uid, sizeof(wait->u.stop_charge.uid));
                  charger->wait_cmd = WAIT_CMD_STOP_CHARGE;
                  charger->present_cmd = CHARGER_CMD_STOP_CHARGE_R;
@@ -429,7 +468,13 @@ err:
          free(wait);
      if (st != NULL)
          free(st);
-     return 0;
+//     if (charger->uid != NULL)
+//         free(charger->uid);
+//     if (charger->package != NULL)
+//         free(charger->package);
+//     if (charger->start_charge_order != NULL)
+//         free(charger->start_charge_order);
+//     return 0;
 }
 
 int 
@@ -482,7 +527,7 @@ gernal_command(int fd, const int cmd, const CHARGER_INFO_TABLE *charger, BUFF *b
             bf->send_buff[16] = bf->recv_buff[31];
             bf->send_buff[17] = bf->recv_buff[34];  // chargercode
             bf->send_buff[18] = bf->recv_buff[33]; 
-            memcpy(bf->send_buff + 19, bf->recv_buff + 35, 16); // uid
+            memcpy(bf->send_buff + 19, bf->recv_buff + 36, 16); // uid
             bf->send_buff[35] = charger->model;
             n = 38;
       break;
@@ -590,7 +635,9 @@ gernal_command(int fd, const int cmd, const CHARGER_INFO_TABLE *charger, BUFF *b
       break;
       case  CHARGER_CMD_STOP_CHARGE_R:
             memcpy(bf->send_buff + 9, charger->uid, 32);
-            n = 43;
+            debug_msg("send_uid:%s\n", charger->uid);
+            bf->send_buff[41] = charger->stop_charge_username;
+            n = 44;
             free(charger->uid);
       break;
       default:
@@ -607,7 +654,9 @@ gernal_command(int fd, const int cmd, const CHARGER_INFO_TABLE *charger, BUFF *b
         My_AES_CBC_Encrypt(KEYA, bf->val_buff, len, bf->send_buff + 9);
     else
         My_AES_CBC_Encrypt(charger->KEYB, bf->val_buff, len, bf->send_buff + 9);
-    if (write(fd, bf->send_buff, len + 9) != len + 9)
+     if (writeable_timeout(fd, 4) <= 0)
+          return -1;
+     if (write(fd, bf->send_buff, len + 9) != len + 9)
         goto err;
     printf("发送成功, 命令:%#x, CID[%d] ...\n", cmd, charger->CID);
     return 0;

@@ -24,7 +24,7 @@
 #include <curl/curl.h>
 #include <linux/if_ether.h>
 #include <libev/msgqueue.h>
-
+#include <time.h>
 #include <json-c/json.h>
 
 #define ng_curl_slist_append(_list, _header) ({\
@@ -37,7 +37,7 @@
 #define API_TIME_ENDPOINT		"/time"
 
 static char curl_err[CURL_ERROR_SIZE];
-static char tmp_buff[1500];
+static char tmp_buff[4096];
 
 /**
  * api_write_output - print the server reply to a file or buffer
@@ -48,6 +48,7 @@ static size_t api_write_output(char *ptr, size_t size, size_t nmemb,
 	struct api_return *api_data = (struct api_return *)data;
 	size_t len = size * nmemb;
 	char *tmp;
+	char date[20];
 	FILE *fp;
 
 	if (!data) {
@@ -78,6 +79,16 @@ static size_t api_write_output(char *ptr, size_t size, size_t nmemb,
 		 * for the final NULL char
 		 */
 		debug_msg("%s %d", ptr, len);
+		if (strncmp(ptr, "update", 6) == 0)
+		{
+			debug_msg("sync system time from %ld", time(0));
+			tmp = strchr(ptr, '2');
+			memcpy(date, tmp, 19);
+			date[19] = '\0';
+			cmd_frun("date -s %s", date);
+			debug_msg("current system time: %ld", time(0));
+			//stime();
+		}
 		break;
 	}
 
