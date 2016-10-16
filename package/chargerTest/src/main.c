@@ -12,43 +12,27 @@
 #include "./include/list.h"
 #include <libev/msgqueue.h>
 // 定义出错信息结构
-char    *err_string[] = {
-    [0] = "Success",
+//char    *err_string[] = {
+//    [0] = "Success",
 //    [E_CHAOBIAO] = "ChaoBiao failed",
 //    [E_CONFIG] = "Config file failed",
 //    [E_ALL_UPDATE] = "Update all file failed",
 //    [E_ONE_UPDATE] = "Update file failed"
-};
+//};
 
 pthread_mutex_t		clifd_mutex = PTHREAD_MUTEX_INITIALIZER;	// 线程互斥锁初始化
-//pthread_cond_t		clifd_cond = PTHREAD_COND_INITIALIZER;		// 线程条件变量初始化
-pthread_mutex_t		serv_mutex = PTHREAD_MUTEX_INITIALIZER;	// 线程互斥锁初始化
+//pthread_cond_t		clifd_cond = PTHREAD_COND_INITIALIZER;  // 线程条件变量初始化
+pthread_mutex_t		serv_mutex = PTHREAD_MUTEX_INITIALIZER;	        // 线程互斥锁初始化
 pthread_cond_t		serv_cond = PTHREAD_COND_INITIALIZER;		// 线程条件变量初始化
 pthread_rwlock_t	charger_rwlock;
 
 // 充电桩信息，数组
-CHARGER_INFO_TABLE	ChargerInfo[50];// = {0};  	// 用于存入每台电桩信息	
-
-typedef struct {
-    ev_uchar   present_charger_cnt;	//当前
-    ev_uchar   present_off_net_cnt;	//当前断网的个数
-    ev_uchar   present_networking_cnt;	//当前联网的总数
-    ev_uchar   present_charging_cnt;	//当前正在充电的个数
-    ev_int     limit_max_current;	//限制的最大的充电电流
-    ev_int     total_num;              //充电装总个数，默认给8
-    ev_int     have_powerbar_serial_fd;            //打开与灯板通信的串口描述符
-    ev_int     timeout_cnt;
-//	pthread_mutex_t clifd_mutex;
-//	pthread_cond_t	clifd_cond;
-//	pthread_mutex_t serv_cond;
-//	pthread_rwlock_t charger_rwlock;
-}CHARGER_MANAGER;
+CHARGER_INFO_TABLE	ChargerInfo[15];	                        // 用于存入每台电桩信息	
 CHARGER_MANAGER		charger_manager = {
 	.total_num = 8,
 	.limit_max_current = 56,
 	.present_off_net_cnt = 8,
 };
-
 sigset_t        mask;
 
 // 函数声明
@@ -142,24 +126,26 @@ char *string_to_uid(char *struid, char *storeuid)
 void  dir_init(void)
 {
     char    name[100];
-    mkdir(WORK_DIR, 0711);
+    mkdir(WORK_DIR, 0777);
     sprintf(name, "%s/%s", WORK_DIR, CHAOBIAO_DIR);
     //创建抄表目录
-    mkdir(name, 0711);
-    sprintf(name, "%s/%s", WORK_DIR, CONFIG_DIR);
-    mkdir(name, 0711);
-    sprintf(name, "%s/%s", WORK_DIR, UPDATE_DIR);
-    mkdir(name, 0711);
-    sprintf(name, "%s/%s", WORK_DIR, RECORD_DIR);
-    mkdir(name, 0711);
-    sprintf(name, "%s/%s", WORK_DIR, EXCEPTION_DIR);
-    mkdir(name, 0711);
-    sprintf(name, "%s/%s", WORK_DIR, LOG_DIR);
-    mkdir(name, 0711);
-    sprintf(name, "%s/%s", WORK_DIR, ROUTER_LOG_DIR);
-    mkdir(name, 0711);
-}
+    mkdir(name, 0777);
 
+    sprintf(name, "%s/%s", WORK_DIR, CONFIG_DIR);
+    mkdir(name, 0777);
+
+    sprintf(name, "%s/%s", WORK_DIR, UPDATE_DIR);
+    mkdir(name, 0777);
+
+    sprintf(name, "%s/%s", WORK_DIR, RECORD_DIR);
+    mkdir(name, 0777);
+
+    sprintf(name, "%s/%s", WORK_DIR, EXCEPTION_DIR);
+    mkdir(name, 0777);
+
+    sprintf(name, "%s/%s", WORK_DIR, LOG_DIR);
+    mkdir(name, 0777);
+}
 int readable_timeout(int fd, int sec)
 {
 	fd_set	rset;
@@ -202,7 +188,7 @@ int main(int argc , char * argv[])
 	fd_set              rendezvous, rset;
 	struct  sigaction   sa;
 
-    mallopt(M_ARENA_MAX, 1);
+        mallopt(M_ARENA_MAX, 1);
 #if  USE_DAEMONIZE
 	daemonize(argv[0]);
 	if(already_running())
@@ -211,13 +197,14 @@ int main(int argc , char * argv[])
 		exit(1);
     }
 #endif
+        dir_init(); // 创建初始化目录
 	if (access(CHARG_FILE,  F_OK) != 0)
 	{
-        file_trunc_to_zero(CHARG_FILE); //CHARG_FILE);	//创建/etc/config/chargerinfo文件
-        ev_uci_add_named_sec("chargerinfo.%s=tab", "TABS");
+                file_trunc_to_zero(CHARG_FILE); //CHARG_FILE);	//创建/etc/config/chargerinfo文件
+                ev_uci_add_named_sec("chargerinfo.%s=tab", "TABS");
 //		ev_uci_add_named_sec("chargerinfo.%s=rod", "Record");
-        ev_uci_add_named_sec("chargerinfo.%s=issued", "SERVER");
-        ev_uci_add_named_sec("chargerinfo.%s=respond", "CLIENT");
+                ev_uci_add_named_sec("chargerinfo.%s=issued", "SERVER");
+                ev_uci_add_named_sec("chargerinfo.%s=respond", "CLIENT");
 		charger_info_init(1); // 初始化数据库数据 
 	} else 	
 		charger_info_init(0); //数据库中读入信息，写入内存数组中，如果没有，也直接运行。(CID, IP, KEY)
@@ -247,48 +234,42 @@ int main(int argc , char * argv[])
         err_sys("pthread_sigmask failed");
 #endif 
 
-    dir_init(); // 创建初始化目录
 //    if ( (charger_manager.have_powerbar_serial_fd  = UART_Open(POWER_BAR_SERIAL)) < 0)
 //        err_sys("open power bar serial error");
 //    if ( UART_Init(charger_manager.have_powerbar_serial_fd, 9600, 0, 8, 1, 'N') < 0)
 //        err_sys("init power bar serial error error");
-#if 0
-    if (access(SERVER_FILE, F_OK) != 0)
-    {
-        init_file(SERVER_FILE);
-        ev_uci_add_named_sec("chargerinfo.%s=issued", "SERVER");
-        ev_uci_add_named_sec("chargerinfo.%s=respond", "CLIENT");
-    }
-#endif
 	socklen_t addrlen, clilen;
-#if 1
-    FD_ZERO(&rendezvous);
+
+        FD_ZERO(&rendezvous);
 	listenfd = sock_serv_init();
-    FD_SET(listenfd, &rendezvous);
-    maxfd = listenfd + 1;
+        FD_SET(listenfd, &rendezvous);
+        maxfd = listenfd + 1;
 	addrlen = sizeof(struct sockaddr_in);
 	// 线程相关初始化
+	// 保护充电信息的读写锁，初始化
+//	if ((err = pthread_rwlock_init(&charger_rwlock, NULL)) < 0)
+//		errno = err, err_sys("pthread_rwlock_init error");
+#if USE_POWER_BAR
 	if ((err = pthread_create(&tid, NULL, &load_balance_pthread, (void *)0)) < 0)
 		errno = err,err_sys("pthread_create error");
-	
-    if( (err = pthread_create(&tid, NULL, &pthread_service_send, (void *)0)) < 0)
+#endif
+       if( (err = pthread_create(&tid, NULL, &pthread_service_send, (void *)0)) < 0)
 		errno = err, err_sys("pthread_create error");
     
-    if( (err = pthread_create(&tid, NULL, &pthread_service_receive, (void *)0)) < 0)
+        if( (err = pthread_create(&tid, NULL, &pthread_service_receive, (void *)0)) < 0)
 		errno = err, err_sys("pthread_create error");
     
-//    if ((err = pthread_create(&tid, NULL, signal_pthread, NULL)) < 0)
-//        errno = err, err_sys("pthread_create failed");
+//      if ((err = pthread_create(&tid, NULL, signal_pthread, NULL)) < 0)
+//               errno = err, err_sys("pthread_create failed");
 
-	// 保护充电信息的读写锁，初始化
-	if ((err = pthread_rwlock_init(&charger_rwlock, NULL)) < 0)
-		errno = err, err_sys("pthread_rwlock_init error");
-   syslog(LOG_INFO, "%s[%ld] is  initlizaton finish...", argv[0], (long int)getpid());
-   for ( ; ; )
+        syslog(LOG_INFO, "%s[%ld] is  initlizaton finish...", argv[0], (long int)getpid());
+        
+        // 执行服务程序
+        for ( ; ; )
 	{
 //		clilen = addrlen;
-//        if (select(maxfd + 1, &rset, NULL, NULL, NULL) < 0)
-//            err_sys("select failed");
+//              if (select(maxfd + 1, &rset, NULL, NULL, NULL) < 0)
+//                      err_sys("select failed");
 		if ((connfd = accept(listenfd, NULL, NULL)) < 0 )
 		{
 			if(errno == EINTR || errno == ECONNABORTED)
@@ -300,18 +281,17 @@ int main(int argc , char * argv[])
 		if ( (err = pthread_create(&tid, NULL, &thread_main, (void *)connfd)) < 0)
 			errno = err, err_sys("pthread_create error");
 #if 0
-        rset = rendezvous;
-        if (select(maxfd, &rset, NULL, NULL, NULL) < 0)
-            err_sys("select failed");
-        if (FD_ISSET(i, &rset) )
-        {
-           if ((connfd = accept(listenfd, NULL, NULL)) < 0)
-              err_ret("accept failed");
-           pthread_create(&tid, NULL, &thread_main, (void *)connfd);
-        }
+                rset = rendezvous;
+                if (select(maxfd, &rset, NULL, NULL, NULL) < 0)
+                        err_sys("select failed");
+                if (FD_ISSET(i, &rset) )
+                {
+                        if ((connfd = accept(listenfd, NULL, NULL)) < 0)
+                                err_ret("accept failed");
+                        pthread_create(&tid, NULL, &thread_main, (void *)connfd);
+                }
 #endif
-    }
-#endif	
+        }	
 	return 0;
 }
 
@@ -376,19 +356,17 @@ void * thread_main(void * arg)
                 cmd = ChargerInfo[charger_index].present_cmd;
                 // 服务程序
 	        return_val = charger_serv(connfd, cmd, &ChargerInfo[charger_index], &bf, &charger_index);
+                // 检查错误
+                error_hander(return_val, &ChargerInfo[charger_index], &bf, bf.ErrorCode);
         } else
         {
                  cmd = bf.recv_buff[4];
-                bf.recv_cnt = n;
+                 bf.recv_cnt = n;
                 // 服务程序
 	        return_val = charger_serv(connfd, cmd, NULL, &bf, &charger_index);
-        }
-   
-        // 检查错误
-        if (charger_index != -1)  
-                error_hander(return_val, &ChargerInfo[charger_index], &bf, bf.ErrorCode);
-        else
+                // 检查错误
                 error_hander(return_val, NULL, &bf, bf.ErrorCode);
+        }
 
 exitt:
 	// 关闭连接
@@ -458,44 +436,44 @@ charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BU
 
 			// 用读的方式，锁住读写锁，然后查看信息,未实现
 			printf("连接请求...\n");
-            // 更新 index 变量
-            ev_char    mac_addr[50] = {0};
-            ev_char    tab_buff[50] = {0};
-            sprintf(mac_addr, "%02x:%02x:%02x:%02x:%02x:%02x", bf->recv_buff[42], bf->recv_buff[43], 
-                    bf->recv_buff[44], bf->recv_buff[45], bf->recv_buff[46], bf->recv_buff[47]);
-            ChargerCnt = charger_manager.present_charger_cnt;
+                         // 更新 index 变量
+                        ev_char    mac_addr[50] = {0};
+                        ev_char    tab_buff[50] = {0};
+                        sprintf(mac_addr, "%02x:%02x:%02x:%02x:%02x:%02x", bf->recv_buff[42], bf->recv_buff[43], 
+                                        bf->recv_buff[44], bf->recv_buff[45], bf->recv_buff[46], bf->recv_buff[47]);
+                        ChargerCnt = charger_manager.present_charger_cnt;
 			if( (key_addr = (char *)malloc(16)) == NULL )
 				goto cmd_0x10;
-            //获取随机KEYB值
+                         //获取随机KEYB值
 			key_init(key_addr);	
 			
-            // 存在的电桩
-            if ( charger)  
+                        // 存在的电桩
+                        if ( charger)  
 			{
 				//将改变的IP存入数据库
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, mac_addr, "chargerinfo.%s.MAC", charger->tab_name )  < 0)
-                    goto cmd_0x10;
+                                        goto cmd_0x10;
 				sprintf(bf->val_buff, "%d.%d.%d.%d", bf->recv_buff[9], bf->recv_buff[10], bf->recv_buff[11], bf->recv_buff[12]);
 				if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.IP", ChargerInfo[(*index)].tab_name) < 0)	// 存入IP
-                    goto cmd_0x10;
+                                        goto cmd_0x10;
 				memcpy(bf->val_buff, key_addr, 16);
 				if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.KEYB", ChargerInfo[(*index)].tab_name) < 0)
-                    goto cmd_0x10;
+                                        goto cmd_0x10;
 				memcpy(bf->val_buff, bf->recv_buff+18, 10);
 				if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Model", ChargerInfo[(*index)].tab_name) < 0) // series
-                    goto cmd_0x10;
+                                        goto cmd_0x10;
 				memcpy(bf->val_buff, bf->recv_buff+28, 10);
 				if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Series", ChargerInfo[(*index)].tab_name) < 0)
-                    goto cmd_0x10;
-                sprintf(bf->val_buff, "%d", bf->recv_buff[48]);
+                                        goto cmd_0x10;
+                                sprintf(bf->val_buff, "%d", bf->recv_buff[48]);
 				if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargerType", charger->tab_name) < 0)	
-                    goto cmd_0x10;
+                                        goto cmd_0x10;
 				sprintf(bf->val_buff, "%d.%02d", bf->recv_buff[41], bf->recv_buff[40]);	//ChargerVersion
 				if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargerVersion", ChargerInfo[(*index)].tab_name) < 0)
-                    goto cmd_0x10;
+                                goto cmd_0x10;
 				memcpy(ChargerInfo[(*index)].KEYB, key_addr, 16);
-                charger->charger_type = bf->recv_buff[48];
-                ChargerInfo[(*index)].wait_cmd = WAIT_CMD_NONE;
+                                charger->charger_type = bf->recv_buff[48];
+                                ChargerInfo[(*index)].wait_cmd = WAIT_CMD_NONE;
 				memcpy(bf->val_buff, bf->recv_buff+18, 10);
 				if(!strcmp(bf->val_buff, "EVG-16N"))
 				{
@@ -515,99 +493,98 @@ charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BU
 			{
 					//全新的连接，初始化key值
 					// 更新数据库
-                unsigned char   rwrite_flag = 0;
-                unsigned char offset;
-                rwrite_flag = 0; 
+                                unsigned char   rwrite_flag = 0;
+                                unsigned char offset;
+                                rwrite_flag = 0; 
 			    
-                if( pthread_rwlock_wrlock(&charger_rwlock) < 0){
-			        debug_msg("pthread_rwlock_wrlock error");
-                    exit(1);
-		    	}
+                                if( pthread_rwlock_wrlock(&charger_rwlock) < 0){
+			                debug_msg("pthread_rwlock_wrlock error");
+                                        exit(1);
+		    	        }
 				if( (sptr = find_uci_tables(TAB_POS)) == NULL)
 				{
-                    printf("读取null ...\n");
+                                        printf("读取null ...\n");
 				}
 				else
 				{
-                    for (i = 0; i < charger_manager.present_charger_cnt; i++)
-                    {
-                        debug_msg("mac = %s", ChargerInfo[i].MAC);
-                        if(memcmp(ChargerInfo[i].MAC, mac_addr, strlen(mac_addr)) == 0)
-                        {
-                            offset = i;
-                            rwrite_flag = 1;
-                            sprintf(bf->val_buff, "%08d%c", CID, '\0');
-                            debug_msg("===============================================同一个mac地址:%s", mac_addr);
-				            if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.CID", ChargerInfo[i].tab_name) < 0)
-                            {
-                                debug_msg("参数CID，写入数据库失败");
-					            goto cmd_0x10;
-                            }
+                                        for (i = 0; i < charger_manager.present_charger_cnt; i++)
+                                        {
+                                                debug_msg("mac = %s", ChargerInfo[i].MAC);
+                                                if(memcmp(ChargerInfo[i].MAC, mac_addr, strlen(mac_addr)) == 0)
+                                                {
+                                                        offset = i;
+                                                        rwrite_flag = 1;
+                                                        sprintf(bf->val_buff, "%08d%c", CID, '\0');
+                                                        debug_msg("===============================================同一个mac地址:%s", mac_addr);
+				                        if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.CID", ChargerInfo[i].tab_name) < 0)
+                                                        {
+                                                                 debug_msg("参数CID，写入数据库失败");
+					                        goto cmd_0x10;
+                                                        }
                          //  break; 
-                        }
-                    
-                    }
+                                                 }
+                                        }
 				}
 				 if(rwrite_flag == 1)
-                 {
-//                     sprintf(tab_buff, "charger%d\0", i);
-                       strcpy(tab_buff, ChargerInfo[offset].tab_name);
-                 }
-                 else
-                 {
-                    offset = charger_manager.present_charger_cnt;
-	    		    sprintf(tab_buff, "charger%d", charger_manager.present_charger_cnt+1);
-                    printf("创建的表名为:%s\n", tab_buff);
-				    ev_uci_add_named_sec("chargerinfo.%s=1", tab_buff);//创建changer表
-                    debug_msg("offset = %d\n", offset);
-                 }   
+                                {
+//                                      sprintf(tab_buff, "charger%d\0", i);
+                                        strcpy(tab_buff, ChargerInfo[offset].tab_name);
+                                }
+                                else
+                                {
+                                        offset = charger_manager.present_charger_cnt;
+	    		                sprintf(tab_buff, "charger%d", charger_manager.present_charger_cnt+1);
+                                        printf("创建的表名为:%s\n", tab_buff);
+				        ev_uci_add_named_sec("chargerinfo.%s=1", tab_buff);//创建changer表
+                                        debug_msg("offset = %d\n", offset);
+                                }   
 				// 保存CID，IP， KEYD到数据库
 				printf("tab_buff:%s \n", tab_buff);
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, mac_addr, "chargerinfo.%s.MAC", tab_buff )  < 1)
 			        goto cmd_0x10;
-                debug_msg("mac:%s", mac_addr);
+                                debug_msg("mac:%s", mac_addr);
 				sprintf(bf->val_buff, "%08d", *(unsigned int *)(bf->recv_buff + 5));
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.CID", tab_buff )  < 1)
 					goto cmd_0x10;
-                debug_msg("cid:%s", bf->val_buff);
+                                debug_msg("cid:%s", bf->val_buff);
 				sprintf(bf->val_buff, "%d.%d.%d.%d", bf->recv_buff[9], bf->recv_buff[10], bf->recv_buff[11], bf->recv_buff[12]);	// IP
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.IP", tab_buff )  < 1)
 					goto cmd_0x10;
-                debug_msg("ip:%s", bf->val_buff);
+                                debug_msg("ip:%s", bf->val_buff);
 				memcpy(bf->val_buff, key_addr, 16);
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.KEYB", tab_buff)  < 1)
 					goto cmd_0x10;
-                debug_msg("keyb:%s", bf->val_buff);
+                                debug_msg("keyb:%s", bf->val_buff);
 				memcpy(bf->val_buff, bf->recv_buff+18, 10);
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Model", tab_buff) < 1) // series
 					goto cmd_0x10;
-                debug_msg("model:%s", bf->val_buff);
+                                debug_msg("model:%s", bf->val_buff);
 				memcpy(bf->val_buff, bf->recv_buff+28, 10);
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Series", tab_buff) < 1)	
 					goto cmd_0x10;
 				sprintf(bf->val_buff, "%d.%02d", bf->recv_buff[41], bf->recv_buff[40]);	//chargerVersion
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargerVersion", tab_buff) < 1)	
 					goto cmd_0x10;
-                sprintf(bf->val_buff, "%d", bf->recv_buff[48]);
+                                sprintf(bf->val_buff, "%d", bf->recv_buff[48]);
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargerType", tab_buff) < 1)	
 					goto cmd_0x10;
-                printf("chargerType:%s ", bf->val_buff);
+                                printf("chargerType:%s ", bf->val_buff);
                 
-                sprintf(bf->val_buff, "%d", bf->recv_buff[17]);
+                                sprintf(bf->val_buff, "%d", bf->recv_buff[17]);
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.PresentMode", tab_buff) < 1)	
 					goto cmd_0x10;
                 
-                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.SelectCurrent", tab_buff);	
+                                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.SelectCurrent", tab_buff);	
 				ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.PresentOutputCurrent", tab_buff);
 				// 写入数据库
 				ChargerInfo[offset].CID = CID;
-                ChargerInfo[offset].charger_type = bf->recv_buff[48];
-                ChargerInfo[offset].wait_cmd = WAIT_CMD_NONE;
-                strcpy(ChargerInfo[offset].MAC, mac_addr);
+                                ChargerInfo[offset].charger_type = bf->recv_buff[48];
+                                ChargerInfo[offset].wait_cmd = WAIT_CMD_NONE;
+                                strcpy(ChargerInfo[offset].MAC, mac_addr);
 				memcpy(ChargerInfo[offset].KEYB, key_addr, 16);
 				strcpy(ChargerInfo[offset].tab_name, tab_buff);
 				memcpy(bf->val_buff, bf->recv_buff+18, 10);
-                *index = offset;
+                                *index = offset;
 				if(!strncmp(bf->val_buff, "EVG-16N", 7))
 				{
 					ChargerInfo[offset].model = EVG_16N;
@@ -618,61 +595,59 @@ charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BU
 				{
 					ChargerInfo[offset].model = EVG_32N;	
 				}
-			    printf("aaaaaa\n");	
-                if(rwrite_flag == 0)
-                {
-                   if(sptr == NULL)
-                   {
-					    sptr = (char *)malloc(20);
-					    memset(sptr, 0, 20);
-                        sprintf(sptr, "%s", tab_buff);//追加表名
-                   } else
-                    sprintf(sptr+strlen(sptr), ",%s", tab_buff);//追加表名
+                                if(rwrite_flag == 0)
+                                {
+                                        if(sptr == NULL)
+                                        {
+					        sptr = (char *)malloc(20);
+					        memset(sptr, 0, 20);
+                                                sprintf(sptr, "%s", tab_buff);//追加表名
+                                        } else
+                                                sprintf(sptr+strlen(sptr), ",%s", tab_buff);//追加表名
 				   
-                   if( ( i = ev_uci_save_action(UCI_SAVE_OPT, true, sptr, "%s", TAB_POS)) < 1) // 保存数据到数据库
-					    goto cmd_0x10;
-                    debug_msg("retun:%d, save tab_name:%s", i,  sptr);
-				    charger_manager.present_charger_cnt++;
-                }
+                                        if( ( i = ev_uci_save_action(UCI_SAVE_OPT, true, sptr, "%s", TAB_POS)) < 1) // 保存数据到数据库
+					        goto cmd_0x10;
+                                        debug_msg("retun:%d, save tab_name:%s", i,  sptr);
+				        charger_manager.present_charger_cnt++;
+                                }
                 
-                for (i = 0; i <charger_manager.present_charger_cnt; i++)
-                {
-                    printf("%s   ",ChargerInfo[i].tab_name);
-                }
+                                for (i = 0; i <charger_manager.present_charger_cnt; i++)
+                                {
+                                        printf("%s   ",ChargerInfo[i].tab_name);
+                                }
 
-			    if(pthread_rwlock_unlock(&charger_rwlock) < 0){
-			        free(key_addr);
-			        if(sptr != NULL)
+			        if(pthread_rwlock_unlock(&charger_rwlock) < 0){
+			                free(key_addr);
+			                if(sptr != NULL)
 				        free(sptr);
-                    debug_msg("pthread_rwlock_unlock error");
-                    exit(1);
-                }
+                                        debug_msg("pthread_rwlock_unlock error");
+                                        exit(1);
+                                }
 		  	 } // end if
-            printf("chargertype = %d\n", bf->recv_buff[42]);
+                        printf("chargertype = %d\n", bf->recv_buff[42]);
 			// 发送0x11回应
-             if ( gernal_command(fd, CHARGER_CMD_CONNECT_R, &ChargerInfo[(*index)], bf) < 0)
-              {
-                  goto cmd_0x10;
-              }
-            bf->ErrorCode = ESERVER_SEND_SUCCESS;
-            free(sptr);
-            free(key_addr);
-            return 0;
+                        if ( gernal_command(fd, CHARGER_CMD_CONNECT_R, &ChargerInfo[(*index)], bf) < 0)
+                        {
+                                goto cmd_0x10;
+                        }
+                        bf->ErrorCode = ESERVER_SEND_SUCCESS;
+                        free(sptr);
+                        free(key_addr);
+                        return 0;
 cmd_0x10:
-//            if (!charger)
-            if ( !charger)
-            {
-		        if(pthread_rwlock_unlock(&charger_rwlock) < 0){
-                     debug_msg("pthrea_rwlock_unlock failed");
-                    exit(1);
-                }
-            }
-            bf->ErrorCode = ESERVER_API_ERR;
-            if (sptr != NULL)
-              free(sptr);
-            if (key_addr != NULL)
-               free(key_addr);
-		    return -1;	
+                        if ( !charger)
+                         {
+		              if(pthread_rwlock_unlock(&charger_rwlock) < 0){
+                                        debug_msg("pthrea_rwlock_unlock failed");
+                                        exit(1);
+                                }
+                        }
+                        bf->ErrorCode = ESERVER_API_ERR;
+                        if (sptr != NULL)
+                                free(sptr);
+                        if (key_addr != NULL)
+                                free(key_addr);
+		        return -1;	
            // 发送回应
 		break;
 
@@ -682,185 +657,182 @@ cmd_0x10:
 //			if(bf->recv_buff[9] ==  CHARGER_CHARGING_COMPLETE_LOCK && ChargerInfo[(*index)].is_charging_flag == 0) 
 //			{
 //				ChargerInfo[(*index)].is_charging_flag = 1;
-//			} 
-			sprintf(bf->val_buff, "%d%c", bf->recv_buff[9], '\0');	//presentMode
+//			}
+			charger->is_charging_flag = 0; 
+			sprintf(bf->val_buff, "%d", bf->recv_buff[9]);	//presentMode
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.PresentMode", charger->tab_name);
 			ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.PresentOutputCurrent", charger->tab_name);
 			ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.SelectCurrent", charger->tab_name);
 			
-            sprintf(bf->val_buff, "%d%c", ((bf->recv_buff[10] << 8) | bf->recv_buff[11]), '\0'); // SUB_MODE
+                        sprintf(bf->val_buff, "%d", ((bf->recv_buff[10] << 8) | bf->recv_buff[11])); // SUB_MODE
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.SubMode", charger->tab_name);
 			// 心跳处理略
 			//  回复心跳
-		    if (gernal_command(fd, CHARGER_CMD_HB_R, charger, bf) < 0)
-            {
-                bf->ErrorCode = ESERVER_API_ERR;
-                return -1;
-            }
-            bf->ErrorCode = ESERVER_SEND_SUCCESS;
-            return 0;
+#if USE_POWER_BAR
+                        printf("=======>surpls current:%d\n", charger->real_current = charger_manager.power_bar_surpls_current);
+#else
+#endif
+		        if (gernal_command(fd, CHARGER_CMD_HB_R, charger, bf) < 0)
+                        {
+                                bf->ErrorCode = ESERVER_API_ERR;
+                                return -1;
+                        }
+                        bf->ErrorCode = ESERVER_SEND_SUCCESS;
+                        return 0;
 		break;
 
 		case	CHARGER_CMD_CHARGE_REQ:	// 0X54 充电请求
 			printf("充电请求...\n");
-            charger->real_current = 0;
-			charger->is_charging_flag = 0;
-            charger_manager.timeout_cnt = 0;
 			// 统计充电请求个数
 			//记录客户信息
-			// load  balance 处理
-//			if( (bf->recv_buff[29] !=  0 )&& (bf->recv_buff[29]%16 == 0))
-//			{
-//				ChargerInfo[(*index)].model = bf->recv_buff[29];
-//			}
-            pthread_mutex_lock(&serv_mutex);
-            charger->load_balance_cmd = 0x54;
-			charger->real_current = 10;
-            
-#if 0
-            if (charger_manager.present_charging_cnt <= 0)
-            {
-            } else
-            {
-                while(charger->real_current <= 0 && charger_manager.timeout_cnt <100)
-		        {
-				    debug_msg("....%d....正在睡眠等待分配电流\n", charger->real_current);
-				    msleep(300);
-                    charger_manager.timeout_cnt++;
-			    }
-                if(charger_manager.timeout_cnt >= 100 && charger->real_current <= 0)
-                {
-                        // failure
+                        pthread_mutex_lock(&serv_mutex);
+#if USE_POWER_BAR
+                        charger->real_current = 0;
+			charger->is_charging_flag = 0;
+                        charger_manager.timeout_cnt = 0;
+                        charger->load_balance_cmd = 0x54;
+                        while (charger->real_current < 7 && charger_manager.timeout_cnt <100)
+                        {
+        		         debug_msg("....%d....正在睡眠等待分配电流\n", charger->real_current);
+			         msleep(300);
+                                 charger_manager.timeout_cnt++;
+		        }
+                        if(charger_manager.timeout_cnt >= 100 && charger->real_current < 7)
+                         {
+                                 // failure,不允许充电
+                                charger->is_charging_flag = 0;
+                                charger->load_balance_cmd = 0;
+                                charger->target_mode = CHARGER_READY;
+                                charger->system_message = 0x02;
+                                charger->real_current = 0;
+                                pthread_mutex_unlock(&serv_mutex);
+                                goto reply_to_charger2;
+                         }
+                         
+                         charger->is_charging_flag = 1;
                          charger->load_balance_cmd = 0;
-                         charger->is_charging_flag = 0;
-                        pthread_mutex_unlock(&serv_mutex);
-		                goto reply_to_charger;
-                }
-            }
-
+                         charger->real_time_current = 7;
 #endif            
-        // 发送数据到后台,上锁
+                        // 发送数据到后台,上锁
 	    
-         // 扫码充电, 没走验证
-        if (bf->recv_buff[56] == 1)
-        {
-            charger->load_balance_cmd = 0;
-            charger->is_charging_flag = 1;
-		    pthread_mutex_unlock(&serv_mutex);
-		    charger->system_message = 0x01;
-            charger->target_mode = CHARGER_CHARGING;
-		    charger->start_time = time(0);	//开始充电时间
-			charger->charging_code = *(unsigned short *)(bf->recv_buff+34);			//赋值charging_code
-            // 扫码充电
-			 sprintf(bf->val_buff, "%d%c", bf->recv_buff[56], '\0');
-             debug_msg("扫码允许充电 ...\n");
-		     goto reply_to_charger;
-        }
-
-        
-
-        sprintf(bf->val_buff, "/Charging/canStartCharging?");
-        sprintf(bf->val_buff+strlen(bf->val_buff), "chargerID=%08d'&'", charger->CID);
-        bf->send_buff[0] = '\0';
-        for (i = 0; i < 16; i++)
-        {
-            sprintf(bf->send_buff + strlen(bf->send_buff), "%02x", bf->recv_buff[36 + i]);
-        }
-        
-        sprintf(bf->val_buff + strlen(bf->val_buff), "privateID=%s", bf->send_buff);
-        memcpy(ChargerInfo[(*index)].ev_linkid, bf->recv_buff+36, 16);
-        // 发送
-        sptr = check_send_status(bf->val_buff);
-         
-        
-        // 后台没有收到连接，允许充电 
-        if (!sptr)
-        {
-            charger->load_balance_cmd = 0;
-            charger->is_charging_flag = 1;
-		    pthread_mutex_unlock(&serv_mutex);
-		    charger->system_message = 0x01;
-            charger->target_mode = CHARGER_CHARGING;
-		    charger->start_time = time(0);	//开始充电时间
-			charger->charging_code = *(unsigned short *)(bf->recv_buff+34);			//赋值charging_code
-            debug_msg("后台超时，允许充电 ...");
-		    //tell charger not to wait
-		    goto reply_to_charger;
-        }
-        sprintf(bf->val_buff, "%s/%s/%08d_startlog", WORK_DIR, LOG_DIR, charger->CID);
-         if ( (file = fopen(bf->val_buff, "ab+")) != NULL)
-          {
-                sprintf(bf->val_buff, "CID:%08d,uid:%s,cycid:%d,tm:%d,pass_no:%d\n", charger->CID, 
-                         bf->send_buff, *(unsigned short*)(bf->recv_buff + 34), *(int *)(bf->recv_buff + 13), sptr[8] - 48);
-                 fwrite(bf->val_buff, 1, strlen(bf->val_buff), file);
-                 fclose(file);
-         }
-        
-        debug_msg("============================>receive str = %s\n", sptr);
-        switch ( sptr[8]-48) 
-//        switch ( *sptr-48) 
-        {
-            case    SYM_Charging_Is_Starting: 
-                    debug_msg("后台允许充电...");
-			        charger->system_message = 0x01;			// systemMessage
-		            charger->start_time = time(0);	//开始充电时间
+                        // 扫码充电, 没走验证
+                        if (bf->recv_buff[56] == 1)
+                        {
+#if USE_POWER_BAR
+                                charger->is_charging_flag = 1;
+                                charger->real_current = 7;
+                                charger->real_time_current = 7;
+#endif
+		                pthread_mutex_unlock(&serv_mutex);
+		                charger->system_message = 0x01;
+                                charger->target_mode = CHARGER_CHARGING;
+                                bf->real_time = 0;
+		                charger->start_time = time(0);	//开始充电时间
 			        charger->charging_code = *(unsigned short *)(bf->recv_buff+34);			//赋值charging_code
-            break;
-            case    SYM_Charging_Is_Stopping:
-                    debug_msg("后台不允许充电...");
-			        charger->system_message = 0x02;			// systemMessage
-            break;
-            case    SYM_No_Access_Right:
-                    debug_msg("没有权限...");
-			        charger->system_message = 0x03;			// systemMessage
-            break;
-            case    SYM_Not_Money_Charging:
-                    debug_msg("余额不足");
-                    charger->system_message = 0x04;
-            break;
-            case    SYM_EV_Link_Not_Valid:
-                    debug_msg("易冲卡无效");
-                    charger->system_message = 0x06;
-            break;
+                                // 扫码充电
+			        sprintf(bf->val_buff, "%d%c", bf->recv_buff[56], '\0');
+                                debug_msg("扫码允许充电 ...\n");
+		                goto reply_to_charger1;
+                        }
 
-            case   SYM_EV_Link_Is_Used:
-                    debug_msg("易冲卡已经使用");
-                    charger->system_message = 0x07;
-            break;
-            default:
-                   charger->system_message = 0x02;
-                   debug_msg("默认值,后台不允许充电 ...");
-            break;
-        }           
-       
-        free(sptr);
-        if (charger->system_message ==  SYM_Charging_Is_Starting)
-        {
-            // 向后台发送充电
-//            sptr = NULL;
-//            cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI %s", bf->val_buff);
-//            cmd_frun("dashboard url_post 192.168.168.28:8080/test %s", bf->val_buff);
-//            sptr = mqreceive_timed("/dashboard.checkin", 10, 4);
-//            if (sptr != NULL)
-//                free(sptr);
-            charger->target_mode = CHARGER_CHARGING;
-            charger->present_cmd = 0;
-            charger->is_charging_flag = 1;
-            if (bf->recv_buff[56] != 1) // 拍卡
-            {
-                ev_uci_save_action(UCI_SAVE_OPT, true, (char*)bf->send_buff,
-				       "chargerinfo.%s.privateID", charger->tab_name);
-            }
+                        sprintf(bf->val_buff, "/Charging/canStartCharging?");
+                        sprintf(bf->val_buff+strlen(bf->val_buff), "chargerID=%08d'&'", charger->CID);
+                        bf->send_buff[0] = '\0';
+                        for (i = 0; i < 16; i++)
+                        {
+                                sprintf(bf->send_buff + strlen(bf->send_buff), "%02x", bf->recv_buff[36 + i]);
+                        }
+                        sprintf(bf->val_buff + strlen(bf->val_buff), "privateID=%s", bf->send_buff);
+                        memcpy(charger->ev_linkid, bf->recv_buff+36, 16);
+                        // 发送
+                        sptr = check_send_status(bf->val_buff);
+                        // 后台没有收到连接，允许充电 
+                        if (!sptr)
+                        {
+                                bf->real_time = 0;
+#if USE_POWER_BAR
+                                charger->is_charging_flag = 1;
+                                charger->load_balance_cmd = 0;
+                                charger->real_current = 7;
+                                charger->real_time_current = 7;
+#endif
+		                pthread_mutex_unlock(&serv_mutex);
+		                charger->system_message = 0x01;
+                                charger->target_mode = CHARGER_CHARGING;
+		                charger->start_time = time(0);	//开始充电时间
+			        charger->charging_code = *(unsigned short *)(bf->recv_buff+34);			//赋值charging_code
+                                debug_msg("后台超时，允许充电 ...");
+		                //tell charger not to wait
+		                goto reply_to_charger1;
+                        }
+                        bf->real_time = time(0);
+                        sprintf(bf->val_buff, "%s/%s/%08d_startlog", WORK_DIR, LOG_DIR, charger->CID);
+                        if ( (file = fopen(bf->val_buff, "ab+")) != NULL)
+                        {
+                                sprintf(bf->val_buff, "CID:%08d,uid:%s,cycid:%d,tm:%d,pass_no:%d\n", charger->CID, 
+                                bf->send_buff, *(unsigned short*)(bf->recv_buff + 34), *(int *)(bf->recv_buff + 13), sptr[8] - 48);
+                                fwrite(bf->val_buff, 1, strlen(bf->val_buff), file);
+                                fclose(file);
+                        }
+                        debug_msg("============================>receive str = %s\n", sptr);
+                        switch ( sptr[8]-48) 
+                        {
+                                case    SYM_Charging_Is_Starting: 
+                                        debug_msg("后台允许充电...");
+			                charger->system_message = 0x01;			// systemMessage
+		                        charger->start_time = time(0);	//开始充电时间
+			                charger->charging_code = *(unsigned short *)(bf->recv_buff+34);			//赋值charging_code
+                                break;
+                                case    SYM_Charging_Is_Stopping:
+                                        debug_msg("后台不允许充电...");
+			                charger->system_message = 0x02;			// systemMessage
+                                break;
+                                case    SYM_No_Access_Right:
+                                        debug_msg("没有权限...");
+			                charger->system_message = 0x03;			// systemMessage
+                                break;
+                                case    SYM_Not_Money_Charging:
+                                        debug_msg("余额不足");
+                                        charger->system_message = 0x04;
+                                break;
+                                case    SYM_EV_Link_Not_Valid:
+                                        debug_msg("易冲卡无效");
+                                        charger->system_message = 0x06;
+                                break;
+                                case   SYM_EV_Link_Is_Used:
+                                       debug_msg("易冲卡已经使用");
+                                        charger->system_message = 0x07;
+                                break;
+                                default:
+                                        charger->system_message = 0x02;
+                                        debug_msg("默认值,后台不允许充电 ...");
+                                break;
+                        }           
+                        free(sptr);
+                        if (charger->system_message ==  SYM_Charging_Is_Starting)
+                        {
+#if     USE_POWER_BAR
+                                charger->is_charging_flag = 1;
+                                charger->load_balance_cmd = 0;
+                                charger->real_current = 7;
+                                charger->real_time_current = 7;
+#endif
+                                charger->target_mode = CHARGER_CHARGING;
+                                ev_uci_save_action(UCI_SAVE_OPT, true, (char*)bf->send_buff, "chargerinfo.%s.privateID", charger->tab_name);
 
-        } else
-        {
-            charger->present_cmd = 0;
-            charger->is_charging_flag = 0;
-            pthread_mutex_unlock(&serv_mutex);
-            charger->target_mode = CHARGER_READY;
-		    goto reply_to_charger;
-        }
-        pthread_mutex_unlock(&serv_mutex);
+                        } else
+                        {
+#if     USE_POWER_BAR
+                                charger->is_charging_flag = 0;
+                                charger->load_balance_cmd = 0;
+                                charger->real_current = 0;
+#endif
+                                pthread_mutex_unlock(&serv_mutex);
+                                charger->target_mode = CHARGER_READY;
+		                goto reply_to_charger2;
+                        }
+                        pthread_mutex_unlock(&serv_mutex);
+reply_to_charger1:
 #if 1
 //			ev_uci_save_action(UCI_SAVE_OPT, true, bf->send_buff, "chargerinfo.%s.privateID", charger->tab_name);
 			sprintf(bf->val_buff, "%d%c", bf->recv_buff[17], '\0');
@@ -877,118 +849,117 @@ cmd_0x10:
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargingCode", charger->tab_name);
 			sprintf(bf->val_buff, "%d%c", bf->recv_buff[56], '\0');
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargerWay", charger->tab_name);
+                        tmp_4_val = *(unsigned int *)(bf->recv_buff + 22);
+                        sprintf(bf->val_buff, "%d", tmp_4_val);
+			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.AccPower", charger->tab_name);
 #endif
-reply_to_charger:			
-            if (gernal_command(fd, CHARGER_CMD_CHARGE_REQ_R, charger, bf) < 0)
-            {
-                bf->ErrorCode = ESERVER_API_ERR;
-                return -1;
-            }
-            bf->ErrorCode = ESERVER_SEND_SUCCESS;
-            return 0;
+reply_to_charger2:			
+                        if (gernal_command(fd, CHARGER_CMD_CHARGE_REQ_R, charger, bf) < 0)
+                        {
+                                bf->ErrorCode = ESERVER_API_ERR;
+                                return -1;
+                        }
+                        bf->ErrorCode = ESERVER_SEND_SUCCESS;
+                        return 0;
 
-		case	CHARGER_CMD_STATE_UPDATE:	// 0X56 充电中状态更新
+	         case	CHARGER_CMD_STATE_UPDATE:	// 0X56 充电中状态更新
 			printf("充电中状态更新...\n");
-            charger->is_charging_flag = 1;
-            charger->real_time_current = *(unsigned short *)(bf->recv_buff + 23);
-			
-            printf("==========================================> bf->recv_buff[34] = %d\n", bf->recv_buff[34]);
+                        charger->is_charging_flag = 1;
+                        charger->real_time_current = bf->recv_buff[22];
+                        printf("================================> bf->recv_buff[22] = %d\n", charger->real_time_current);
 #if 1
-			sprintf(bf->val_buff, "%d%c", bf->recv_buff[52], '\0');
+			sprintf(bf->val_buff, "%d", bf->recv_buff[52]);
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargerWay", charger->tab_name);
-            sprintf(bf->val_buff, "%d%c", bf->recv_buff[17], '\0');
+                        sprintf(bf->val_buff, "%d", bf->recv_buff[17]);
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.PresentMode", charger->tab_name);
 			tmp_2_val = (bf->recv_buff[23] << 8 | bf->recv_buff[24]);
-            sprintf(bf->val_buff, "%d%c", tmp_2_val, '\0');
+                        sprintf(bf->val_buff, "%d", tmp_2_val);
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.PresentOutputCurrent", charger->tab_name);
 			tmp_2_val = (bf->recv_buff[25] << 8 | bf->recv_buff[26]);
-            sprintf(bf->val_buff, "%d%c", tmp_2_val, '\0');
+                        sprintf(bf->val_buff, "%d", tmp_2_val);
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.PresentOutputVoltage", charger->tab_name);
 			tmp_2_val = *(unsigned short *)(bf->recv_buff+34);
 			sprintf(bf->val_buff, "%d%c", tmp_2_val, '\0');
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Duration", charger->tab_name);
-		    tmp_2_val = *(unsigned short *)(bf->recv_buff + 53);
-            sprintf(bf->val_buff, "%d", tmp_2_val);
+		        tmp_2_val = *(unsigned short *)(bf->recv_buff + 53);
+                        sprintf(bf->val_buff, "%d", tmp_2_val);
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargingCode", charger->tab_name);
-            tmp_4_val = *(unsigned int *)(bf->recv_buff + 30);
-			sprintf(bf->val_buff, "%d%c", tmp_4_val, '\0');
+                        tmp_4_val = *(unsigned int *)(bf->recv_buff + 30);
+			sprintf(bf->val_buff, "%d", tmp_4_val);
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Power", charger->tab_name);
-
-            if (bf->recv_buff[52] != 1) // 拍卡
-            {
-                bf->val_buff[0] = '\0';
-                for (i = 0; i < 16; i++)
-                {
-                    sprintf(bf->val_buff + strlen(bf->val_buff), "%02x", bf->recv_buff[36 + i]);
-                }
-			    ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.privateID", charger->tab_name);
-            }
-            // 快冲
-            if (charger->charger_type == 2 || charger->charger_type == 4)
-            {
-                sprintf(bf->val_buff, "%d", bf->recv_buff[27]);
-			    ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Soc", charger->tab_name);
-                tmp_2_val = (bf->recv_buff[28] << 8 | bf->recv_buff[29]);
-                sprintf(bf->val_buff, "%d", tmp_2_val);
-			    ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Tilltime", charger->tab_name);
-                cmd_frun("dashboard update_fast");
-                
-            }
-            
-            // 记录日志,电量
-            sprintf(bf->send_buff, "%s/%s/%08d%c", WORK_DIR, LOG_DIR, charger->CID, '\0');
-            if ( (file = fopen(bf->send_buff, "ab+")) != NULL)
-            {
-                struct tm *tim1 = (struct tm *)malloc(sizeof(struct tm));
-                if (tim1 != NULL)
-                {
-                    tm = *(time_t *)(bf->recv_buff + 13);
-                    if (localtime_r(&tm, tim1) != NULL)
-                    {
-                        sprintf(bf->val_buff, "[%4d-%02d-%02d %02d:%02d:%02d]", 
-                                tim1->tm_year+1900, tim1->tm_mon+1, tim1->tm_mday, tim1->tm_hour, tim1->tm_min, tim1->tm_sec);
-                        sprintf(bf->val_buff + strlen(bf->val_buff), " CID:%08d, cycid:%4d, cur:%2dA, vol:%3dV, power:%dwh, soc:%d, \
-                                tilltime:%d\n", charger->CID, ((bf->recv_buff[53] << 8) | bf->recv_buff[54]), 
-                                (bf->recv_buff[23]<<8 | bf->recv_buff[24]),(bf->recv_buff[25]<<8 | bf->recv_buff[26]),
+                        if (bf->recv_buff[52] != 1) // 拍卡
+                        {
+                                bf->val_buff[0] = '\0';
+                                for (i = 0; i < 16; i++)
+                                {
+                                        sprintf(bf->val_buff + strlen(bf->val_buff), "%02x", bf->recv_buff[36 + i]);
+                                }
+			        ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.privateID", charger->tab_name);
+                        }
+                        // 快冲
+                        if (charger->charger_type == 2 || charger->charger_type == 4)
+                        {
+                                sprintf(bf->val_buff, "%d", bf->recv_buff[27]);
+			        ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Soc", charger->tab_name);
+                                tmp_2_val = (bf->recv_buff[28] << 8 | bf->recv_buff[29]);
+                                sprintf(bf->val_buff, "%d", tmp_2_val);
+			        ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Tilltime", charger->tab_name);
+                                cmd_frun("dashboard update_fast");
+                        }
+                        // 记录日志,电量
+                        sprintf(bf->send_buff, "%s/%s/%08d", WORK_DIR, LOG_DIR, charger->CID);
+                        if ( (file = fopen(bf->send_buff, "ab+")) != NULL)
+                        {
+                                struct tm *tim1 = (struct tm *)malloc(sizeof(struct tm));
+                                if (tim1 != NULL)
+                                {
+                                        tm = *(time_t *)(bf->recv_buff + 13);
+                                        if (localtime_r(&tm, tim1) != NULL)
+                                        {
+                                            sprintf(bf->val_buff, "[%4d-%02d-%02d %02d:%02d:%02d]", 
+                                            tim1->tm_year+1900, tim1->tm_mon+1, tim1->tm_mday, tim1->tm_hour, tim1->tm_min, tim1->tm_sec);
+                                            sprintf(bf->val_buff + strlen(bf->val_buff), " CID:%08d, cycid:%4d, cur:%2dA, vol:%3dV, \
+                                        power:%dwh, soc:%d, tilltime:%d\n", charger->CID, ((bf->recv_buff[53] << 8)|bf->recv_buff[54]),\ 
+                                       (bf->recv_buff[23]<<8 | bf->recv_buff[24]),(bf->recv_buff[25]<<8 | bf->recv_buff[26]), \
                                 *(unsigned int *)( bf->recv_buff + 30), bf->recv_buff[27], (bf->recv_buff[28] << 8| bf->recv_buff[29]));
-                    }
-                    free(tim1);
-                }
-                fwrite(bf->val_buff, 1, strlen(bf->val_buff), file);
-                fclose(file);
-            }
+                                        }
+                                        free(tim1);
+                                }
+                                fwrite(bf->val_buff, 1, strlen(bf->val_buff), file);
+                                fclose(file);
+                        }
 #endif
-            charger->target_mode = CHARGER_CHARGING;
-            charger->system_message = 0x01;
-            // 回应心跳
-            if (gernal_command(fd, CHARGER_CMD_HB_R, charger, bf) < 0)
-            {
-                bf->ErrorCode = ESERVER_API_ERR;
-                return -1;
-            }
-            bf->ErrorCode = ESERVER_SEND_SUCCESS;
-            return 0;
+                        charger->target_mode = CHARGER_CHARGING;
+                        charger->system_message = 0x01;
+                        // 回应心跳
+                        if (gernal_command(fd, CHARGER_CMD_HB_R, charger, bf) < 0)
+                        {
+                                bf->ErrorCode = ESERVER_API_ERR;
+                                return -1;
+                        }
+                        bf->ErrorCode = ESERVER_SEND_SUCCESS;
+                        return 0;
 		break;
 
 		case	CHARGER_CMD_STOP_REQ:	// 0x58  停止充电请求
 			debug_msg("停止充电请求, CID[%d] ...", charger->CID);
 			charger->end_time = time(0);				//获取充电结束时间
-		    charger->power = *(unsigned int *)(bf->recv_buff+37);	//获取结束充电的电量
+		        charger->power = *(unsigned int *)(bf->recv_buff+37);	//获取结束充电的电量
 			charger->is_charging_flag = 0;
 			charger->real_current = 0;
             
-            if (bf->recv_buff[59] == 1) // 扫码
-            {
-                goto replay58;       
-            }
+                        if (bf->recv_buff[59] == 1) // 扫码
+                        {
+                                goto replay58;       
+                        }
 			// 发送数据给后台
 			sprintf(bf->val_buff, "/ChargerState/stopState?");
 			sprintf(bf->val_buff + strlen(bf->val_buff), "key={chargers:[{chargerId:\\\"%08d\\\",", charger->CID);
-            bf->send_buff[0] = '\0';
-            for (i = 0; i < 16; i++) {
-                sprintf(bf->send_buff + strlen(bf->send_buff), "%02x", bf->recv_buff[43 + i]);
-            }
-            sprintf(bf->val_buff + strlen(bf->val_buff), "privateID:\\\"%s\\\",", bf->send_buff);
+                        bf->send_buff[0] = '\0';
+                        for (i = 0; i < 16; i++) {
+                                sprintf(bf->send_buff + strlen(bf->send_buff), "%02x", bf->recv_buff[43 + i]);
+                        }
+                        sprintf(bf->val_buff + strlen(bf->val_buff), "privateID:\\\"%s\\\",", bf->send_buff);
 			tmp_4_val = *(unsigned int *)(bf->recv_buff + 37);
 			sprintf(bf->val_buff + strlen(bf->val_buff), "power:%d,", tmp_4_val);
 			tmp_2_val =(bf->recv_buff[60] << 8 | bf->recv_buff[61]);
@@ -1005,6 +976,9 @@ reply_to_charger:
                 
 			//写入数据库，更新相应表信息
 			//当前模式
+                        tmp_4_val = *(unsigned int *)(bf->recv_buff + 22);
+                        sprintf(bf->val_buff, "%d", tmp_4_val);
+			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.AccPower", charger->tab_name);
 //			tmp_2_val = *(unsigned short*)(bf->recv_buff+18);
 //			sprintf(bf->val_buff, "%d", tmp_2_val);
 //			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.SubMode", ChargerInfo[(*index)].tab_name);
@@ -1734,8 +1708,7 @@ void *pthread_service_send(void *arg)
 #if FORMAL_ENV
                         cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI %s", val);
 #else
-			cmd_frun("dashboard url_post 10.9.8.2:8080/test %s", val);
-                        //cmd_frun("dashboard url_post 192.168.168.28:8080/test %s", val);
+                        cmd_frun("dashboard url_post 10.9.8.2:8080/test %s", val);
 #endif 
                         free(val);   
                    }
@@ -1938,7 +1911,30 @@ int    check_have_all_handle(char way, struct wait_task *task)
     return 0;
 }
 
+void   check_charger_network(void)
+{
+        int i;
 
+        for (i = 0; i < charger_manager.present_charger_cnt; i++)
+        {
+                        if (ChargerInfo[i].free_cnt_flag == 1 && ChargerInfo[i].free_cnt > 10)
+                        {
+                                ChargerInfo[i].free_cnt_flag = 0;
+                                ev_uci_save_action(UCI_SAVE_OPT, true, "46", "chargerinfo.%s.PresentMode", ChargerInfo[i].tab_name);
+                                // 断网情况下，清除电桩的一些状态，必需
+                                if (ChargerInfo[i].is_charging_flag == 1)
+                                {
+                                     ChargerInfo[i].is_charging_flag = 0;
+                                }
+                        }
+			if(ChargerInfo[i].free_cnt_flag == 1)
+			 {
+			        ChargerInfo[i].free_cnt++;
+			 }
+                        if (ChargerInfo[i].free_cnt_flag == 0)
+                                ev_uci_save_action(UCI_SAVE_OPT, true, "46", "chargerinfo.%s.PresentMode", ChargerInfo[i].tab_name);
+        }
+}
 
 void * pthread_service_receive(void *arg)
 {
@@ -1959,7 +1955,6 @@ void * pthread_service_receive(void *arg)
    for ( ; ; )
    {
             // 阻塞住，每5秒超时
-#if 1
        recv_str = mqreceive_timed("/server.cmd", 100, 5);
        if (recv_str)
        {
@@ -1979,11 +1974,13 @@ void * pthread_service_receive(void *arg)
                     continue;
           }
          debug_msg("读取队列超时，准备读取UCI数据库 ...");
+
+#if USE_POWER_BAR
+#else
+         check_charger_network();
 #endif
          update_cnt = 0;
          have_handle_flag = 0;
-//         msleep(5000);
-#if 1
          if (ev_uci_data_get_val(val_buff, sizeof(val_buff), "chargerinfo.SERVER.CID") < 0) //CMD 
             goto set_zero;
          CID_TMP = atoi(val_buff);
@@ -2156,7 +2153,6 @@ void * pthread_service_receive(void *arg)
 set_zero:
 	  ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.CMD", "SERVER");
        CMD = CMD_TMP = 0; 
-#endif
    } //end for
     return NULL;
 }
@@ -2168,14 +2164,14 @@ struct load_balance {
     unsigned char   no_match_flag;
     int             cid;
 };
-int  bin_packing(unsigned char *data, unsigned char *limit, int len, int surpls)
+int  bin_packing(unsigned char *data, unsigned char *limit, unsigned char average, int len, int surpls)
 {
     int i = len;
     int m = 0;
     
     for(i = 0; i < len; i++)
     {
-        if (data[i] < limit[i])
+        if (data[i] < limit[i] && data[i] < average)
             data[i] += 1;
         else
         {
@@ -2187,7 +2183,7 @@ int  bin_packing(unsigned char *data, unsigned char *limit, int len, int surpls)
     }
     if (m == len)
         return (surpls);
-    return bin_packing(data, limit, len, surpls);
+    return bin_packing(data, limit, average, len, surpls);
 }
 int  bin_packing_err(unsigned char *data, unsigned int limit, int len, int surpls)
 {
@@ -2216,70 +2212,90 @@ int  bin_packing_err(unsigned char *data, unsigned int limit, int len, int surpl
 
 void *load_balance_pthread(void *arg)
 {
-      int i;
-      unsigned char CNT,NUM, NUM_TMP = 0, have_charger_flag, charger_index, index, sum;
-      unsigned char limit[8], current[8], no_change_index[8];
-               char  mark_index[8];
-               char  surpls;
-      unsigned char  wait_time, off_net_cnt;
-      struct load_balance balance[8] = {0};
-      int cnt = 0;
-      char      send_buff[10] = {0};
+      int i, cnt = 0;
+      unsigned char CNT,                // 电桩数量局部量
+                    NUM,                // 正在充电数的局部量
+                    NUM_TMP = 0,
+                    have_charger_flag,  // 有充电请求的标志
+                    charger_index,      // 充电请求电桩在ChargerInfo数组中的位置。
+                    index, sum, wait_time,
+                    off_net_cnt,        // 联网电桩数
+                    average_limit;      // 平均电流
+      unsigned char limit[15], 
+                    current[15], 
+                    no_change_index[15], // 充电请求时，降低电桩为7A，没有为7A的，设置此标志。
+                    off_net_charging[15];// 正在充电之后断网的，设置此标志。
+      char          mark_index[8],
+                    surpls,              // 剩余电流
+                    send_buff[10] = {0};
+      struct load_balance balance[15] = {0}; // 正在充电的电桩，设置此标志。
 
-      sleep(20); 
-      debug_msg("pthread of load balance is running");
+
+//      debug_msg("pthread of load balance is running");
       for (; ;)
       {
-          CNT = charger_manager.present_charger_cnt; // 充电桩个数
-          have_charger_flag = 0;
-          index = 0;
-          off_net_cnt = 0;
-          NUM = 0;
-	    if(ev_uci_data_get_val(send_buff, 10, "chargerinfo.TABS.chargernum") >= 0)
-        {
-            if (atoi(send_buff) > 0)
-                charger_manager.total_num = atoi(send_buff);
-            printf("max_num = %d\n", charger_manager.total_num);
-        }
-	    if(ev_uci_data_get_val(send_buff, 10, "chargerinfo.TABS.max_current") >= 0)
-        {
-            if (atoi(send_buff) > 0)
-                charger_manager.limit_max_current = atoi(send_buff);
-            printf("max_current = %d\n", charger_manager.limit_max_current);
-        }
-
-
-          for (i = 0; i < CNT; i++)
-          {
-                if (ChargerInfo[i].present_cmd == 0x54) // 有拍卡充电
+                CNT = charger_manager.present_charger_cnt; // 充电桩个数, 拷入局部变量
+                have_charger_flag = 0;                     // 清除
+                index = 0;
+                off_net_cnt = 0;
+                NUM = 0;
+	        if(ev_uci_data_get_val(send_buff, 10, "chargerinfo.TABS.chargernum") >= 0)
                 {
-                    have_charger_flag = 1;
-                    charger_index = i;
+                        charger_manager.total_num = atoi(send_buff);
+//                        printf("max_num = %d\n", charger_manager.total_num);
                 }
-                if (ChargerInfo[i].is_charging_flag == 1)
+	        if(ev_uci_data_get_val(send_buff, 10, "chargerinfo.TABS.maxcurrent") >= 0)
                 {
-                    balance[i].charging_flag = 1;
-                    NUM++;
-                    
-                } else
-                {
-                    balance[i].charging_flag = 0;      // balance 对应电桩序列,复制到局部变量，防止被改变
+                        charger_manager.limit_max_current = atoi(send_buff);
+//                        printf("max_current = %d\n", charger_manager.limit_max_current);
                 }
-                if (ChargerInfo[i].free_cnt_flag == 1 && ChargerInfo[i].free_cnt > 10)
+                // 读取电桩数据信息
+                for (i = 0; i < CNT; i++)
                 {
-                    ChargerInfo[i].free_cnt_flag = 0;
-                    
-                }
-			    if(ChargerInfo[i].free_cnt_flag == 1)
-			    {
+                        // 统计断网的电桩数量
+                        if (ChargerInfo[i].free_cnt_flag == 1 && ChargerInfo[i].free_cnt > 10)
+                        {
+                                ChargerInfo[i].free_cnt_flag = 0;
+                                ev_uci_save_action(UCI_SAVE_OPT, true, "46", "chargerinfo.%s.PresentMode", ChargerInfo[i].tab_name);
+                                // 断网情况下，清除电桩的一些状态，必需
+                                if (ChargerInfo[i].is_charging_flag == 1)
+                                {
+                                        balance[i].charging_flag = 1;
+                                        ChargerInfo[i].real_time_current = 16;
+                                        off_net_charging[i] = 1;
+                                        no_change_index[i] = 1;
+                                }
+                        }
+			if(ChargerInfo[i].free_cnt_flag == 1)
+			 {
 				    ChargerInfo[i].free_cnt++;
 				    off_net_cnt++;	
-			    }
-                if (ChargerInfo[i].free_cnt_flag == 0)
-                {
-                    ev_uci_save_action(UCI_SAVE_OPT, true, "46", "chargerinfo.%s.PresentMode", ChargerInfo[i].tab_name);
+                                   if (ChargerInfo[i].is_charging_flag == 1 && off_net_charging[i] == 1)
+                                   {
+                                       no_change_index[i] = 1;
+                                       ChargerInfo[i].real_time_current = 16;
+                                   } 
+                                   off_net_charging[i] = 0;
+			 }
+                        // 标记充电请求的电桩，只有一台
+                        if (ChargerInfo[i].load_balance_cmd == 0x54) // 有拍卡充电
+                        {
+                                have_charger_flag = 1;
+                                charger_index = i;
+                        }
+                        // 统计正在充电的电桩数量
+                        if (ChargerInfo[i].is_charging_flag == 1)
+                        {
+                                balance[i].charging_flag = 1;
+                                NUM++;
+
+                    
+                        } else
+                        {
+                                balance[i].charging_flag = 0;      // balance 对应电桩序列,复制到局部变量，防止被改变
+                        }
                 }
-        }
+        debug_msg("load_balance============>charger_cnt:%d, charing_cnt:%d, net_off_cnt:%d \n", CNT, NUM, charger_manager.present_off_net_cnt);
 	    charger_manager.present_off_net_cnt = charger_manager.total_num - off_net_cnt;
 //        debug_msg("pthread of load balance: off net cnt = %d", charger_manager.present_off_net_cnt);
         // 向串口发送灯板控制命令
@@ -2316,91 +2332,78 @@ void *load_balance_pthread(void *arg)
 //            cmd_frun("echo %s > /dev/ttyUSB0", send_buff);
 //                power_bar_ctrl_send(charger_manager.have_powerbar_serial_fd, POWER_BAR_PWN_3S, POWER_BAR_GREEN, 1);
         }
-        debug_msg("load_balance============>charger_cnt:%d, charing_cnt:%d, net_off_cnt:%d \n", CNT, NUM, charger_manager.present_off_net_cnt);
-        sleep(10);
-#if 0  
-        // 不进行分配的条件
-          if (have_charger_flag == 0 && NUM <= 0 || CNT == 0)  // (have_charger_flag == 0 && NUM = NUM_TMP)
-            {
-//                if (NUM == NUM_TMP)
-//                {
-//                    NUM_TMP = NUM;
-                    sleep(10);
-                    continue;
-//                }
-            }
-           printf("*********************************\n");
-           printf("**       开始进行电流分配     ***\n");
-           printf("*********************************\n");
-           NUM_TMP = NUM;
-          //分配充电电流, 7A
-          printf("have_charger_flag = %d\n", have_charger_flag );
-          if (have_charger_flag == 1)
-          {
-              printf("SSSSSSSSSSSSSSSSSSSSSSSSSS\nSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS有电桩充电\n");
-                index = 0;
-                for (i = 0; i < CNT; i++)
+                // 不进行分配的条件
+                if (have_charger_flag == 0 && NUM == 0)
                 {
-                    if (balance[i].charging_flag == 1)
-                    {
-                        ChargerInfo[i].real_current = 7;
-                        index++;
-                    }
-                 }
-                // 等待 1min, 提前相等直接跳出
-                cnt = 0;
-                wait_time = 20;
-                char no_cnt = 0;
-                while (wait_time--)
+                        charger_manager.power_bar_surpls_current = charger_manager.limit_max_current; 
+                        sleep(5);
+                        continue;
+                }
+                
+                //有充电请求，分配充电电流, 7A
+                if (have_charger_flag == 1)
                 {
-                    memset(no_change_index, 0, sizeof(no_change_index));
-                    printf("正在等待.....\n");
-                    cnt = 0;
-                    for ( i = 0; i < CNT; i++)
-                    {
-                        if (balance[i].charging_flag == 1)
+                printf("*********************************\n");
+                 printf("**       开始进行电流分配     ***\n");
+                printf("*********************************\n");
+                        if (charger_manager.power_bar_surpls_current >= 16)
                         {
-                            if (ChargerInfo[i].real_time_current == 7)
-                               cnt++;
-                            else
-                                no_change_index[i] = 1;
+                            ChargerInfo[charger_index].real_current = 7;
+                            ChargerInfo[charger_index].real_time_current = 7;
+                            ChargerInfo[charger_index].load_balance_cmd = 0;
+                            ChargerInfo[charger_index].is_charging_flag = 1;
+                        } else
+                        {
+                                charger_manager.power_bar_surpls_current = 0;
+                                ChargerInfo[charger_index].real_current = 0;
+                                ChargerInfo[charger_index].load_balance_cmd = 0;
                         }
-                    }
-                    if (index == cnt)
-                        break;
-                    sleep(1);
-                }
-        
-                // 判断有没有可用电流
-                sum = 0;
-                for (i = 0; i < CNT; i++)
-                {
-                    if (balance[i].charging_flag == 1)
-                    {
-                        sum += ChargerInfo[i].real_time_current;
-                    }
-                }
-                surpls = charger_manager.limit_max_current - sum - 7 * charger_manager.present_off_net_cnt;
-                printf("$$$$$$$$$$$$======>surpls:%d\n",surpls);
-                if (surpls >= 7)
-                {
-                    ChargerInfo[charger_index].real_current = 7;
-                    sleep (2);
-                    continue;
-                } else
-                {
-                    sleep (2);
-                    continue;
-                }
-                // 跳转
-                goto READ;
-          } // end if 
+                        index = 0;
+                        for (i = 0; i < CNT; i++)
+                        {
+                                if (balance[i].charging_flag == 1 && off_net_charging[i] == 0)
+                                {
+                                        ChargerInfo[i].real_current = 7;
+                                        index++;
+                                }
+                        }
+                        // 等待 1min, 提前相等直接跳出
+                        wait_time = 30;
+                        // 清0位未改变的电桩,做标记用
+                        memset(no_change_index, 0, sizeof(no_change_index));
+                        while (wait_time--)
+                        {
+                                cnt = 0;
+                                sum = 0;
+                                for ( i = 0; i < CNT; i++)
+                                {
+                                        if (balance[i].charging_flag == 1)
+                                        {
+                                                if (ChargerInfo[i].real_time_current == 7)
+                                                {
+                                                        no_change_index[i] = 0;
+                                                        cnt++;
+                                                }
+                                                else
+                                                        no_change_index[i] = 1;
+                                        }
+                                }
+                                if (index == cnt)
+                                {
+                                        printf("电桩已经全部改变 ...\n");
+                                        break;
+                                }
+                                sleep(1);
+                        }
+                        sleep(5);
+                        continue;
+          }  
+          
 READ:
         // 重读电桩实时电流
-        sleep (10);
         index = 0;
-        sum = 0;
         char cur = 0;
+        sum = 0;
         memset(mark_index, -1, sizeof(mark_index));
         for (i = 0; i < CNT; i++)
         {
@@ -2418,29 +2421,38 @@ READ:
                 sum += cur;  //current[index];
             }
         }
-        // 计算剩余
-        for (i = 0; i < index; i++)
-        {
-            printf("$$$$$$$$$$$$$$$$$$======>limit:%d\n", limit[i]);
-        }
-        printf("$$$$$$$$$$$$======>surpls:%d\n",surpls);
-//        surpls = charger_manager.limit_max_current - sum;
-        surpls = charger_manager.limit_max_current - sum - 7 * charger_manager.present_off_net_cnt;
-        if (surpls <= 0)
-             bin_packing_err(current, 7, index, 0 - surpls);
+         if (charger_manager.limit_max_current - sum >= 16)
+         {
+                charger_manager.power_bar_surpls_current = 16;
+                cur = charger_manager.power_bar_surpls_current;
+         }
          else
-            bin_packing(current, limit, index, surpls);
-        printf("$$$$$$$$$$$$======>surpls:%d\n",surpls);
-        for (i = 0; i < index; i++)
-        {
-            printf("$$$$$$$$$$$$$$$$$$======>%d\n", current[i]);
-        }
-        index = 0;
-        for (i = 0; i < 8; i++)
-        {
-            printf("%d ", no_change_index[i]);
-        }
-        printf("\n");
+         { 
+//             charger_manager.power_bar_surpls_current = charger_manager.limit_max_current - sum;
+              charger_manager.power_bar_surpls_current = 0;
+              cur = 16;
+         }
+         surpls = charger_manager.limit_max_current - cur - sum;
+         average_limit = (charger_manager.limit_max_current -  charger_manager.power_bar_surpls_current)/NUM;
+         printf("统计当前电量: sum = %d, limit_avg:%d, surpls:%d, power_bar_surpls:%d\n", sum, average_limit, surpls,
+                 charger_manager.power_bar_surpls_current);
+
+        // 计算剩余
+//        if (surpls <= 0)
+//             bin_packing_err(current, 7, index, 0 - surpls);
+//         else
+         if (surpls > 0)
+                bin_packing(current, limit, average_limit, index, surpls);
+          else if (surpls < 0)
+          {
+                bin_packing_err(current, 7, index, 0 - surpls);
+          }
+
+         for (i = 0; i < index; i++)
+         {
+                printf("预分配的电流[%d]-->%d\n", i, current[i]);
+         }
+         index = 0;
         for ( i = 0; i < CNT; i++)
         {
             if (balance[i].charging_flag == 1)
@@ -2449,13 +2461,12 @@ READ:
                     ChargerInfo[i].real_current = ChargerInfo[i].real_time_current;
                 else
                 {
-                    if (mark_index[i] == i) // 已经改成7A
                         ChargerInfo[i].real_current = current[index++];
                 }
+                printf("最终分配的电流[%d]-->%d\n", i, ChargerInfo[i].real_current);
             }
         }
-        continue;
-#endif
+        sleep(5);
       } 
     return (void *)NULL;
 }
@@ -2489,14 +2500,14 @@ void  charger_info_init(int select)
         ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.END_TIME");
         return ;
     }
-    printf("uci  init ... \n");
+         printf("uci  init ... \n");
 	if( (tab_tmp = tab_name = find_uci_tables(TAB_POS)) == NULL)
 		return ;
 	while(*tab_name)
 	{
 		if(*tab_name == ',')
 		{
-	        printf("charger name[%d] = %s\n",i,  name[i]);
+	                printf("charger name[%d] = %s\n",i,  name[i]);
 			i++;
 			j = 0;
 			tab_name++;
@@ -2505,51 +2516,45 @@ void  charger_info_init(int select)
 		name[i][j++] = *tab_name++;		
 	}
 	printf("charger name[%d] = %s\n",i,  name[i]);
-    printf("i+1 = %d\n", i+1);
-	for(j =0; j <= i; j++)
+        printf("i+1 = %d\n", i+1);
+	
+        for(j =0; j <= i; j++)
 	{
-		if(ev_uci_data_get_val(info, 20, "chargerinfo.%s.CID", name[j]) < 0){ //获取CID
-            continue;
-        }
-		ChargerInfo[j].CID = atoi(info);
-#ifndef NDEBUG
-		printf("数据库取出的CID为------------------>%d\n", ChargerInfo[j].CID);
-#endif	
-//        bzero(info, sizeof(info));
-        ev_uci_data_get_val(info, 40, "chargerinfo.%s.PresentMode", name[j]); //
-        debug_msg("presentmode = %d", atoi(info)); 
-        if (atoi(info) == CHARGER_CHARGING)
-        {
-            debug_msg("服务正在重启，有电桩正在充电");
-            bzero(info, sizeof(info));
-            if (ev_uci_data_get_val(info, 40, "chargerinfo.%s.privateID", name[j]) < 0) //
-                goto ret;
-            debug_msg("privaid:%s", info); 
-            for (ii = 0; ii < 16; ii++)
-            {
-                data = 0;
-                tmp[0] = info[2 * ii];
-                tmp[1] = info[2 * ii + 1];
-                if (tmp[0] <= '9')
+		if(ev_uci_data_get_val(info, 20, "chargerinfo.%s.CID", name[j]) < 0) //获取CID
+		        exit(1);
+                ChargerInfo[j].CID = atoi(info);
+                if ( ev_uci_data_get_val(info, 40, "chargerinfo.%s.PresentMode", name[j]) < 0)
+                     goto ret;
+                if (atoi(info) == CHARGER_CHARGING)
                 {
-                    data += (16*(tmp[0] - '0'));
-                } else
-                {
-                    data += (16*(tmp[0] - 'a' + 10));
+                        ChargerInfo[j].is_charging_flag = 1;
+                        debug_msg("服务正在重启，有电桩正在充电");
+                        if (ev_uci_data_get_val(info, 40, "chargerinfo.%s.privateID", name[j]) < 0) //
+                                goto ret;
+                        for (ii = 0; ii < 16; ii++)
+                        {
+                                data = 0;
+                                tmp[0] = info[2 * ii];
+                                tmp[1] = info[2 * ii + 1];
+                                if (tmp[0] <= '9')
+                                {
+                                        data += (16*(tmp[0] - '0'));
+                                } else
+                                {
+                                        data += (16*(tmp[0] - 'a' + 10));
+                                }
+                                if (tmp[1] >= 'a') 
+                                {
+                                        data +=  (tmp[1] - 'a' + 10);
+                                } else
+                                {
+                                        data += (tmp[1] - '0');
+                                }
+                                debug_msg("%x ", data);
+                                ChargerInfo[j].ev_linkid[ii] = data;     
+                        }
                 }
-               if (tmp[1] >= 'a') 
-               {
-                    data +=  (tmp[1] - 'a' + 10);
-               } else
-               {
-                    data += (tmp[1] - '0');
-               }
-               debug_msg("%x ", data);
-                ChargerInfo[j].ev_linkid[ii] = data;     
-            }
-        }
 ret:
-        bzero(info, strlen(info));
 		if(ev_uci_data_get_val(info, 20, "chargerinfo.%s.Model", name[j]) < 0) // IP
 		    exit(1);
 		if(strncmp(info, "EVG-32N", 7) == 0)
@@ -2560,7 +2565,6 @@ ret:
 		{
 			ChargerInfo[j].model = EVG_16N;	
 		}
-//		bzero(info, strlen(info));
 //		ev_uci_data_get_val(info, 20, "chargerinfo.%s%c%s", name[j], '.', "IP"); // IP
 		//ChargerInfo[j].IP = inet_addr(info);
 //		unsigned char* p = info;
@@ -2579,20 +2583,17 @@ ret:
 #ifndef NDEBUG
 //		printf("数据库取出的IP为------------------>%d.%d.%d.%d\n", ChargerInfo[j].IP[0], ChargerInfo[j].IP[1], ChargerInfo[j].IP[2], ChargerInfo[j].IP[3]);
 #endif	
-		bzero(info, strlen(info));
 		// 赋值key值
 		if(ev_uci_data_get_val(info, 20, "chargerinfo.%s.KEYB", name[j]) < 0)
 		    exit(1);
 		strncpy(ChargerInfo[j].KEYB, info, 16);
-		bzero(info, strlen(info));
 		if(ev_uci_data_get_val(info, 20, "chargerinfo.%s.ChargerType", name[j]) < 0)
 		    exit(1);
-        ChargerInfo[j].charger_type = atoi(info);
-        if(ev_uci_data_get_val(info, 20, "chargerinfo.%s.MAC", name[j]) < 0)
+                 ChargerInfo[j].charger_type = atoi(info);
+                if(ev_uci_data_get_val(info, 20, "chargerinfo.%s.MAC", name[j]) < 0)
 		    exit(1);
-        strncpy(ChargerInfo[j].MAC, info, 17);
+                strncpy(ChargerInfo[j].MAC, info, 17);
 		strcpy(ChargerInfo[j].tab_name, name[j]);
-//        ChargerInfo[j].real_current = 7; // 7A
 		charg_cnt++;
 		charger_manager.present_charger_cnt++;	// 全局数组，用于在内存中记录充电桩的个数,所有线程共享	
 #ifndef NDEBUG

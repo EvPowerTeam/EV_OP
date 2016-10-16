@@ -57,6 +57,7 @@ typedef  long           ev_long;
  *****************************************************/
 #define  FORMAL_ENV         1
 #define  USE_DAEMONIZE      1
+#define  USE_POWER_BAR      0
 #define  SOCK_LONG_CONNECT  0
 
 
@@ -140,7 +141,6 @@ typedef  long           ev_long;
 #define     RECORD_DIR              "RECORD"
 #define     EXCEPTION_DIR           "exception"
 #define     LOG_DIR                 "log"
-#define     ROUTER_LOG_DIR          "routerlog"
 #define     CONFIG_FILE             "/etc/chargerserver.conf"
 #define     FILEPERM                (S_IRUSR | S_IWUSR)
 
@@ -189,6 +189,7 @@ typedef struct {
     unsigned char   *recv_buff;
     unsigned char   *send_buff;
     char            *val_buff;
+    time_t          real_time;
     int             recv_cnt;
     int             ErrorCode;
 }BUFF;
@@ -283,6 +284,23 @@ typedef struct  chargerinfo{
 	unsigned int    start_time; 	            // 开始充电时间
 	unsigned int    end_time;	                // 结束充电时间
 }CHARGER_INFO_TABLE;
+
+
+typedef struct {
+    ev_uchar   present_charger_cnt;	//当前
+    ev_uchar   present_off_net_cnt;	//当前断网的个数
+    ev_uchar   present_networking_cnt;	//当前联网的总数
+    ev_uchar   present_charging_cnt;	//当前正在充电的个数
+    ev_int     limit_max_current;	//限制的最大的充电电流
+    ev_int     total_num;              //充电装总个数，默认给8
+    ev_int     have_powerbar_serial_fd;            //打开与灯板通信的串口描述符
+    ev_int     timeout_cnt;
+    volatile   ev_int power_bar_surpls_current;
+//	pthread_mutex_t clifd_mutex;
+//	pthread_cond_t	clifd_cond;
+//	pthread_mutex_t serv_cond;
+//	pthread_rwlock_t charger_rwlock;
+}CHARGER_MANAGER;
 
 
 // 充电协议相关

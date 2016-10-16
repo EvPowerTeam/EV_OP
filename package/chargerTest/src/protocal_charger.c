@@ -5,6 +5,8 @@
 #include "./include/CRC.h"
 #include "./include/err.h"
 
+extern  CHARGER_MANAGER charger_manager;
+
 void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
 {
         
@@ -502,7 +504,14 @@ gernal_command(int fd, const int cmd, const CHARGER_INFO_TABLE *charger, BUFF *b
             bf->send_buff[10] = (char)(tm >> 8);
             bf->send_buff[11] = (char)(tm >> 16);
             bf->send_buff[12] = (char)(tm >> 24);
+#if USE_POWER_BAR
+            if (bf->recv_buff[4] == 0x56)
+                bf->send_buff[13] = charger->real_current;
+            else
+                bf->send_buff[13] = charger_manager.power_bar_surpls_current;
+#else
             bf->send_buff[13] = charger->support_max_current;
+#endif
             n = 16;
       break; 
       case CHARGER_CMD_CONNECT_R:
@@ -516,11 +525,11 @@ gernal_command(int fd, const int cmd, const CHARGER_INFO_TABLE *charger, BUFF *b
             n = 35;
       break;
       case CHARGER_CMD_CHARGE_REQ_R:
-            tm = time(0);
-            bf->send_buff[9]  = (char)tm;
-            bf->send_buff[10] = (char)(tm >>  8);
-            bf->send_buff[11] = (char)(tm >> 16);
-            bf->send_buff[12] = (char)(tm >> 24);
+//            tm = time(0);
+            bf->send_buff[9]  = (char)bf->real_time;
+            bf->send_buff[10] = (char)(bf->real_time >>  8);
+            bf->send_buff[11] = (char)(bf->real_time >> 16);
+            bf->send_buff[12] = (char)(bf->real_time >> 24);
             bf->send_buff[13] = charger->target_mode;
             bf->send_buff[14] = charger->system_message;
             bf->send_buff[15] = bf->recv_buff[32];  // duration
@@ -528,7 +537,11 @@ gernal_command(int fd, const int cmd, const CHARGER_INFO_TABLE *charger, BUFF *b
             bf->send_buff[17] = bf->recv_buff[34];  // chargercode
             bf->send_buff[18] = bf->recv_buff[33]; 
             memcpy(bf->send_buff + 19, bf->recv_buff + 36, 16); // uid
+#if USE_POWER_BAR
+            bf->send_buff[35] = charger->real_current;
+#else
             bf->send_buff[35] = charger->model;
+#endif
             n = 38;
       break;
       case CHARGER_CMD_STOP_REQ_R :
