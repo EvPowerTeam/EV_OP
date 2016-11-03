@@ -17,7 +17,7 @@ define Package/dashboard
   CATEGORY:=Utilities
   TITLE:=package to communicate with cloud via dashboard
  #URL:=
-  DEPENDS:=+libnl-tiny +libev +librt
+  DEPENDS:=+libnl-tiny +libev +librt +libmosquitto
 endef
 
 define Package/dashboard/description

@@ -33,6 +33,17 @@ static void boot_setup_network()
 
 static void boot_init_dir(void)
 {
+    //char    name[100];
+    //mkdir(WORK_DIR, 0777);
+    //sprintf(name, "%s/%s%c", WORK_DIR, CHAOBIAO_DIR, '\0');
+
+    //mkdir(name, 0777);
+    //sprintf(name, "%s/%s%c", WORK_DIR, CONFIG_DIR, '\0');
+    //mkdir(name, 0777);
+    //sprintf(name, "%s/%s%c", WORK_DIR, UPDATE_DIR, '\0');
+    //mkdir(name, 0777);
+    //sprintf(name, "%s/%s%c", WORK_DIR, RECORD_DIR, '\0');
+    //mkdir(name, 0777);
 }
 
 int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
@@ -45,9 +56,6 @@ int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 		file_trunc_to_zero(path_router_reboot_log);
 
 	cmd_frun("echo \"`date` Router reboot\" >> %s", path_router_reboot_log);
-	cmd_run("sh /root/setup_sangfor start");
-	sleep(3);
-	cmd_run("kill -6 `pidof l3vpnd`");
 	init_config(0, NULL, NULL);
 	//boot_setup_network();
 	//boot_init_dir(); // 创建初始化目录

@@ -1,11 +1,6 @@
 
 /***
  *
- * Copyright (C) 2014-2015 Open Mesh, Inc.
- *
- * The reproduction and distribution of this software without the written
- * consent of Open-Mesh, Inc. is prohibited by the United States Copyright
- * Act and international treaties.
  *
  ***/
 
@@ -91,6 +86,14 @@ enum ev_ssid {
 
 #define ISOLA_MARK		0x40000000
 #define ISOLA_MASK		0x40000000
+
+#define FORMAL_ENV 1
+#define API_CHECKIN_VALID "10.9.8.2:8080/ChargerAPI"
+#define API_CHECKIN_URL_FMT"10.9.8.2:8080/ChargerAPI"
+#define API_CHECKIN_URL_FMT_SONIC "192.168.168.28:8080/test"
+#define API_CHECKIN_URL_FMT_INT "124.202.140.226:8080/ChargerAPI"
+#define API_TEST_CHECKIN_URL_FMT "10.9.8.2:8080/test"
+#define API_TEST_CHECKIN_URL_FMT_INT "124.202.140.226:8080/test"
 
 extern char sys_platform;
 extern char sys_orphan_mode;

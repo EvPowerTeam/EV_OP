@@ -55,7 +55,6 @@ typedef  long           ev_long;
  *      充电协议相关
  *
  *****************************************************/
-#define  FORMAL_ENV         1
 #define  USE_DAEMONIZE      1
 #define  USE_POWER_BAR      0
 #define  SOCK_LONG_CONNECT  0
@@ -141,6 +140,7 @@ typedef  long           ev_long;
 #define     RECORD_DIR              "RECORD"
 #define     EXCEPTION_DIR           "exception"
 #define     LOG_DIR                 "log"
+#define     ROUTER_LOG_DIR          "/mnt/umemory/routerlog"
 #define     CONFIG_FILE             "/etc/chargerserver.conf"
 #define     FILEPERM                (S_IRUSR | S_IWUSR)
 
@@ -239,48 +239,48 @@ struct  finish_task {
 
 // 管理充电桩信息的数据结构，动态表单，用于查找每条充电桩
 typedef struct  chargerinfo{
-    char            charger_type;        // 电桩类型
-    char            version[2];
-    char            MAC[20];                    //mac地址，字符串
+        char            charger_type;        // 电桩类型
+        char            version[2];
+        char            MAC[20];                    //mac地址，字符串
 	char 	        tab_name[10];               //当前数据库表名
 	char 	        is_charging_flag;		      // 电桩正在充电的标志
 	unsigned char   model;		                //电桩信息，型号对应的电流大小 (EVG-32N--->32A)
 	unsigned char   present_cmd;	            //当前接受的命令
-    unsigned char   present_mode;
+        unsigned char   present_mode;
 	unsigned char   load_balance_cmd;	            //是否有load—balance充电请求的命令
-    unsigned char   way;                // WEB 命令还是后台命令
-    unsigned char   wait_cmd;           // 执行后台发送的命令
-    unsigned char 	IP[4];		                // 电桩IP地址
+        unsigned char   way;                // WEB 命令还是后台命令
+        unsigned char   wait_cmd;           // 执行后台发送的命令
+        unsigned char 	IP[4];		                // 电桩IP地址
 	unsigned char 	KEYB[16];		            // keyb
 	unsigned char   ev_linkid[16];	            //evlink卡用户名
 	unsigned char   real_current;               //load_balance程序分配的动态电流
-    unsigned char   real_time_current;
-    unsigned char	free_cnt;                   //联网的计数器，当计数达到15次(30s),此电桩认为已经断网
+        unsigned char   real_time_current;
+        unsigned char	free_cnt;                   //联网的计数器，当计数达到15次(30s),此电桩认为已经断网
 	unsigned char	free_cnt_flag;              //联网计数器标志位，服务器接受一个信息时，设置该标志为1，联网计数器设置为0.
-    unsigned char   config_frame_size;          //配置文件的包大小(文件大小/1024)
-    unsigned char   support_max_current;        // 支持的最大电流
-    unsigned char   target_mode;
-    unsigned char   system_message;
-    unsigned char   config_num;                 // 配置文件包号
-    unsigned char   stop_charge_value;
-    unsigned char   control_cmd;                // 控制命令值
+        unsigned char   config_frame_size;          //配置文件的包大小(文件大小/1024)
+        unsigned char   support_max_current;        // 支持的最大电流
+        unsigned char   target_mode;
+        unsigned char   system_message;
+        unsigned char   config_num;                 // 配置文件包号
+        unsigned char   stop_charge_value;
+        unsigned char   control_cmd;                // 控制命令值
 	unsigned short  charging_code;	            //充电记录:
-    unsigned short  yuyue_time;
-    unsigned short  cb_target_id;
-    unsigned short  cb_charging_code;
+        unsigned short  yuyue_time;
+        unsigned short  cb_target_id;
+        unsigned short  cb_charging_code;
 	unsigned short  power;		                //充电电量
-    short           start_charge_current;       // 开始充电电流
-    short            start_charge_energy;        // 电量
-    char            *uid;
-    char            *start_charge_order;        // 订单号
-    char            *file_name;
-    char            *start_charge_package;      // 套餐
-    int             stop_charge_username;       // 停止充电用户名代号
-    int             file_length; 
-    int             file_fd;                    //打开配置文件的文件描述符，抄表描符，更新描述符
-    time_t          cb_start_time;        //记录服务器发送的开始抄表时间戳
-    time_t          cb_end_time;          //记录服务器发送的结束抄表时间戳
-    unsigned int    CID;		                // 电桩CID信息
+        short           start_charge_current;       // 开始充电电流
+        short            start_charge_energy;        // 电量
+        char            *uid;
+        char            *start_charge_order;        // 订单号
+        char            *file_name;
+        char            *start_charge_package;      // 套餐
+        int             stop_charge_username;       // 停止充电用户名代号
+        int             file_length; 
+        int             file_fd;                    //打开配置文件的文件描述符，抄表描符，更新描述符
+        time_t          cb_start_time;        //记录服务器发送的开始抄表时间戳
+        time_t          cb_end_time;          //记录服务器发送的结束抄表时间戳
+        unsigned int    CID;		                // 电桩CID信息
 	unsigned int    start_time; 	            // 开始充电时间
 	unsigned int    end_time;	                // 结束充电时间
 }CHARGER_INFO_TABLE;
@@ -355,6 +355,7 @@ typedef enum {
 	SYM_Monthly_Quata_Used_Up	= 0x05, // 每月限额已用完
 	SYM_EV_Link_Not_Valid		= 0x06, // 易充卡无效
 	SYM_EV_Link_Is_Used		= 0x07,	// 易充卡已经使用
+        SYM_OFF_NET                     = 0xEF,
 	SYM_Charger_Is_Repair		= 0xF0 // 充电桩维修
 }SystemMessage;
 

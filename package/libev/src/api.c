@@ -24,7 +24,7 @@
 #include <curl/curl.h>
 #include <linux/if_ether.h>
 #include <libev/msgqueue.h>
-#include <time.h>
+
 #include <json-c/json.h>
 
 #define ng_curl_slist_append(_list, _header) ({\
@@ -78,7 +78,13 @@ static size_t api_write_output(char *ptr, size_t size, size_t nmemb,
 		/* if this is not the first chunk consider that one byte is used
 		 * for the final NULL char
 		 */
-		debug_msg("%s %d", ptr, len);
+		debug_msg("server reply: %s %d", ptr, len);
+		if (strncmp(ptr, "charging", 8) == 0)
+		{
+			ptr[9] = '\0';
+			debug_msg("received reply from server");
+			mqsend("/dashboard.checkin", ptr, strlen(ptr), 10);
+		}
 		if (strncmp(ptr, "update", 6) == 0)
 		{
 			debug_msg("sync system time from %ld", time(0));
@@ -89,6 +95,7 @@ static size_t api_write_output(char *ptr, size_t size, size_t nmemb,
 			debug_msg("current system time: %ld", time(0));
 			//stime();
 		}
+
 		break;
 	}
 
@@ -222,6 +229,7 @@ static int api_debug_cb(CURL NG_UNUSED(*handle), curl_infotype type, char *data,
 {
 	char *buff;
 
+#if 0
 	debug_msg("type: %d", type);
 	if (type == 3) {
 		debug_msg("server returns: %s", data);
@@ -231,7 +239,7 @@ static int api_debug_cb(CURL NG_UNUSED(*handle), curl_infotype type, char *data,
 			mqsend("/dashboard.checkin", data, strlen(data), 10);
 		}
 	}
-#if 0
+#endif
 	buff = malloc(size + 1);
 	if (!buff)
 		return 0;
@@ -242,7 +250,7 @@ static int api_debug_cb(CURL NG_UNUSED(*handle), curl_infotype type, char *data,
 	debug_msg("data: %s", buff);
 
 	free(buff);
-#endif
+
 	return 0;
 }
 
@@ -562,8 +570,8 @@ struct api_conn *api_conn_create(const char *proto, const char *host,
 	curl_easy_setopt(conn->hdl, CURLOPT_WRITEFUNCTION, api_write_output);
 	curl_easy_setopt(conn->hdl, CURLOPT_TIMEOUT, timeout);
 	curl_easy_setopt(conn->hdl, CURLOPT_CONNECTTIMEOUT, 20);
-	curl_easy_setopt(conn->hdl, CURLOPT_DEBUGFUNCTION, api_debug_cb);
 #ifdef LIBNG_DEBUG
+	curl_easy_setopt(conn->hdl, CURLOPT_DEBUGFUNCTION, api_debug_cb);
 	curl_easy_setopt(conn->hdl, CURLOPT_VERBOSE, true);
 #endif
 

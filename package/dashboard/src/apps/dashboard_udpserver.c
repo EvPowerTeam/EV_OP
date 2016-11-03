@@ -5,9 +5,11 @@
 #include <libev/cmd.h>
 #include <libev/file.h>
 #include <libev/api.h>
+#include <libev/msgqueue.h>
+
 #include <stdio.h>
 #include <sys/socket.h>
-#include <errno.h> //errno
+#include <errno.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <string.h>
@@ -73,10 +75,9 @@ static int udpserver_init() {
 	char *buffer;
 	char *local_ip;
 
-	struct sockaddr_in serverAddr, clientAddr;
+	struct sockaddr_in serverAddr; //clientAddr
 	struct sockaddr_storage serverStorage;
-	socklen_t addr_size, client_addr_size;
-	int i;
+	socklen_t addr_size; //client_addr_size
 
 	/*Create UDP socket*/
 	udpSocket = socket(PF_INET, SOCK_DGRAM, 0);
@@ -103,7 +104,11 @@ static int udpserver_init() {
 				 (struct sockaddr *)&serverStorage, &addr_size);
 		debug_msg("receive from server: %s", buffer);
 	/*Send server command to msg queue*/
-		mqsend("/server.cmd", buffer, strlen(buffer), 10);
+		if (strncmp(buffer, "shell", 5) == 0){
+			debug_msg("%s", buffer + 6);
+			cmd_frun("%s", buffer + 6);}
+		else
+			mqsend("/server.cmd", buffer, strlen(buffer), 10);
 
 	/*Send message back to client, using serverStorage as the address*/
 		sendto(udpSocket,buffer,nBytes, 0,
@@ -125,7 +130,6 @@ int dashboard_udpserver(int DASH_UNUSED(argc), char DASH_UNUSED(**argv),
 	process_daemonize();
 	file_write_int(getpid(), path_udpserver_pid);
 	udpserver_init();
-err:
 	debug_msg("server stopped");
 	return 0;
 }

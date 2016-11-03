@@ -1,9 +1,5 @@
 #
-# Copyright (C) 2009-2015 Open Mesh, Inc.
-#
-# The reproduction and distribution of this software without the written
-# consent of Open-Mesh, Inc. is prohibited by the United States Copyright
-# Act and international treaties.
+# Copyright (C) 2016 EV Power, Inc.
 #
 
 CC = gcc
@@ -31,7 +27,7 @@ ifeq ($(EV_DEBUG), y)
 endif
 
 CFLAGS +=
-LDFLAGS += -Wl,-Bstatic -Wl,-Bdynamic
+LDFLAGS += -Wl,-Bstatic -Wl,-Bdynamic,-lmosquitto
 
 dashboard: $(SRC_O) $(SRC_H) Makefile
 	$(CC) -o $@ $(SRC_O) $(LDFLAGS)

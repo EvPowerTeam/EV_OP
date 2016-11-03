@@ -1,6 +1,6 @@
 
 #define _GNU_SOURCE
-#define DEBUG_FILE_PATH "/tmp/debug_libng.log"
+#define DEBUG_FILE_PATH "/tmp/debug_libev.log"
 
 #undef LIBNG_DEBUG
 #if defined(DEBUG_CONSOLE) || defined(DEBUG_FILE) || defined(DEBUG_SYSLOG)

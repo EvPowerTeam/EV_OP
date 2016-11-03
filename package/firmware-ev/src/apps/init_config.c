@@ -17,17 +17,6 @@
 #include <stdio.h>
 #include <linux/if_ether.h>
 
-
-const char path_crashlog_debugfs[] = "/sys/kernel/debug/crashlog";
-const char path_crashlog_tmpfs[] = "/tmp/crashlog";
-const char path_udisk[] = "/mnt/umemory";
-const char path_xl2tpd[] = "/etc/xl2tpd/xl2tpd.conf";
-const char path_strongswan[] = "/etc/strongswan.conf";
-const char path_ipsec_conf[] = "/etc/ipsec.conf";
-const char path_ipsec_key[] = "/etc/ipsec.secrets";
-const char path_ppp[] = "/etc/ppp/hk.options.xl2tpd.client";
-
-
 /*
  * For now we are using strongswan 5.3.2 with Xl2tpd
  * */
@@ -49,6 +38,8 @@ static void init_vpn_config()
 	cmd_run("./etc/init.d/cron restart");
 	cmd_run("chmod 777 /root/setup_vpn.sh");
 	cmd_run("chmod 777 /root/vpn_monitor");
+	//cmd_run("chmod 777 /root/vpn_monitor2");
+	cmd_run("chmod 777 /root/record.sh");
 }
 
 /**
@@ -58,7 +49,7 @@ static void init_router_config()
 {
 	debug_msg("router setup");
 	file_trunc_to_zero(path_udpserver_pid);
-	if (file_exists(path_config_charger))
+        if (file_exists(path_config_charger))
 		file_delete(path_config_charger);
 	//router id
 	//ev_uci_save_val_int();

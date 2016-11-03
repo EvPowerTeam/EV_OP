@@ -4,6 +4,7 @@
 #include "./include/AES.h"
 #include "./include/CRC.h"
 #include "./include/err.h"
+#include <libev/system.h>
 
 extern  CHARGER_MANAGER charger_manager;
 
@@ -42,19 +43,13 @@ void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
                 sprintf(bf->val_buff + strlen(bf->val_buff), "chargingType:%d,", bf->recv_buff[52]);
                 sprintf(bf->val_buff + strlen(bf->val_buff), "status:%d}]}", CHARGER_CHARGING);
                 printf("send:%s\n", bf->val_buff);;
-#if FORMAL_ENV
-                cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI %s", bf->val_buff);
-#else
-                cmd_frun("dashboard url_post 10.9.8.2:8080/test %s", bf->val_buff);
-#endif
+
+                cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, bf->val_buff);
             }
 
             sprintf(val, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",status:%d}", charger->CID, new_mode);
-#if FORMAL_ENV
-            cmd_frun("dashboard url_post 10.9.8.2:8080/ChargerAPI %s", val);
-#else
-            cmd_frun("dashboard url_post 10.9.8.2:8080/test %s", val);
-#endif
+            cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, val);
+
             debug_msg("发送改变状态, CID[%d], %s ...", charger->CID, val);
             free(val);
         }
@@ -510,7 +505,7 @@ gernal_command(int fd, const int cmd, const CHARGER_INFO_TABLE *charger, BUFF *b
             else
                 bf->send_buff[13] = charger_manager.power_bar_surpls_current;
 #else
-            bf->send_buff[13] = charger->support_max_current;
+            bf->send_buff[13] = charger->model;//charger->support_max_current;
 #endif
             n = 16;
       break; 

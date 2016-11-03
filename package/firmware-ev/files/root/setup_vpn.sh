@@ -27,3 +27,4 @@
 	route add -net 10.9.8.0 gateway 10.9.8.100 netmask 255.255.248.0 dev ppp2
 	sleep 6 
 	/bin/dashboard udpserver
+	/bin/dashboard checkin_now

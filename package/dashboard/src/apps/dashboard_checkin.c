@@ -7,6 +7,7 @@
 #include <libev/cmd.h>
 #include <libev/file.h>
 #include <libev/api.h>
+#include <libev/system.h>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -47,9 +48,9 @@ static char *dashboard_checkin_string(int type)
 	/*get interface name of l2tp VPN*/
 	ret = cmd_frun(cmd_get_vpn_interface);
 	if (ret < 0)
-		return NULL;
+		return "";
 	if (cmd_output_len < 1)
-		return NULL;
+		return "";
 	cmd_output_buff[cmd_output_len - 1] = '\0';
 	strncpy(vpn_int, cmd_output_buff, sizeof(vpn_int));
 	vpn_int[sizeof(vpn_int) - 1] = '\0';
@@ -204,8 +205,13 @@ int dashboard_checkin(void *arg)
 {
 	int ret = -1;
 	debug_msg("performing checkin");
+#if FORMAL_ENV
 	ret = api_send_buff("http", API_CHECKIN_URL_FMT, dashboard_checkin_string(0),
-		      "", NULL, NULL);
+		            "", NULL, NULL);
+#else
+	ret = api_send_buff("http", API_TEST_CHECKIN_URL_FMT, dashboard_checkin_string(0),
+		            "", NULL, NULL);
+#endif
 	return ret;
 }
 
@@ -222,22 +228,33 @@ int dashboard_url_post(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 
 int dashboard_post_file(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 {
+	int ret = -1;
 	if (argc != 1) {
 		printf("file name missing \n");
 		exit(0);
 	}
-	cmd_frun("dashboard checkin_now");
 	debug_msg("input %s",argv[0]);
-	return api_post_file_glassfish("http", API_CHECKIN_URL_FMT,
+#if FORMAL_ENV
+	ret = api_post_file_glassfish("http", API_CHECKIN_URL_FMT,
 					API_CHARGING_RECORD_FMT, argv[0]);
+#else
+	ret = api_post_file_glassfish("http", API_TEST_CHECKIN_URL_FMT,
+					API_CHARGING_RECORD_FMT, argv[0]);
+#endif
+	return ret;
 }
 
 int dashboard_update_fastcharger(void *arg)
 {
 	int ret;
 	debug_msg("update realtime information of fast charger");
+#if FORMAL_ENV
 	ret = api_send_buff("http", API_CHECKIN_URL_FMT,
 			    dashboard_checkin_string(1), "", NULL, NULL);
+#else
+	ret = api_send_buff("http", API_TEST_CHECKIN_URL_FMT,
+			    dashboard_checkin_string(1), "", NULL, NULL);
+#endif
 	return ret;
 }
 
