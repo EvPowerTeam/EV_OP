@@ -58,7 +58,7 @@ int mqcreate_debug(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 
 int mqreceive_debug(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 {
-    int flags;
+    int c, flags;
     mqd_t mqd;
     ssize_t n;
     unsigned int prio;

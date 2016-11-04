@@ -5,7 +5,6 @@
 #include <libev/cmd.h>
 #include <libev/file.h>
 #include <libev/api.h>
-#include <libev/msgqueue.h>
 
 #include <stdio.h>
 #include <sys/socket.h>
@@ -130,6 +129,7 @@ int dashboard_udpserver(int DASH_UNUSED(argc), char DASH_UNUSED(**argv),
 	process_daemonize();
 	file_write_int(getpid(), path_udpserver_pid);
 	udpserver_init();
+err:
 	debug_msg("server stopped");
 	return 0;
 }

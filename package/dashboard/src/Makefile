@@ -8,7 +8,7 @@ CFLAGS += -I. -Ishared/ -Iconfig/ -Icheckin/ -Iapps/ `pkg-config --cflags libev`
 OFLAGS += -Os
 LDFLAGS += $(OFLAGS) -luci -lrt `pkg-config --libs libev json-c`
 
-# EXTRA_CFLAGS += -DDEBUG_CONSOLE
+EXTRA_CFLAGS += -DDEBUG_CONSOLE
 # EXTRA_CFLAGS += -DDEBUG_FILE
 # EXTRA_CFLAGS += -DDEBUG_SYSLOG
 # EXTRA_CFLAGS += -DDEBUG_TRACE
@@ -26,8 +26,8 @@ ifeq ($(EV_DEBUG), y)
   EXTRA_CFLAGS += -DDEBUG_SYSLOG
 endif
 
-CFLAGS +=
-LDFLAGS += -Wl,-Bstatic -Wl,-Bdynamic,-lmosquitto
+CFLAGS += 
+LDFLAGS += -Wl,-Bstatic -Wl,-Bdynamic
 
 dashboard: $(SRC_O) $(SRC_H) Makefile
 	$(CC) -o $@ $(SRC_O) $(LDFLAGS)

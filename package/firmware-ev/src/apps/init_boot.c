@@ -66,5 +66,5 @@ int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 	ret = mqcreate(O_EXCL, 10, 200, "/server.cmd");
 	debug_msg("ret: %d errno: %d", ret, errno);
 	cmd_run("mwan3 stop");
-	return ret;
+	return 0;
 }

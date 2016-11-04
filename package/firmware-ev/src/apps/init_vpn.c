@@ -25,7 +25,7 @@ int init_vpn_check(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 {
 	debug_msg("checkin vpn status");
 	//for periodic checking vpn with full path
-	cmd_frun("/bin/sh /root/vpn_monitor_9qu");
+	cmd_frun("/bin/sh /root/vpn_monitor");
 #if 0 
 	int fd;
 	struct ifreq ifr;
@@ -62,9 +62,9 @@ int init_vpn_check(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 int init_vpn_up(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 		 char EV_UNUSED(*extra_arg))
 {
-	debug_msg("check vpn status");
+	debug_msg("checkin vpn status");
 	//for periodic checking vpn with full path
-	cmd_frun("/bin/sh /root/vpn_monitor_9qu");
+	cmd_frun("/bin/sh /root/vpn_monitor");
 	return 0;
 }
 

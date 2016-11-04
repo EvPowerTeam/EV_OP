@@ -315,17 +315,17 @@ int api_post_file_glassfish(const char *proto, const char *host,
 
 	if (!proto) {
 		debug_msg("No protocol provided!");
-		return -1;
+		return NULL;
 	}
 
 	if (!host) {
 		debug_msg("No host provided!");
-		return -1;
+		return NULL;
 	}
 
 	if ((strcmp(proto, "http") != 0) && (strcmp(proto, "https") != 0)) {
 		debug_msg("invalid proto: %s", proto);
-		return -1;
+		return NULL;
 	}
 
 	/* get the size in byte of the file so that a buffer that will contain

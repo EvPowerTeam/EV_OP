@@ -4,7 +4,7 @@
 #include "apps/dashboard_controller.h"
 #include "apps/dashboard_checkin.h"
 #include "apps/dashboard_udpserver.h"
-#include "apps/dashboard_mqtt.h"
+//#include "apps/dashboard_mqtt.h"
 #include "apps/mq.h"
 
 #include <stdlib.h>
@@ -16,7 +16,7 @@ DASH_APP(checkin_now, dashboard_checkin_now, NULL, NULL);
 DASH_APP(url_post, dashboard_url_post, NULL, NULL);
 DASH_APP(post_file, dashboard_post_file, NULL, NULL);
 DASH_APP(udpserver, dashboard_udpserver, NULL, NULL);
-DASH_APP(mqtt_sub, dashboard_mqtt_sub, NULL, NULL);
+//DASH_APP(mqtt_sub, dashboard_mqtt_sub, NULL, NULL);
 //DASH_APP(charger, dashboard_post_file, startcharging, stopcharging);
 //DASH_APP(parse_config, parse_config, parse_config, NULL);
 
@@ -32,7 +32,7 @@ const struct dash_app *dash_apps[] = {
 	&dash_app_post_file,
 	&dash_app_udpserver,
 	&dash_app_update_fast,
-	&dash_app_mqtt_sub,
+	//&dash_app_mqtt_sub,
 	//&dash_app_parse_config,
 	//&dash_app_reload,
 #if defined(DASH_DEBUG)
