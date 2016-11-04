@@ -15,7 +15,7 @@
 
 int dashboard_checkin_now(int argc, char **argv);
 
-int dashboard_checkin(void *arg);
+int dashboard_checkin();
 
 int dashboard_url_post(int argc, char **argv, char *extra_arg);
 

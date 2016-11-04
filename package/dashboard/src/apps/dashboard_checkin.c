@@ -23,9 +23,6 @@
 #include <sys/file.h>
 
 //static char val_buff[65], more_buff[50], env_buff[65], path_rep[50];
-//static const char path_invalid_key[] = "/tmp/invalid_key";
-//static const char path_checkin_timeout[] = "/tmp/checkin_timeout";
-//static const char path_alt_checkin_timeout[] = "/tmp/alt_checkin_timeout";
 //static const char path_checkin_req[] = "/tmp/dashboard.%d.req";
 //static const char path_checkin_rep[] = "/tmp/dashboard.%d.rep";
 //static const char path_checkin_log[] = "/tmp/checkin.%d.log";
@@ -201,12 +198,12 @@ int new_config_wrapper(int argc, char **argv)
 }
 #endif
 
-int dashboard_checkin(void *arg)
+int dashboard_checkin()
 {
 	int ret = -1;
 	debug_msg("performing checkin");
 #if FORMAL_ENV
-	ret = api_send_buff("http", API_CHECKIN_URL_FMT, dashboard_checkin_string(0),
+	ret = api_send_buff("http", API_CHECKIN_VALID, dashboard_checkin_string(0),
 		            "", NULL, NULL);
 #else
 	ret = api_send_buff("http", API_TEST_CHECKIN_URL_FMT, dashboard_checkin_string(0),
@@ -235,7 +232,7 @@ int dashboard_post_file(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 	}
 	debug_msg("input %s",argv[0]);
 #if FORMAL_ENV
-	ret = api_post_file_glassfish("http", API_CHECKIN_URL_FMT,
+	ret = api_post_file_glassfish("http", API_CHECKIN_VALID,
 					API_CHARGING_RECORD_FMT, argv[0]);
 #else
 	ret = api_post_file_glassfish("http", API_TEST_CHECKIN_URL_FMT,
@@ -249,7 +246,7 @@ int dashboard_update_fastcharger(void *arg)
 	int ret;
 	debug_msg("update realtime information of fast charger");
 #if FORMAL_ENV
-	ret = api_send_buff("http", API_CHECKIN_URL_FMT,
+	ret = api_send_buff("http", API_CHECKIN_VALID,
 			    dashboard_checkin_string(1), "", NULL, NULL);
 #else
 	ret = api_send_buff("http", API_TEST_CHECKIN_URL_FMT,

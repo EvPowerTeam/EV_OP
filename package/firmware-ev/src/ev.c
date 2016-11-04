@@ -14,7 +14,7 @@
 #include <signal.h>
 
 #define EV_APP_NAME "ev"
-#define FW_EV_VER_ID_SHORT "Beta 0.1"
+#define FW_EV_VER_ID_SHORT "Beta 0.8"
 
 static void print_version(void)
 {

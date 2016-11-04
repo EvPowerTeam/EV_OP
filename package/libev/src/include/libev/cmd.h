@@ -17,10 +17,10 @@
 extern char *cmd_output_buff;
 extern int cmd_output_len;
 
-int cmd_run(const char *cmd);
-int cmd_run_status(const char *cmd);
-int cmd_frun(const char *format, ...);
-int cmd_frun_fd(int fd, const char *format, ...);
+extern int cmd_run(const char *cmd);
+extern int cmd_run_status(const char *cmd);
+extern int cmd_frun(const char *format, ...);
+extern int cmd_frun_fd(int fd, const char *format, ...);
 int cmd_pipe(const char *cmd);
 int cmd_fpipe(const char *format, ...);
 pid_t cmd_create_read_pipe(int *fd, const char *cmd, ...);

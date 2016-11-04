@@ -30,7 +30,6 @@ void my_connect_callback(struct mosquitto *mosq, void *obj, int rc)
 
 void my_disconnect_callback(struct mosquitto *mosq, void *obj, int result)
 {
-	int i;
 	//struct mosq_config *cfg;
 
 	//assert(obj);
@@ -41,9 +40,6 @@ void my_disconnect_callback(struct mosquitto *mosq, void *obj, int result)
 void my_message_callback(struct mosquitto *mosq, void *obj, const struct mosquitto_message *message)
 {
 	//struct mosq_config *cfg;
-	int i;
-	bool res;
-
 	//assert(obj);
 	//cfg = (struct mosq_config *)obj;
 

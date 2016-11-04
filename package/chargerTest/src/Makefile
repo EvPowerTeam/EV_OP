@@ -9,11 +9,11 @@ LDFLAGS += $(OFLAGS) -luci -lpthread -lcrypto `pkg-config --libs libev json-c`
 
 EXTRA_CFLAGS += -DDEBUG_CONSOLE
 # EXTRA_CFLAGS += -DDEBUG_FILE
-# EXTRA_CFLAGS += -DDEBUG_SYSLOG
+EXTRA_CFLAGS += -DDEBUG_SYSLOG
 # EXTRA_CFLAGS += -DDEBUG_TRACE
 
 SRC_C = main.c net_info.c AES.c CRC.c err.c system_call.c serial.c protocal_charger.c list.c
-SRC_H =
+SRC_H = ./include/*.h
 SRC_O = $(SRC_C:.c=.o)
 
 ifneq ($(CONFIG_REGDBQUERY_STATIC_ONLY), y)
