@@ -175,6 +175,7 @@ const char path_reboot_reason[] = "/etc/reboot_reason";
 const char path_batctl_bin[] = "/usr/sbin/batctl";
 const char path_bat_hosts[] = "/etc/bat-hosts";
 const char path_udpserver_pid[] = "/tmp/udpserver.pid";
+const char path_mosquitto_pid[] = "/tmp/mosquitto.pid";
 const char path_charger_pid[] = "/tmp/run/chargerTest_daemon.pid";
 const char path_checkin_pid[] = "/tmp/checkin.pid";
 const char path_config_health_care[] = "/etc/config/health_care";

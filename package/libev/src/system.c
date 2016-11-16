@@ -2,6 +2,7 @@
 /***
  *
  * Copyright (C) 2014-2015 EV Power, Inc.
+ * systematic functions and variables
  *
  ***/
 
@@ -43,6 +44,8 @@
 #include <linux/mii.h>
 #include <linux/sockios.h>
 
+static const char *api_checkin_valid = "114.119.6.180:8080/ChargerAPI"; //"10.168.1.180:8080/ChargerAPI";
+static const char *api_checkin_test = "10.9.8.2:8080/test";
 static const char *ieee80211_dir = "/sys/class/ieee80211";
 
 struct mii_data {
@@ -493,6 +496,11 @@ char *sys_url_encode(const char *str)
 	res[res_pos] = '\0';
 
 	return res;
+}
+
+char *sys_checkin_url()
+{
+	return api_checkin_valid;
 }
 
 int sys_set_mac_addr(const char *iface, unsigned char *mac_buff)

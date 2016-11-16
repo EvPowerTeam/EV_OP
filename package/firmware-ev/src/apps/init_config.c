@@ -37,7 +37,6 @@ static void init_vpn_config()
 	if (file_exists("/root/root"))
 		cmd_frun(cmd_cp, "/root/root", "/etc/crontabs/root");
 
-	cmd_run("mwan3 stop");
 	cmd_run("./etc/init.d/cron restart");
 	cmd_run("chmod 777 /root/setup_vpn.sh");
 	cmd_run("chmod 777 /root/setup_9qu.sh");

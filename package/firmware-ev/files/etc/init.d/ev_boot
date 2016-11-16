@@ -12,4 +12,5 @@ START=12
 
 boot() {
 	/bin/ev init_boot
+	/bin/dashboard mqtt_sub
 }

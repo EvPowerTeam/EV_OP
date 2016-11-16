@@ -1,6 +1,7 @@
 
 #include "dashboard_checkin.h"
 #include "include/dashboard.h"
+
 #include <libev/process.h>
 #include <libev/const_strings.h>
 #include <libev/uci.h>
@@ -37,11 +38,12 @@
 static char *dashboard_checkin_string(int type)
 {
 	static char json_str[JSON_MAX];
-	char *tab_name, *rid, *version;
-	char tmp_buff[33], json_sub[100], vpn_ip[INET_ADDRSTRLEN], vpn_int[5];
+	char *tab_name, *rid, *version, *vpn_ip;
+	char tmp_buff[33], json_sub[100], vpn_int[5];
 	int i, cnt = 0;
 	int ret;
 
+#if 0
 	/*get interface name of l2tp VPN*/
 	ret = cmd_frun(cmd_get_vpn_interface);
 	if (ret < 0)
@@ -59,7 +61,9 @@ static char *dashboard_checkin_string(int type)
 	cmd_output_buff[cmd_output_len - 1] = '\0';
 	strncpy(vpn_ip, cmd_output_buff, sizeof(vpn_ip));
 	vpn_ip[sizeof(vpn_ip) - 1] = '\0';
+#endif
 
+	vpn_ip = getlocalip();
 	tab_name = calloc(9, sizeof(char *));
 	rid = calloc(10, sizeof(char *));
 	version = calloc(10, sizeof(char *));
@@ -76,6 +80,7 @@ static char *dashboard_checkin_string(int type)
 
 	snprintf(json_str, JSON_MAX, "%s?key={routerid:\'%s\',firmware_version:%s,remote_server:\'%s\',chargers:[",
 		 API_UPDATE_FMT, rid, version, vpn_ip);
+	free(vpn_ip);
 
 	for (i = 1; i < 12; i++)
 	{
@@ -201,14 +206,9 @@ int new_config_wrapper(int argc, char **argv)
 int dashboard_checkin()
 {
 	int ret = -1;
-	debug_msg("performing checkin");
-#if FORMAL_ENV
-	ret = api_send_buff("http", API_CHECKIN_VALID, dashboard_checkin_string(0),
+	debug_msg("performing checkin to %s", sys_checkin_url());
+	ret = api_send_buff("http", sys_checkin_url(), dashboard_checkin_string(0),
 		            "", NULL, NULL);
-#else
-	ret = api_send_buff("http", API_TEST_CHECKIN_URL_FMT, dashboard_checkin_string(0),
-		            "", NULL, NULL);
-#endif
 	return ret;
 }
 
@@ -231,13 +231,9 @@ int dashboard_post_file(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 		exit(0);
 	}
 	debug_msg("input %s",argv[0]);
-#if FORMAL_ENV
-	ret = api_post_file_glassfish("http", API_CHECKIN_VALID,
+
+	ret = api_post_file_glassfish("http", sys_checkin_url(),
 					API_CHARGING_RECORD_FMT, argv[0]);
-#else
-	ret = api_post_file_glassfish("http", API_TEST_CHECKIN_URL_FMT,
-					API_CHARGING_RECORD_FMT, argv[0]);
-#endif
 	return ret;
 }
 
@@ -245,13 +241,8 @@ int dashboard_update_fastcharger(void *arg)
 {
 	int ret;
 	debug_msg("update realtime information of fast charger");
-#if FORMAL_ENV
-	ret = api_send_buff("http", API_CHECKIN_VALID,
+	ret = api_send_buff("http", sys_checkin_url(),
 			    dashboard_checkin_string(1), "", NULL, NULL);
-#else
-	ret = api_send_buff("http", API_TEST_CHECKIN_URL_FMT,
-			    dashboard_checkin_string(1), "", NULL, NULL);
-#endif
 	return ret;
 }
 

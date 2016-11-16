@@ -88,12 +88,12 @@ enum ev_ssid {
 #define ISOLA_MASK		0x40000000
 
 #define FORMAL_ENV 1
-#define API_CHECKIN_VALID "114.119.6.180:8080/ChargerAPI"
+#define API_CHECKIN_VALID "10.9.8.2:8080/ChargerAPI"
 //#define API_CHECKIN_URL_FMT "10.9.8.2:8080/ChargerAPI"
-#define API_CHECKIN_URL_FMT "10.168.1.180:8080/ChargerAPI"
-#define API_CHECKIN_URL_FMT_INT "114.119.6.180:8080/ChargerAPI"
-#define API_TEST_CHECKIN_URL_FMT "10.168.1.180:8080/test"
-#define API_TEST_CHECKIN_URL_FMT_INT "114.119.6.180:8080/test"
+//#define API_CHECKIN_URL_FMT "10.168.1.180:8080/ChargerAPI"
+//#define API_CHECKIN_URL_FMT_INT "114.119.6.180:8080/ChargerAPI"
+//#define API_TEST_CHECKIN_URL_FMT "10.168.1.180:8080/test"
+//#define API_TEST_CHECKIN_URL_FMT_INT "114.119.6.180:8080/test"
 
 extern char sys_platform;
 extern char sys_orphan_mode;
@@ -123,6 +123,7 @@ bool sys_ssid_is_bridged(enum ev_ssid ssid);
 bool sys_ssid_has_vlan_tag(enum ev_ssid ssid);
 int sys_get_mac_addr(const char *iface, unsigned char *mac_buff);
 char *sys_url_encode(const char *str);
+char *sys_checkin_url();
 int sys_set_mac_addr(const char *iface, unsigned char *mac_buff);
 bool sys_iface_exists(const char *ifname);
 void sys_logger(const char *name, const char *fmt, ...);

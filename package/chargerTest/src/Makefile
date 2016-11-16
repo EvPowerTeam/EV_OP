@@ -7,9 +7,9 @@ CFLAGS += `pkg-config --cflags libev`
 OFLAGS += -Os
 LDFLAGS += $(OFLAGS) -luci -lpthread -lcrypto `pkg-config --libs libev json-c`
 
-EXTRA_CFLAGS += -DDEBUG_CONSOLE
+# EXTRA_CFLAGS += -DDEBUG_CONSOLE
 # EXTRA_CFLAGS += -DDEBUG_FILE
-EXTRA_CFLAGS += -DDEBUG_SYSLOG
+# EXTRA_CFLAGS += -DDEBUG_SYSLOG
 # EXTRA_CFLAGS += -DDEBUG_TRACE
 
 SRC_C = main.c net_info.c AES.c CRC.c err.c system_call.c serial.c protocal_charger.c list.c
@@ -20,8 +20,9 @@ ifneq ($(CONFIG_REGDBQUERY_STATIC_ONLY), y)
   $(warning who wrote this Makefile!?)
 endif
 
-ifeq ($(OM_DEBUG), y)
+ifeq ($(EV_DEBUG), y)
   EXTRA_CFLAGS += -DDEBUG_CONSOLE
+  EXTRA_CFLAGS += -DDEBUG_FILE
   EXTRA_CFLAGS += -DDEBUG_SYSLOG
 endif
 

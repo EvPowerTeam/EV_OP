@@ -168,6 +168,7 @@ extern const char path_reboot_reason[];
 extern const char path_batctl_bin[];
 extern const char path_bat_hosts[];
 extern const char path_udpserver_pid[];
+extern const char path_mosquitto_pid[];
 extern const char path_charger_pid[];
 extern const char path_checkin_pid[];
 extern const char path_config_health_care[];

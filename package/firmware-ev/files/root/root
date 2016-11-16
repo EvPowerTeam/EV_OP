@@ -6,6 +6,7 @@
 */2 * * * * /bin/chargerTest
 */8 * * * * /bin/sync; /bin/echo 3 > /proc/sys/vm/drop_caches
 */4 * * * * /bin/dashboard udpserver
-#30 4 * * 2 /bin/sh /root/record.sh 
+#30 4 * * 2 /bin/sh /root/record.sh
+30 4 * * * /bin/dashboard mqtt_sub
 0 3 * * * sleep 70 && touch /etc/reboot && reboot
 

@@ -71,7 +71,7 @@ char *   check_send_status(const char *send_info)
 
     for (i = 0; i < 3; i++)
     {
-        cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, send_info);
+        cmd_frun("dashboard url_post %s %s", sys_checkin_url(), send_info);
 
         sptr = mqreceive_timed("/dashboard.checkin", 10, 4);
         if (sptr != NULL)
@@ -127,31 +127,6 @@ char *string_to_uid(char *struid, char *storeuid)
     return storeuid;
 }
 
-void  dir_init(void)
-{
-    char    name[100];
-    mkdir(WORK_DIR, 0711);
-    sprintf(name, "%s/%s", WORK_DIR, CHAOBIAO_DIR);
-    //创建抄表目录
-    mkdir(name, 0711);
-
-    sprintf(name, "%s/%s", WORK_DIR, CONFIG_DIR);
-    mkdir(name, 0711);
-
-    sprintf(name, "%s/%s", WORK_DIR, UPDATE_DIR);
-    mkdir(name, 0711);
-
-    sprintf(name, "%s/%s", WORK_DIR, RECORD_DIR);
-    mkdir(name, 0711);
-
-    sprintf(name, "%s/%s", WORK_DIR, EXCEPTION_DIR);
-    mkdir(name, 0711);
-
-    sprintf(name, "%s/%s", WORK_DIR, LOG_DIR);
-    mkdir(name, 0777);
-    
-    mkdir(ROUTER_LOG_DIR, 0777);
-}
 int readable_timeout(int fd, int sec)
 {
 	fd_set	rset;
@@ -211,7 +186,6 @@ int main(int argc , char * argv[])
 	addrlen = sizeof(struct sockaddr_in);
 
         // 线程相关初始化
-        dir_init(); // 创建初始化目录
 	if (access(CHARG_FILE,  F_OK) != 0)
 	{
                 file_trunc_to_zero(CHARG_FILE); //CHARG_FILE);	//创建/etc/config/chargerinfo文件
@@ -305,9 +279,10 @@ int main(int argc , char * argv[])
 #define MAX_LEN     1500
 void * thread_main(void * arg)
 {
-	ev_int connfd, n, charger_index = -1, Error = 0, cmd, return_val, i;
+	ev_int connfd, n, charger_index = -1, Error = 0, cmd, return_val = 0, i;
         BUFF    bf = {NULL, NULL, NULL, 0, 0};
-        
+        char rec[5] = {101, 118, 62, 48, 255};
+
 	 connfd = ((ev_int)arg);
 	
         if(pthread_detach(pthread_self()) < 0)
@@ -330,6 +305,7 @@ void * thread_main(void * arg)
         if (readable_timeout(connfd, 20) <= 0)
         {
                 debug_msg("server read timeout ...");
+                return_val = -1;
                 goto exitt;
         }
 
@@ -382,7 +358,9 @@ exitt:
                 free(bf.send_buff);
         if (bf.val_buff != NULL)
                 free(bf.val_buff);
-	shutdown(connfd, SHUT_RDWR);  
+	if (return_val < 0)
+		write(connfd, rec, 5);
+	shutdown(connfd, SHUT_RD);  
 	close(connfd);
 	pthread_exit((void *)0);
 //	sock_close(connfd);
@@ -717,7 +695,7 @@ cmd_0x10:
                          
                          charger->is_charging_flag = 1;
                          charger->load_balance_cmd = 0;
-                         charger->real_time_current = 7;
+                         charger->real_time_current = 16;
 #endif            
                         // 发送数据到后台,上锁
 	    
@@ -726,8 +704,8 @@ cmd_0x10:
                         {
 #if USE_POWER_BAR
                                 charger->is_charging_flag = 1;
-                                charger->real_current = 7;
-                                charger->real_time_current = 7;
+                                charger->real_current = 15;
+                                charger->real_time_current = 16;
 #endif
 		                pthread_mutex_unlock(&serv_mutex);
 		                charger->system_message = 0x01;
@@ -759,8 +737,8 @@ cmd_0x10:
 #if USE_POWER_BAR
                                 charger->is_charging_flag = 1;
                                 charger->load_balance_cmd = 0;
-                                charger->real_current = 7;
-                                charger->real_time_current = 7;
+                                charger->real_current = 15;
+                                charger->real_time_current = 16;
 #endif
 		                pthread_mutex_unlock(&serv_mutex);
                                 if (charger->charger_type == 2 || charger->charger_type == 4)
@@ -836,8 +814,8 @@ cmd_0x10:
 #if     USE_POWER_BAR
                                 charger->is_charging_flag = 1;
                                 charger->load_balance_cmd = 0;
-                                charger->real_current = 7;
-                                charger->real_time_current = 7;
+                                charger->real_current = 15;
+                                charger->real_time_current = 16;
 #endif
                                 charger->target_mode = CHARGER_CHARGING;
                                 ev_uci_save_action(UCI_SAVE_OPT, true, (char*)bf->send_buff, "chargerinfo.%s.privateID", charger->tab_name);
@@ -991,7 +969,7 @@ reply_to_charger2:
 			sprintf(bf->val_buff + strlen(bf->val_buff), "status:%d}]}",  CHARGER_CHARGING_COMPLETE_LOCK);
 			debug_msg("len: %d", strlen(bf->val_buff));
 
-            cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, bf->val_buff);
+            cmd_frun("dashboard url_post %s %s", sys_checkin_url(), bf->val_buff);
                 
 			//写入数据库，更新相应表信息
 			//当前模式
@@ -1161,7 +1139,7 @@ replay58:
 			    sprintf(bf->val_buff + strlen(bf->val_buff), "chargingType:%d,", bf->recv_buff[61]);
 			    sprintf(bf->val_buff + strlen(bf->val_buff), "status:%d}]}", bf->recv_buff[17]);
 			    debug_msg("len: %d", strlen(bf->val_buff));
-			    cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, bf->val_buff);
+			    cmd_frun("dashboard url_post %s %s", sys_checkin_url(), bf->val_buff);
                 bf->ErrorCode = ESTOP_CHARGE_FINISH;
 #endif
                 return 0;
@@ -1691,7 +1669,7 @@ void *pthread_service_send(void *arg)
 			sprintf(val + strlen(val), "cid=%08d\\\&type=%d\\\&code=%d\\\&id=%s",task->cid, 3, 301, val_buff);
 			debug_msg("len: %d", strlen(val));
 
-                        cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, val);
+                        cmd_frun("dashboard url_post %s %s", sys_checkin_url(), val);
 
 //                    memset(val_buff, 0, sizeof(val_buff));
 //                    memcpy(val_buff, task->u.yuyue.uid, 32);
@@ -1701,7 +1679,7 @@ void *pthread_service_send(void *arg)
 			        sprintf(val + strlen(val), "status:%d}", task->errcode);
 			        debug_msg("len: %d", strlen(val));
 
-                    cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, val);
+                    cmd_frun("dashboard url_post %s %s", sys_checkin_url(), val);
 
                     free(val);
                 }
@@ -1721,7 +1699,7 @@ void *pthread_service_send(void *arg)
 			sprintf(val + strlen(val), "cid=%08d\\\&type=%d\\\&code=%d\\\&id=%s",task->cid, 3, task->errcode, val_buff);
 			debug_msg("len: %d", strlen(val));
 
-                        cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, val);
+                        cmd_frun("dashboard url_post %s %s", sys_checkin_url(), val);
 
                         free(val);   
                    }
@@ -2225,13 +2203,13 @@ int  bin_packing_err(unsigned char *data, unsigned int limit, int len, int surpl
 
 void *load_balance_pthread(void *arg)
 {
-      int i, cnt = 0;
+      int i, cnt = 0, sum,  surpls;
       unsigned char CNT,                // 电桩数量局部量
                     NUM,                // 正在充电数的局部量
                     NUM_TMP = 0,
                     have_charger_flag,  // 有充电请求的标志
                     charger_index,      // 充电请求电桩在ChargerInfo数组中的位置。
-                    index, sum, wait_time,
+                    index, wait_time,
                     off_net_cnt,        // 联网电桩数
                     average_limit;      // 平均电流
       unsigned char limit[15], 
@@ -2239,7 +2217,6 @@ void *load_balance_pthread(void *arg)
                     no_change_index[15] = {0}, // 充电请求时，降低电桩为7A，没有为7A的，设置此标志。
                     off_net_charging[15] = {0};// 正在充电之后断网的，设置此标志。
       char          mark_index[8],
-                    surpls,              // 剩余电流
                     send_buff[10] = {0};
       struct load_balance balance[15] = {0}; // 正在充电的电桩，设置此标志。
 
@@ -2383,7 +2360,7 @@ void *load_balance_pthread(void *arg)
                 printf("*********************************\n");
                         if (charger_manager.power_bar_surpls_current >= 16)
                         {
-                            ChargerInfo[charger_index].real_current = 7;
+                            ChargerInfo[charger_index].real_current = 15;
                             ChargerInfo[charger_index].real_time_current = 16;
                             ChargerInfo[charger_index].load_balance_cmd = 0;
                             ChargerInfo[charger_index].is_charging_flag = 1;
@@ -2442,8 +2419,9 @@ void *load_balance_pthread(void *arg)
           
 READ:
         // 重读电桩实时电流
+        sleep(5);
         index = 0;
-        char cur = 0;
+        int cur = 0;
         sum = 0;
         memset(mark_index, -1, sizeof(mark_index));
         for (i = 0; i < CNT; i++)
@@ -2462,6 +2440,8 @@ READ:
                 sum += cur;  //current[index];
             }
         }
+        if (sum > charger_manager.limit_max_current )
+		continue;
          if (charger_manager.limit_max_current - sum >= 16)
          {
                 charger_manager.power_bar_surpls_current = 16;
@@ -2470,8 +2450,8 @@ READ:
          else
          { 
 //             charger_manager.power_bar_surpls_current = charger_manager.limit_max_current - sum;
-              charger_manager.power_bar_surpls_current = 0;
-              cur = 16;
+               charger_manager.power_bar_surpls_current = 0;
+               cur = 16;
          }
          surpls = charger_manager.limit_max_current - cur - sum;
          average_limit = (charger_manager.limit_max_current -  charger_manager.power_bar_surpls_current)/NUM;

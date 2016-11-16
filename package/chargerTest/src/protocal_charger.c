@@ -23,15 +23,16 @@ void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
 
         if ( new_mode ==0 ||  new_mode == charger->present_mode )
             return ;
-       
+
         debug_msg("检查状态有没有改变, CID[%d] ...", charger->CID); 
-        if ( charger->present_mode > 0 &&  (( val = (char *)calloc(100, sizeof(char))) != NULL) )
+        if ( charger->present_mode > 0 &&  (( val = calloc(100, sizeof(char *))) != NULL) )
         {
+		bf->send_buff[0] = 0;
             if (new_mode == CHARGER_CHARGING && bf->recv_buff[4] == CHARGER_CMD_STATE_UPDATE)
             {
                 sprintf(bf->val_buff, "/ChargerState/stopState?");
                 sprintf(bf->val_buff + strlen(bf->val_buff), "key={chargers:[{chargerId:\\\"%08d\\\",", charger->CID);
-                bf->send_buff[0] = 0;
+                
                 for (i = 0; i < 16; i++)
                 {
                         sprintf(bf->send_buff + strlen(bf->send_buff), "%02x", bf->recv_buff[36 + i]);
@@ -44,11 +45,11 @@ void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
                 sprintf(bf->val_buff + strlen(bf->val_buff), "status:%d}]}", CHARGER_CHARGING);
                 printf("send:%s\n", bf->val_buff);;
 
-                cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, bf->val_buff);
+                cmd_frun("dashboard url_post %s %s", sys_checkin_url(), bf->val_buff);
             }
-
-            sprintf(val, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",status:%d}", charger->CID, new_mode);
-            cmd_frun("dashboard url_post %s %s", API_CHECKIN_VALID, val);
+            
+		sprintf(val, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",pid:\\\"%s\\\",status:%d}", charger->CID, bf->send_buff, new_mode);
+		cmd_frun("dashboard url_post %s %s", sys_checkin_url(), val);
 
             debug_msg("发送改变状态, CID[%d], %s ...", charger->CID, val);
             free(val);
@@ -61,18 +62,18 @@ void
 uci_clean_charge_finish(const CHARGER_INFO_TABLE *charger)
 {
 
-            ev_uci_delete( "chargerinfo.%s.privateID", charger->tab_name);
-			ev_uci_delete( "chargerinfo.%s.ChargingCode", charger->tab_name);
-			ev_uci_delete( "chargerinfo.%s.PresentOutputVoltage", charger->tab_name);
-			ev_uci_delete( "chargerinfo.%s.ChargerWay", charger->tab_name);
-			ev_uci_delete( "chargerinfo.%s.Power", charger->tab_name);
-			ev_uci_delete( "chargerinfo.%s.Duration", charger->tab_name);
+	ev_uci_delete( "chargerinfo.%s.privateID", charger->tab_name);
+	ev_uci_delete( "chargerinfo.%s.ChargingCode", charger->tab_name);
+	ev_uci_delete( "chargerinfo.%s.PresentOutputVoltage", charger->tab_name);
+	ev_uci_delete( "chargerinfo.%s.ChargerWay", charger->tab_name);
+	ev_uci_delete( "chargerinfo.%s.Power", charger->tab_name);
+	ev_uci_delete( "chargerinfo.%s.Duration", charger->tab_name);
     
-            if (charger->charger_type == 2 || charger->charger_type == 4)
-            {
-			    ev_uci_delete( "chargerinfo.%s.Soc", charger->tab_name);
-			    ev_uci_delete( "chargerinfo.%s.Tilltime", charger->tab_name);
-            }
+	if (charger->charger_type == 2 || charger->charger_type == 4)
+	{
+		ev_uci_delete( "chargerinfo.%s.Soc", charger->tab_name);
+		ev_uci_delete( "chargerinfo.%s.Tilltime", charger->tab_name);
+	}
 }
 void 
 error_hander(int handle, CHARGER_INFO_TABLE *charger, BUFF *bf, int errnum)
@@ -211,7 +212,6 @@ error_hander(int handle, CHARGER_INFO_TABLE *charger, BUFF *bf, int errnum)
     
     } else if (ESTOP_CHARGE_API_ERR == errnum)
     {
-    
     }
 
     return;
