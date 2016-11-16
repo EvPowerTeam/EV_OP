@@ -208,6 +208,12 @@ function dmesg()
 	return luci.util.exec("dmesg")
 end
 
+---  Retrieves the output of the "cat vpnfile" command.
+--@return      String containing the current log buffer
+function vpnlog()
+	return luci.util.exec("cat /tmp/vpn.log")
+end
+
 --- Generates a random id with specified length.
 -- @param bytes	Number of bytes for the unique id
 -- @return		String containing hex encoded id

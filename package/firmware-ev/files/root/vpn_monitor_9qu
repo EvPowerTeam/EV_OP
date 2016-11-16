@@ -14,7 +14,7 @@ if ping -q -c 2 "$pingip" >> /dev/null ; then      # ping is good - bring iface 
     else                                # ping is bad, iface is down
         if [ $? -eq 1 ] ;  then
             echo "9qu vpn is down"
-            /bin/sh /root/setup_9qu.sh
+            /bin/sh /root/setup_9qu.sh >/tmp/vpn.log 2>&1
         fi
     fi
 

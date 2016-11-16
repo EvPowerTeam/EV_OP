@@ -11,7 +11,7 @@
 
 #define CHECKIN_NAME "checkin"
 #define DEBUG_FILE_PATH "/mnt/umemory/routerlog/debug_dash.log"
-#define API_SERVER_IP "10.168.1.185" // "10.168.1.185"
+#define API_SERVER_IP "10.168.1.185" // "10.168.1.185" 10.9.8.2
 #define API_SERVER_PORT "8080"
 #define CHECKIN_FLAG_MAX 20
 

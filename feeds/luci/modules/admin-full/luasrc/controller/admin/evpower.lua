@@ -10,8 +10,53 @@ function index()
 	entry({"admin","evpower","balancing"},cbi("cbi_evpower_charger/config"),"电桩负载均衡",4)
 	entry({"admin","evpower","chargerdata"},alias("admin","evpower","overview"),"电桩充电数据总览",5)
 	entry({"admin","evpower","pushconf"},template("view_evpower_charger/chargerconf"),"推送配置",6)
+	entry({"admin","evpower","vpninfo"},template("view_evpower_charger/vpn_info"),_("VPN账号/密码"),7)
+	entry({"admin","evpower","vpnlog"}, call("action_vpnlog"), _("VPN Log"), 8)
+	entry({"admin","evpower","vpninfo_button"},call("action_vpninfo_button"))
+	entry({"admin","evpower","vpn_status"},call("action_vpnstatus"))
+	entry({"admin","evpower","vpn_status1"},call("action_vpnstatus1"))
 	entry({"admin","evpower","chargerconf"},call("action_chargerconf"))
 	entry({"admin","evpower","confcomp"},call("action_confcomp"))
+end
+
+function action_vpninfo_button()
+	if luci.http.formvalue("vpninfo_flag") == "1" then
+		luci.sys.exec("/bin/sh /root/setup_9qu.sh > /tmp/vpn.log 2>&1")
+	end
+end
+
+function action_vpnlog()
+	local vpnlog = luci.sys.vpnlog()
+	luci.template.render("view_evpower_charger/vpninfo",{vpnlog=vpnlog})
+end
+
+function action_vpnstatus()
+	local vpnval = {}
+	vpnval.vpnname = luci.sys.exec("sed -n \"/name/p\" /root/9qu.xl2tpd | awk '{ print $2 }' | cut -d '\"' -f 2 ")
+	vpnval.vpnpasswd = luci.sys.exec("sed -n \"/password/p\" /root/9qu.xl2tpd | awk '{ print $2 }' | cut -d '\"' -f 2 ")
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(vpnval)
+end
+
+function action_vpnstatus1()
+	if luci.http.formvalue("vpn_flag") == "1" then
+		local savevpn=luci.http.formvalue("is_vpn")
+
+		local file = io.open("/root/9qu.xl2tpd","r")
+		local str = file:read("*a")
+		local v1,v2 = string.find(str,"name \"")
+		local v3,v4 = string.find(str,"password")
+		local str1 = string.sub(str,v2+1,v3-2)
+		local newStr = string.gsub(str,str1,savevpn)
+
+		file:close()
+
+		local file1 = io.open("/root/9qu.xl2tpd","w")
+		file1:write(newStr)
+		local file2 = io.open("/etc/ppp/9qu.xl2tpd","w")
+		file2:write(newStr)
+		
+	end
 end
 
 function action_evsqlconf()

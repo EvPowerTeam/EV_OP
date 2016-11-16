@@ -1,0 +1,45 @@
+<%+header%>
+
+<fieldset class="cbi-section">
+	<legend><%:VPN账号：%><span id='ev_vpn_name'></span></legend>
+	<legend><%:VPN密码：%><span id='ev_vpn_password'></span></legend>
+<br>
+<input type="button" class="cbi-button cbi-button-apply" value="<%:修改%>" onclick="return sync_clock(this)" />
+</fieldset>
+
+<script type="text/javascript">//<![CDATA[
+
+	function sync_clock(obj)
+	{
+		var rid = prompt('Please Input Name/Password:');
+		var xhR = new XHR();
+		if( ! rid)
+		{
+			;
+		}else{
+			xhR.post('<%=luci.dispatcher.build_url("admin","evpower","vpn_status1")%>',{
+				vpn_flag : 1,
+				is_vpn	: rid
+			},function(xhr){
+			
+			});
+		}
+	}
+
+	XHR.poll(8, '<%=luci.dispatcher.build_url("admin", "evpower", "vpn_status")%>', null,
+		function(x, rv)
+		{
+			var s1 = document.getElementById('ev_vpn_name');
+			console.log(s1);
+			var s2 = document.getElementById('ev_vpn_password');
+			if ( s1 && s2 )
+			{
+				s1.innerHTML = rv.vpnname || '?';
+				s2.innerHTML = rv.vpnpasswd || '?';
+			}
+		}
+	);
+	
+//]]></script>
+
+<%+footer%>
