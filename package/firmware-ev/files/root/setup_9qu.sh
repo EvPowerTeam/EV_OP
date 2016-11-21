@@ -16,7 +16,9 @@
         sed -i '57d' /etc/ipsec.conf
         sed -i " 56a \        rightid       = ${vpnip} " /etc/ipsec.conf
         ipsec restart
-        sleep 10
+	sleep 5
+	./etc/init.d/xl2tpd restart
+        sleep 5
         ipsec up 9qu
         sleep 2
         echo "c 9qu" > ../var/run/xl2tpd/l2tp-control

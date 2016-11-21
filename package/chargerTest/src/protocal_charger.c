@@ -471,7 +471,7 @@ err:
 //         free(charger->package);
 //     if (charger->start_charge_order != NULL)
 //         free(charger->start_charge_order);
-//     return 0;
+     return 0;
 }
 
 int 

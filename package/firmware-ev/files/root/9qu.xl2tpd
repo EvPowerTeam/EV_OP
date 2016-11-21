@@ -19,6 +19,6 @@ lock
 #proxyarp
 connect-delay 5000
 
-name "ot1"
-password "evpowerot1"
+name "ot2"
+password "evpowerot2"
 

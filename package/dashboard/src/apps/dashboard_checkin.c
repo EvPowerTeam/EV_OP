@@ -162,6 +162,11 @@ static char *dashboard_checkin_string(int type)
 		        strncat(json_str, json_sub, sizeof(json_sub));
 		}
 
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.FwName", tab_name) == 0) {
+		        sprintf(json_sub, "FwVersion:\'%s\',", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.PresentOutputVoltage", tab_name) == 0) {
 		        sprintf(json_sub, "outputVoltage:%s,", tmp_buff);
 		        strncat(json_str, json_sub, sizeof(json_sub));

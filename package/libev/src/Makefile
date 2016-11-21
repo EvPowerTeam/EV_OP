@@ -16,7 +16,6 @@ LIBNAME = libev.so
 ifeq ($(EV_DEBUG), y)
   EXTRA_CFLAGS += -DDEBUG_CONSOLE
   EXTRA_CFLAGS += -DDEBUG_SYSLOG
-  EXTRA_CFLAGS += -DDEBUG_FILE
 endif
 
 SRC_C = $(wildcard *.c)

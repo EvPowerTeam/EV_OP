@@ -104,9 +104,9 @@ int dashboard_mqtt_sub(int argc, char *argv[])
 	ret = file_read_string("/etc/saveRID", topic, 10);
 	debug_msg("mqtt sub to: %s", topic);
 	if (ret < 0)
-		mosquitto_subscribe(mosq, &mid, topic, 0);
-	else
 		mosquitto_subscribe(mosq, &mid, "Evpower", 0);
+	else
+		mosquitto_subscribe(mosq, &mid, topic, 0);
 
 	rc = mosquitto_loop_forever(mosq, -1, 1);
 

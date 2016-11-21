@@ -1,6 +1,6 @@
 
 #define _GNU_SOURCE
-#define DEBUG_FILE_PATH "/tmp/debug_libev.log"
+#define DEBUG_FILE_PATH "/mnt/umemory/routerlog/debug_libev.log"
 
 #undef LIBNG_DEBUG
 #if defined(DEBUG_CONSOLE) || defined(DEBUG_FILE) || defined(DEBUG_SYSLOG)
@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <syslog.h>
 
-static inline char *ng_time_str()
+static inline char *ev_time_str()
 {
 	char *buff;
 	time_t now;
@@ -34,7 +34,7 @@ static inline char *ng_time_str()
 
 #if defined(DEBUG_CONSOLE)
 #define debug_console(fmt, arg...) do {\
-	char *_t = ng_time_str();\
+	char *_t = ev_time_str();\
 	fprintf(stderr, "%s %s: " fmt "\n", _t, __FUNCTION__, ## arg);\
 } while (0)
 #else
@@ -43,7 +43,7 @@ static inline char *ng_time_str()
 
 #if defined(DEBUG_FILE)
 #define debug_file(fmt, arg...) do {\
-	char *_t = ng_time_str();\
+	char *_t = ev_time_str();\
 	FILE *file = fopen(DEBUG_FILE_PATH, "a");\
 	fprintf(file, "%s [%i] %s: " fmt "\n", _t, getpid(), __FUNCTION__, ## arg);\
 	fclose(file);\

@@ -457,8 +457,10 @@ charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BU
                                 goto cmd_0x10;
                                 memcpy(bf->val_buff, bf->recv_buff + 49, 12);
 				bf->val_buff[12] = 0;
-				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.FwName", charger->tab_name) < 1)	
-					goto cmd_0x10;
+				if (bf->recv_cnt > 70)
+					if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff,
+					   "chargerinfo.%s.FwName", charger->tab_name) < 1)	
+						goto cmd_0x10;
 				memcpy(ChargerInfo[(*index)].KEYB, key_addr, 16);
                                 charger->charger_type = bf->recv_buff[48];
                                 ChargerInfo[(*index)].wait_cmd = WAIT_CMD_NONE;
@@ -563,8 +565,10 @@ charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BU
 					goto cmd_0x10;
 				memcpy(bf->val_buff, bf->recv_buff + 49, 12);
 				bf->val_buff[12] = 0;
-				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.FwName", tab_buff) < 1)	
-					goto cmd_0x10;
+				if (bf->recv_cnt > 70)
+					if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff,
+					   "chargerinfo.%s.FwName", tab_buff) < 1)	
+						goto cmd_0x10;
 					
                                 ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.SelectCurrent", tab_buff);	
 				ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.PresentOutputCurrent", tab_buff);
