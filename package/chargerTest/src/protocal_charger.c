@@ -30,7 +30,7 @@ void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
 		bf->send_buff[0] = 0;
             if (new_mode == CHARGER_CHARGING && bf->recv_buff[4] == CHARGER_CMD_STATE_UPDATE)
             {
-                sprintf(bf->val_buff, "/ChargerState/stopState?");
+                sprintf(bf->val_buff, "/ChargerState/startState?");
                 sprintf(bf->val_buff + strlen(bf->val_buff), "key={chargers:[{chargerId:\\\"%08d\\\",", charger->CID);
                 
                 for (i = 0; i < 16; i++)

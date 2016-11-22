@@ -444,9 +444,11 @@ charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BU
 				if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.KEYB", ChargerInfo[(*index)].tab_name) < 0)
                                         goto cmd_0x10;
 				memcpy(bf->val_buff, bf->recv_buff+18, 10);
+				bf->val_buff[10] = 0;
 				if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Model", ChargerInfo[(*index)].tab_name) < 0) // series
                                         goto cmd_0x10;
 				memcpy(bf->val_buff, bf->recv_buff+28, 10);
+				bf->val_buff[10] = 0;
 				if (ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Series", ChargerInfo[(*index)].tab_name) < 0)
                                         goto cmd_0x10;
                                 sprintf(bf->val_buff, "%d", bf->recv_buff[48]);
@@ -546,10 +548,12 @@ charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BU
 					goto cmd_0x10;
                                 debug_msg("keyb:%s", bf->val_buff);
 				memcpy(bf->val_buff, bf->recv_buff+18, 10);
+				bf->val_buff[10] = 0;
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Model", tab_buff) < 1) // series
 					goto cmd_0x10;
                                 debug_msg("model:%s", bf->val_buff);
 				memcpy(bf->val_buff, bf->recv_buff+28, 10);
+				bf->val_buff[10] = 0;
 				if(ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Series", tab_buff) < 1)	
 					goto cmd_0x10;
 				sprintf(bf->val_buff, "%d.%02d", bf->recv_buff[41], bf->recv_buff[40]);	//chargerVersion
