@@ -279,7 +279,7 @@ int main(int argc , char * argv[])
 #define MAX_LEN     1500
 void * thread_main(void * arg)
 {
-	ev_int connfd, n, charger_index = -1, Error = 0, cmd, return_val = 0, i;
+	ev_int connfd, n, charger_index = -1, Error = 0, cmd, return_val = 0, ret = 0, i;
         BUFF    bf = {NULL, NULL, NULL, 0, 0};
         char rec[5] = {101, 118, 62, 48, 255};
 
@@ -337,17 +337,17 @@ void * thread_main(void * arg)
                 have_wait_command(&ChargerInfo[charger_index], &bf);
                 cmd = ChargerInfo[charger_index].present_cmd;
                 // 服务程序
-	        return_val = charger_serv(connfd, cmd, &ChargerInfo[charger_index], &bf, &charger_index);
+	        ret = charger_serv(connfd, cmd, &ChargerInfo[charger_index], &bf, &charger_index);
                 // 检查错误
-                error_hander(return_val, &ChargerInfo[charger_index], &bf, bf.ErrorCode);
+                error_hander(ret, &ChargerInfo[charger_index], &bf, bf.ErrorCode);
         } else
         {
                  cmd = bf.recv_buff[4];
                  bf.recv_cnt = n;
                 // 服务程序
-	        return_val = charger_serv(connfd, cmd, NULL, &bf, &charger_index);
+	        ret = charger_serv(connfd, cmd, NULL, &bf, &charger_index);
                 // 检查错误
-                error_hander(return_val, NULL, &bf, bf.ErrorCode);
+                error_hander(ret, NULL, &bf, bf.ErrorCode);
         }
 
 exitt:
@@ -358,8 +358,9 @@ exitt:
                 free(bf.send_buff);
         if (bf.val_buff != NULL)
                 free(bf.val_buff);
-	if (return_val < 0)
+	if (return_val < 0) {
 		write(connfd, rec, 5);
+	}
 	shutdown(connfd, SHUT_RD);  
 	close(connfd);
 	pthread_exit((void *)0);
@@ -1125,7 +1126,12 @@ replay58:
         
         case    CHARGER_CMD_STOP_CHARGE_R:
                 debug_msg("发送停止充电命令, CID[%d] ...", charger->CID);
-                if ( gernal_command(fd, CHARGER_CMD_STOP_CHARGE_R, charger, bf) < 0)
+                sprintf(bf->val_buff,
+			"/PushMessage/pushMessage?cid=%08d\\\&type=%d\\\&code=%d\\\&id=%s",
+			charger->CID, 3, 102, charger->uid);
+
+                cmd_frun("dashboard url_post %s %s", sys_checkin_url(), bf->val_buff);
+                if (gernal_command(fd, CHARGER_CMD_STOP_CHARGE_R, charger, bf) < 0)
                 {
                     bf->ErrorCode = ESTOP_CHARGE_API_ERR;
                     return -1;

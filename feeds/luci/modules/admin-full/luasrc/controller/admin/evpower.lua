@@ -46,7 +46,7 @@ function action_vpnstatus1()
 		local str = file:read("*a")
 		local v1,v2 = string.find(str,"name \"")
 		local v3,v4 = string.find(str,"password")
-		local str1 = string.sub(str,v2+1,v3-2)
+		local str1 = string.sub(str,v2+1,v3-3)
 		local newStr = string.gsub(str,str1,savevpn)
 
 		file:close()
