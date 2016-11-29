@@ -241,7 +241,7 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
      {
          charger->wait_cmd = WAIT_CMD_NONE;
          return 0;
-     } 
+     }
      else if ( charger->present_cmd == 0x34)
      {
          // 可以发送任何命令
@@ -375,7 +375,8 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
             case WAIT_CMD_STOP_CHARGE:
                  My_AES_CBC_Decrypt(charger->KEYB, bf->recv_buff+9, bf->recv_cnt-9, bf->send_buff);
                  debug_msg("present_mode:%#x", bf->send_buff[0]);
-                 if (bf->send_buff[0] != CHARGER_CHARGING) // 在空闲的时候，处理扫码充电
+                 if (bf->send_buff[0] != CHARGER_CHARGING && 
+                     bf->send_buff[0] != CHARGER_CHARGING_COMPLETE_LOCK) // 在空闲的时候，处理扫码充电
                      goto err;
                  debug_msg("接收到停止充电命令:CID[%08d] ...", charger->CID);
                  if ( (charger->uid = (char *)malloc(sizeof(wait->u.stop_charge.uid) )) == NULL)
@@ -452,6 +453,7 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
 
      } else
      {
+	debug_msg("charger cannot react in ");
         // 处于更新或其他状态，什么都不做
      }  // end if
      if (st != NULL)

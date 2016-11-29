@@ -667,6 +667,8 @@ cmd_0x10:
 			
                         sprintf(bf->val_buff, "%d", ((bf->recv_buff[10] << 8) | bf->recv_buff[11])); // SUB_MODE
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.SubMode", charger->tab_name);
+			sprintf(bf->val_buff, "%d", ((bf->recv_buff[17] >> 4) & 0x01)); //parking sensor
+			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Parking", charger->tab_name);
 			// 心跳处理略
 			//  回复心跳
 #if USE_POWER_BAR
@@ -744,6 +746,7 @@ cmd_0x10:
                                 sprintf(bf->send_buff + strlen(bf->send_buff), "%02x", bf->recv_buff[36 + i]);
                         }
                         sprintf(bf->val_buff + strlen(bf->val_buff), "privateID=%s", bf->send_buff);
+                        debug_msg("Charging req privateID: %s", bf->send_buff);
                         memcpy(charger->ev_linkid, bf->recv_buff+36, 16);
                         // 发送
                         sptr = check_send_status(bf->val_buff);

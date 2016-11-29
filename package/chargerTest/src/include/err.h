@@ -91,7 +91,7 @@ static inline char *ng_time_str()
 
 #if defined(DEBUG_SYSLOG)
 #define debug_syslog(fmt, arg...) do {\
-	openlog("libng", LOG_PID, LOG_DAEMON | LOG_EMERG);\
+	openlog("charger", LOG_PID, LOG_DAEMON | LOG_EMERG);\
 	syslog(0, "%s: " fmt, __FUNCTION__, ## arg);\
 	closelog();\
 } while (0)
