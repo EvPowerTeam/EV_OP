@@ -1,14 +1,4 @@
 
-/***
- *
- * Copyright (C) 2014-2015 Open Mesh, Inc.
- *
- * The reproduction and distribution of this software without the written
- * consent of Open-Mesh, Inc. is prohibited by the United States Copyright
- * Act and international treaties.
- *
- ***/
-
 #include "include/dashboard.h"
 #include "json.h"
 
