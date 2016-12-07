@@ -21,7 +21,7 @@ void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
             
 //        printf("recv_cmd:%#x, cmd:%#x, present_mode:%d, new_mode:%d\n", bf->recv_buff[4], cmd, charger->present_mode, new_mode);
 
-        if ( new_mode ==0 ||  new_mode == charger->present_mode )
+        if ( new_mode == 0 ||  new_mode == charger->present_mode )
             return ;
 
         debug_msg("检查状态有没有改变, CID[%d] ...", charger->CID); 
@@ -373,11 +373,11 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
                  charger->present_cmd = CHARGER_CMD_START_CHARGE_R;
             break;
             case WAIT_CMD_STOP_CHARGE:
-                 My_AES_CBC_Decrypt(charger->KEYB, bf->recv_buff+9, bf->recv_cnt-9, bf->send_buff);
+                 //My_AES_CBC_Decrypt(charger->KEYB, bf->recv_buff+9, bf->recv_cnt-9, bf->send_buff);
                  debug_msg("present_mode:%#x", bf->send_buff[0]);
-                 if (bf->send_buff[0] != CHARGER_CHARGING &&
-                     bf->send_buff[0] != CHARGER_CHARGING_COMPLETE_LOCK) // 在空闲的时候，处理扫码充电
-                     goto err;
+                 //if (bf->send_buff[0] != CHARGER_CHARGING &&
+                     //bf->send_buff[0] != CHARGER_CHARGING_COMPLETE_LOCK) // 在空闲的时候，处理扫码充电
+                     //goto err;
                  debug_msg("接收到停止充电命令:CID[%08d] ...", charger->CID);
                  if ( (charger->uid = (char *)malloc(sizeof(wait->u.stop_charge.uid) )) == NULL)
                   {
@@ -453,7 +453,7 @@ have_wait_command(CHARGER_INFO_TABLE *charger, BUFF  *bf)
 
      } else
      {
-	debug_msg("charger cannot react in ");
+	debug_msg("charger cannot react");
         // 处于更新或其他状态，什么都不做
      }  // end if
      if (st != NULL)

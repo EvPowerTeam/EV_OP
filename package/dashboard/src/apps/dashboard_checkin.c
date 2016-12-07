@@ -171,6 +171,16 @@ static char *dashboard_checkin_string(int type)
 		        sprintf(json_sub, "Parking:\'%s\',", tmp_buff);
 		        strncat(json_str, json_sub, sizeof(json_sub));
 		}
+		
+		if (ev_uci_data_get_val(tmp_buff, 5, "chargerinfo.%s.DigitalInput", tab_name) == 0) {
+		        sprintf(json_sub, "DigitalInput:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
+		if (ev_uci_data_get_val(tmp_buff, 5, "chargerinfo.%s.DigitalOutput", tab_name) == 0) {
+		        sprintf(json_sub, "DigitalOutput:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
 
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.PresentOutputVoltage", tab_name) == 0) {
 		        sprintf(json_sub, "outputVoltage:%s,", tmp_buff);

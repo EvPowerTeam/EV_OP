@@ -664,11 +664,17 @@ cmd_0x10:
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.PresentMode", charger->tab_name);
 			ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.PresentOutputCurrent", charger->tab_name);
 			ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.%s.SelectCurrent", charger->tab_name);
-			
+
                         sprintf(bf->val_buff, "%d", ((bf->recv_buff[10] << 8) | bf->recv_buff[11])); // SUB_MODE
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.SubMode", charger->tab_name);
 			sprintf(bf->val_buff, "%d", ((bf->recv_buff[17] >> 4) & 0x01)); //parking sensor
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Parking", charger->tab_name);
+
+			//Digital Input/Output
+			sprintf(bf->val_buff, "%d", ((bf->recv_buff[14] << 8) | bf->recv_buff[15]));
+			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.DigitalInput", charger->tab_name);
+			sprintf(bf->val_buff, "%d", ((bf->recv_buff[16] << 8) | bf->recv_buff[17]));
+			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.DigitalOutput", charger->tab_name);
 			// 心跳处理略
 			//  回复心跳
 #if USE_POWER_BAR
@@ -970,7 +976,8 @@ reply_to_charger2:
             
                         if (bf->recv_buff[59] == 1) // 扫码
                         {
-                                goto replay58;       
+				debug_msg("bluetooth charging request");
+                                //goto replay58;       
                         }
 			// 发送数据给后台
 			sprintf(bf->val_buff, "/ChargerState/stopState?");
@@ -1008,7 +1015,7 @@ reply_to_charger2:
 //            sprintf(bf->val_buff, "%d", tmp_2_val);
 //			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.PresentOutputCurrent", charger->tab_name);
 			
-replay58:            
+//replay58:            
             uci_clean_charge_finish(charger);
             memset(bf->val_buff, 0, strlen(bf->val_buff));
             if (charger->start_time != 0)
