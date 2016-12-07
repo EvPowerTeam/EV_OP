@@ -23,7 +23,7 @@
 #include <sys/types.h>
 #include <syslog.h>
 #include <stdarg.h>
-
+#include <inttypes.h>
 #include <time.h>
 #include <string.h>
 
@@ -91,9 +91,11 @@ static inline char *dash_time_str()
 #define DASH_UNUSED(x) (x)__attribute__((unused))
 
 enum dshbrd_checkin_parts {
-	CHECKIN_EMPTY = 0x00,
-	CHECKIN_CT = 0x01,
-	CHECKIN_PA = 0x02,
+	CHECKIN_EMPTY = 0,
+	CHECKIN_FC = 1,	//only fast charger
+	CHECKIN_SC = 2,	//standard charger
+	CHECKIN_EX = 3,	//with extra params
+	CHECKIN_FULL = 4,	//all params
 };
 
 enum checkin_api_ver {

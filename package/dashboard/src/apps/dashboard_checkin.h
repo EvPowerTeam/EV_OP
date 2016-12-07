@@ -13,12 +13,12 @@
 #define UIC_TABLE_CHARGER "charger%d"
 #define MAX_LEN 255
 
-int dashboard_checkin_now(int argc, char **argv);
+int dashboard_checkin_now(int type);
 
-int dashboard_checkin();
+int dashboard_checkin(int argc, char **argv);
 
 int dashboard_url_post(int argc, char **argv, char *extra_arg);
 
 int dashboard_post_file(int argc, char **argv, char *extra_arg);
 
-int dashboard_update_fastcharger(void *arg);
+int dashboard_update_fastcharger();

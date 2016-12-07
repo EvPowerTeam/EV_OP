@@ -47,7 +47,10 @@ void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
 
                 cmd_frun("dashboard url_post %s %s", sys_checkin_url(), bf->val_buff);
             }
-            
+
+		if (new_mode == CHARGER_READY)
+			uci_clean_charge_finish(charger);
+
 		sprintf(val, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",pid:\\\"%s\\\",status:%d}", charger->CID, bf->send_buff, new_mode);
 		cmd_frun("dashboard url_post %s %s", sys_checkin_url(), val);
 

@@ -85,12 +85,14 @@ static char *dashboard_checkin_string(int type)
 	for (i = 1; i < 12; i++)
 	{
 		sprintf(tab_name, "charger%d", i);
-		debug_msg("%s", tab_name);
-		if (type && ev_uci_data_get_val(tmp_buff, 20,
+		if (type == CHECKIN_FC)
+			if (ev_uci_data_get_val(tmp_buff, 20,
 			                        "chargerinfo.%s.ChargerType",
 						tab_name) == 0)
-			if(strcmp(tmp_buff, "1")==0 || strcmp(tmp_buff, "3")==0)	//not fast charger
-				continue;
+				if(strcmp(tmp_buff, "1") == 0 ||
+				   strcmp(tmp_buff, "3") == 0)	//not fast charger
+					continue;
+		debug_msg("processing %s", tab_name);
 
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.CID", tab_name) < 0)
 			continue;
@@ -102,6 +104,36 @@ static char *dashboard_checkin_string(int type)
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
 
+		if (type == CHECKIN_SC)
+			goto standard;
+		if (type == CHECKIN_EX)
+			goto extra;
+		//fast_charger:
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Soc", tab_name) == 0) {
+		        sprintf(json_sub, "soc:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
+		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Tilltime", tab_name) == 0) {
+		        sprintf(json_sub, "tillTime:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+extra:
+		if (ev_uci_data_get_val(tmp_buff, 5, "chargerinfo.%s.DigitalInput", tab_name) == 0) {
+		        sprintf(json_sub, "DigitalInput:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
+		if (ev_uci_data_get_val(tmp_buff, 5, "chargerinfo.%s.DigitalOutput", tab_name) == 0) {
+		        sprintf(json_sub, "DigitalOutput:%s,", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+
+		if (ev_uci_data_get_val(tmp_buff, 5, "chargerinfo.%s.Parking", tab_name) == 0) {
+		        sprintf(json_sub, "Parking:\'%s\',", tmp_buff);
+		        strncat(json_str, json_sub, sizeof(json_sub));
+		}
+standard:
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.MAC", tab_name) == 0) {
 			sprintf(json_sub, "mac:'%s',", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
@@ -116,17 +148,7 @@ static char *dashboard_checkin_string(int type)
 			sprintf(json_sub, "privateID:'%s',", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
 		}
-/*
-		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.start_time", tab_name) == 0) {
-			sprintf(json_sub, "startTime:%s,", tmp_buff);
-			strncat(json_str, json_sub, sizeof(json_sub));
-		}
 
-		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.end_time", tab_name) == 0) {
-			sprintf(json_sub, "endTime:%s,", tmp_buff);
-			strncat(json_str, json_sub, sizeof(json_sub));
-		}
-*/
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Power", tab_name) == 0) {
 			sprintf(json_sub, "power:%s,", tmp_buff);
 			strncat(json_str, json_sub, sizeof(json_sub));
@@ -142,18 +164,8 @@ static char *dashboard_checkin_string(int type)
 		        strncat(json_str, json_sub, sizeof(json_sub));
 		}
 
-		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Soc", tab_name) == 0) {
-		        sprintf(json_sub, "soc:%s,", tmp_buff);
-		        strncat(json_str, json_sub, sizeof(json_sub));
-		}
-
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Duration", tab_name) == 0) {
 		        sprintf(json_sub, "elapsedTime:%s,", tmp_buff);
-		        strncat(json_str, json_sub, sizeof(json_sub));
-		}
-
-		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.Tilltime", tab_name) == 0) {
-		        sprintf(json_sub, "tillTime:%s,", tmp_buff);
 		        strncat(json_str, json_sub, sizeof(json_sub));
 		}
 
@@ -164,21 +176,6 @@ static char *dashboard_checkin_string(int type)
 
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.FwName", tab_name) == 0) {
 		        sprintf(json_sub, "FwVersion:\'%s\',", tmp_buff);
-		        strncat(json_str, json_sub, sizeof(json_sub));
-		}
-
-		if (ev_uci_data_get_val(tmp_buff, 5, "chargerinfo.%s.Parking", tab_name) == 0) {
-		        sprintf(json_sub, "Parking:\'%s\',", tmp_buff);
-		        strncat(json_str, json_sub, sizeof(json_sub));
-		}
-		
-		if (ev_uci_data_get_val(tmp_buff, 5, "chargerinfo.%s.DigitalInput", tab_name) == 0) {
-		        sprintf(json_sub, "DigitalInput:%s,", tmp_buff);
-		        strncat(json_str, json_sub, sizeof(json_sub));
-		}
-
-		if (ev_uci_data_get_val(tmp_buff, 5, "chargerinfo.%s.DigitalOutput", tab_name) == 0) {
-		        sprintf(json_sub, "DigitalOutput:%s,", tmp_buff);
 		        strncat(json_str, json_sub, sizeof(json_sub));
 		}
 
@@ -202,19 +199,21 @@ static char *dashboard_checkin_string(int type)
 	debug_msg("length %d content: %s", strlen(json_str), json_str);
 	return json_str;
 }
-
-int dashboard_checkin_now(int DASH_UNUSED(argc), char DASH_UNUSED(**argv))
+//0 default 1 fast charger 2 standard 3 extra 4 full flag
+int dashboard_checkin(int argc, char **argv)
 {
-	uint8_t checkin_parts = CHECKIN_CT | CHECKIN_PA;
-	debug_msg("checkin now!");
-	return dashboard_checkin(&checkin_parts);
-}
+	int ret = -1;
+	if (argc != 1) {
+		debug_msg("perform full checkin \n");
+		int checkin_parts = CHECKIN_FULL;
+		return dashboard_checkin_now(checkin_parts);
+	}
+	debug_msg("input %s",argv[0]);
 
-static void new_config(void)
-{
-	return;
+	int checkin_parts = atoi(argv[0]);
+	debug_msg("checkin in %d", checkin_parts);
+	return dashboard_checkin_now(checkin_parts);
 }
-
 
 #if defined(DASH_DEBUG)
 int new_config_wrapper(int argc, char **argv)
@@ -223,11 +222,11 @@ int new_config_wrapper(int argc, char **argv)
 }
 #endif
 
-int dashboard_checkin()
+int dashboard_checkin_now(int type)
 {
 	int ret = -1;
-	debug_msg("performing checkin to %s", sys_checkin_url());
-	ret = api_send_buff("http", sys_checkin_url(), dashboard_checkin_string(0),
+	debug_msg("performing checkin to %s type: %d", sys_checkin_url(), type);
+	ret = api_send_buff("http", sys_checkin_url(), dashboard_checkin_string(type),
 		            "", NULL, NULL);
 	return ret;
 }
@@ -257,7 +256,7 @@ int dashboard_post_file(int argc, char **argv, char DASH_UNUSED(*extra_arg))
 	return ret;
 }
 
-int dashboard_update_fastcharger(void *arg)
+int dashboard_update_fastcharger()
 {
 	int ret;
 	debug_msg("update realtime information of fast charger");
