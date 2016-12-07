@@ -677,6 +677,8 @@ cmd_0x10:
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.DigitalOutput", charger->tab_name);
 			// 心跳处理略
 			//  回复心跳
+                        debug_msg("digtaloutput:%#x\n", bf->recv_buff[14] << 8 | bf->recv_buff[15]);
+                        debug_msg("digtalinput:%#x, %#x\n", bf->recv_buff[16] << 8 | bf->recv_buff[17], bf->recv_buff[17]);
 #if USE_POWER_BAR
                         printf("=======>surpls current:%d\n", charger->real_current = charger_manager.power_bar_surpls_current);
 #else
@@ -955,20 +957,21 @@ reply_to_charger2:
                                 fclose(file);
                         }
 #endif
-                        charger->target_mode = CHARGER_CHARGING;
-                        charger->system_message = 0x01;
-                        // 回应心跳
                         if (gernal_command(fd, CHARGER_CMD_HB_R, charger, bf) < 0)
                         {
                                 bf->ErrorCode = ESERVER_API_ERR;
                                 return -1;
                         }
                         bf->ErrorCode = ESERVER_SEND_SUCCESS;
+                        charger->target_mode = CHARGER_CHARGING;
+                        charger->system_message = 0x01;
+                        // 回应心跳
                         return 0;
 		break;
 
 		case	CHARGER_CMD_STOP_REQ:	// 0x58  停止充电请求
 			debug_msg("停止充电请求, CID[%d] ...", charger->CID);
+                        gernal_command(fd, CHARGER_CMD_STOP_REQ_R, charger, bf);
 			charger->end_time = time(0);				//获取充电结束时间
 		        charger->power = *(unsigned int *)(bf->recv_buff+37);	//获取结束充电的电量
 			charger->is_charging_flag = 0;
@@ -1039,12 +1042,6 @@ reply_to_charger2:
              // 回应
             charger->target_mode = CHARGER_READY;
             charger->system_message = SYM_Charging_Is_Stopping;
-            if (gernal_command(fd, CHARGER_CMD_STOP_REQ_R, charger, bf) < 0)
-            {
-                bf->ErrorCode = ESERVER_API_ERR;
-                return -1;
-            }
-            bf->ErrorCode = ESERVER_SEND_SUCCESS;
             return 0;
 		break;
 

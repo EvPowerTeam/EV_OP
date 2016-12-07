@@ -12,17 +12,32 @@ void SendServer_charger_status(CHARGER_INFO_TABLE *charger, BUFF *bf)
 {
         
         unsigned char  i, new_mode = 0, cmd = bf->recv_buff[4];
-        char     *val;
+        unsigned short           digtal_input;
+        char            *val;
 
         if ( cmd == CHARGER_CMD_HB )
+        {
             new_mode = bf->recv_buff[9];
+            digtal_input = (bf->recv_buff[17] >> 6) & 0x01;
+        }
         else if ( cmd == CHARGER_CMD_CHARGE_REQ || cmd == CHARGER_CMD_STATE_UPDATE || cmd == CHARGER_CMD_STOP_REQ)
             new_mode = bf->recv_buff[17];
             
 //        printf("recv_cmd:%#x, cmd:%#x, present_mode:%d, new_mode:%d\n", bf->recv_buff[4], cmd, charger->present_mode, new_mode);
 
         if ( new_mode == 0 ||  new_mode == charger->present_mode )
-            return ;
+        {
+                if (cmd == CHARGER_CMD_HB)
+                {
+                        if (charger->digtal_input == 1 && charger->digtal_input != digtal_input && charger->present_mode == CHARGER_ESTOP)
+                        {
+                                debug_msg("紧急制动按钮扒开了, cid:%d", charger->CID);
+                                cmd_frun("dashboard checkin_now");
+                        }
+                        charger->digtal_input = (bf->recv_buff[17] >> 6) & 0x01; 
+                }
+                return ;
+        }
 
         debug_msg("检查状态有没有改变, CID[%d] ...", charger->CID); 
         if ( charger->present_mode > 0 &&  (( val = calloc(100, sizeof(char *))) != NULL) )

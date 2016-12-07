@@ -264,6 +264,7 @@ typedef struct  chargerinfo{
         unsigned char   config_num;                 // 配置文件包号
         unsigned char   stop_charge_value;
         unsigned char   control_cmd;                // 控制命令值
+        unsigned short            digtal_input;
 	unsigned short  charging_code;	            //充电记录:
         unsigned short  yuyue_time;
         unsigned short  cb_target_id;
