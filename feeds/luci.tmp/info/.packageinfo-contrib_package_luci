@@ -1,7 +1,7 @@
 Source-Makefile: feeds/luci/contrib/package/luci/Makefile
 Package: luci-base
 Submenu: 8. Libraries
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +lua +libuci-lua +libubus-lua
 Menu-Depends: 
 Provides: 
@@ -38,7 +38,7 @@ Config:
 
 Package: luci-lib-httpclient
 Submenu: 8. Libraries
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +luci-base +luci-base +luci-lib-nixio
 Menu-Depends: 
 Provides: 
@@ -56,7 +56,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-lib-json
 Submenu: 8. Libraries
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -74,7 +74,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-lib-nixio
 Submenu: 8. Libraries
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +luci-base +PACKAGE_luci-lib-nixio_openssl:libopenssl +PACKAGE_luci-lib-nixio_cyassl:libcyassl
 Menu-Depends: 
 Provides: 
@@ -112,7 +112,7 @@ Config:
 
 Package: luci-lib-px5g
 Submenu: 8. Libraries
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +luci-base +luci-lib-nixio
 Menu-Depends: 
 Provides: 
@@ -130,7 +130,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-lib-luaneightbl
 Submenu: 8. Libraries
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +luci-base +luci-base
 Menu-Depends: 
 Provides: 
@@ -148,7 +148,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-proto-ppp
 Submenu: 6. Protocols
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -166,7 +166,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-proto-ipv6
 Submenu: 6. Protocols
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -184,7 +184,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-proto-3g
 Submenu: 6. Protocols
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +PACKAGE_luci-proto-3g:comgt
 Menu-Depends: 
 Provides: 
@@ -202,7 +202,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-proto-hso
 Submenu: 6. Protocols
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +PACKAGE_luci-proto-hso:comgt +PACKAGE_luci-proto-hso:kmod-usb-net +PACKAGE_luci-proto-hso:kmod-usb-net-hso
 Menu-Depends: 
 Provides: 
@@ -220,7 +220,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-proto-relay
 Submenu: 6. Protocols
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +PACKAGE_luci-proto-relay:relayd
 Menu-Depends: 
 Provides: 
@@ -238,7 +238,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-mod-admin-mini
 Submenu: 2. Modules
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +luci-base @BROKEN
 Menu-Depends: 
 Provides: 
@@ -256,7 +256,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-mod-admin-full
 Submenu: 2. Modules
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +luci-base
 Menu-Depends: 
 Provides: 
@@ -274,7 +274,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-mod-failsafe
 Submenu: 2. Modules
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +luci-base
 Menu-Depends: 
 Provides: 
@@ -292,7 +292,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-mod-rpc
 Submenu: 2. Modules
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +luci-lib-json
 Menu-Depends: 
 Provides: 
@@ -310,7 +310,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-app-firewall
 Submenu: 3. Applications
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +PACKAGE_luci-app-firewall:firewall
 Menu-Depends: 
 Provides: 
@@ -328,7 +328,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-app-qos
 Submenu: 3. Applications
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +PACKAGE_luci-app-qos:qos-scripts
 Menu-Depends: 
 Provides: 
@@ -346,7 +346,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-app-commands
 Submenu: 3. Applications
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -364,7 +364,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-theme-openwrt
 Submenu: 4. Themes
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -382,7 +382,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-theme-bootstrap
 Submenu: 4. Themes
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -400,7 +400,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-german
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -418,7 +418,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-english
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -436,7 +436,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-french
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -454,7 +454,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-italian
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -472,7 +472,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-russian
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -490,7 +490,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-portuguese-brazilian
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -508,7 +508,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-chinese
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -526,7 +526,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-japanese
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -544,7 +544,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-greek
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -562,7 +562,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-catalan
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -580,7 +580,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-portuguese
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -598,7 +598,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-spanish
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -616,7 +616,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-vietnamese
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -634,7 +634,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-malay
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -652,7 +652,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-norwegian
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -670,7 +670,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-hebrew
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -688,7 +688,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-romanian
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -706,7 +706,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-ukrainian
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -724,7 +724,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-hungarian
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -742,7 +742,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-i18n-polish
 Submenu: 5. Translations
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread 
 Menu-Depends: 
 Provides: 
@@ -760,7 +760,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci
 Submenu: 1. Collections
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +uhttpd +uhttpd-mod-ubus +luci-mod-admin-full +luci-theme-bootstrap +luci-app-firewall +luci-proto-ppp +libiwinfo-lua +luci-lib-nixio
 Menu-Depends: 
 Provides: 
@@ -778,7 +778,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-ssl
 Submenu: 1. Collections
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +luci +libustream-polarssl +px5g
 Menu-Depends: 
 Provides: 
@@ -796,7 +796,7 @@ LuCI Development Team <luci@lists.subsignal.org>
 
 Package: luci-light
 Submenu: 1. Collections
-Version: 0.12+git-15.143.53098-670e046-1
+Version: 0.12+git-16.038.38474-0d510b2-1
 Depends: +libc +USE_EGLIBC:librt +USE_EGLIBC:libpthread +uhttpd +luci-mod-admin-mini +luci-theme-openwrt @BROKEN
 Menu-Depends: 
 Provides: 
