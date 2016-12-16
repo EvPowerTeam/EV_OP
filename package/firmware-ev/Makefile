@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 export OM_DEBUG=
 
 PKG_NAME:=firmware-ev
-PKG_VERSION:=1
+PKG_VERSION:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=
@@ -16,7 +16,7 @@ define Package/firmware-ev
   SUBMENU:=Distributions
   SECTION:=net
   CATEGORY:=Network
-  TITLE:=zero-config VPN/MESH network
+  TITLE:=system config VPN network
   URL:=
   MAINTAINER:=
   DEPENDS:=+libuci +libnl-tiny +libpolarssl +libev
@@ -36,8 +36,6 @@ define Package/firmware-ng/config
 	select BUSYBOX_CONFIG_FEATURE_IP_TUNNEL
 	select BUSYBOX_CONFIG_FEATURE_IP_RULE
 	select BUSYBOX_CONFIG_FEATURE_IP_SHORT_FORMS
-	select BUSYBOX_CONFIG_FEATURE_IP_RARE_PROTOCOLS
-#	select BUSYBOX_CONFIG_UDHCPC_DEFAULT_SCRIPT="/sbin/udhcpc-event"
 endef
 
 define Build/Prepare

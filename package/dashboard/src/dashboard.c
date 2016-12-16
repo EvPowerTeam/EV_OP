@@ -40,7 +40,7 @@ static int print_avail_apps(void)
 	for (dash_app = dash_apps; *dash_app; ++dash_app)
 		printf("   * %s\n", (*dash_app)->name);
 #endif
-
+	print_version();
 	return 1;
 }
 

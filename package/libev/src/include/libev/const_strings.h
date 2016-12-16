@@ -139,6 +139,7 @@ extern const char cmd_write_routes[];
 extern const char cmd_write_rules[];
 extern const char cmd_write_top[];
 extern const char cmd_write_wireless[];
+extern const char cmd_wget_download[];
 extern const char fmt_batman_iface[];
 extern const char fmt_bridge_port[];
 extern const char fmt_bridge_call_iptables[];

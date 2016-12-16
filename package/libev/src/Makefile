@@ -3,7 +3,7 @@ CC = gcc
 CFLAGS += -Wall -fno-strict-aliasing -W -std=gnu99
 CFLAGS += -Iinclude `pkg-config --cflags json-c`
 OFLAGS += -Os
-LDFLAGS += $(OFLAGS) -luci -lpolarssl -lrt -lcurl `pkg-config --libs json-c jansson`
+LDFLAGS += $(OFLAGS) -luci -lpolarssl -lrt -lcurl `pkg-config --libs json-c`
 
 LIBNAME = libev.so
 

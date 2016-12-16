@@ -54,7 +54,7 @@ static inline char *ev_time_str()
 
 #if defined(DEBUG_SYSLOG)
 #define debug_syslog(fmt, arg...) do {\
-	openlog("libng", LOG_PID, LOG_DAEMON | LOG_EMERG);\
+	openlog("libev", LOG_PID, LOG_DAEMON | LOG_EMERG);\
 	syslog(0, "%s: " fmt, __FUNCTION__, ## arg);\
 	closelog();\
 } while (0)
@@ -74,4 +74,3 @@ static inline char *ev_time_str()
 #endif
 
 #define NG_UNUSED(x) (x)__attribute__((unused))
-#define CERTS_PATH "/etc/ssl/certs/"

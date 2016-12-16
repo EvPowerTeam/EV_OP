@@ -1,11 +1,10 @@
 */3 * * * * sh /usr/sbin/g3monitor
 */10 * * * * sh /usr/sbin/savelog
 */5 * * * * ev init_vpn
-#*/5 * * * * /root/vpn_monitor2
-*/3 * * * * dashboard checkin_now
+*/3 * * * * dashboard checkin 3
 */2 * * * * /bin/chargerTest
-*/8 * * * * /bin/sync; /bin/echo 3 > /proc/sys/vm/drop_caches
-*/4 * * * * /bin/dashboard udpserver
+*/30 * * * * /bin/sync; /bin/echo 3 > /proc/sys/vm/drop_caches
+*/10 * * * * /bin/dashboard udpserver
 #30 4 * * 2 /bin/sh /root/record.sh
 30 4 * * * /bin/dashboard mqtt_sub
 0 3 * * * sleep 70 && touch /etc/reboot && reboot

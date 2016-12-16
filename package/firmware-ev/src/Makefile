@@ -17,7 +17,7 @@ SRC_H = ev.h apps.h $(wildcard apps/*.h) $(wildcard shared/*.h)
 
 SRC_O = $(SRC_C:.c=.o)
 
-ifeq ($(OM_DEBUG), y)
+ifeq ($(EV_DEBUG), y)
   EXTRA_CFLAGS += -DDEBUG_CONSOLE
   EXTRA_CFLAGS += -DDEBUG_SYSLOG
 endif

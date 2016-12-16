@@ -704,8 +704,8 @@ retry:
 	ret = curl_easy_perform(conn->hdl);
 	curl_slist_free_all(headers);
 	if (ret != CURLE_OK) {
-		sys_logger("API", "connection error to %s: %s (%d)", tmp_buff,
-			   curl_err, ret);
+		sys_logger("API", "connection error: %s (%d) to %s", curl_err,
+		ret, tmp_buff);
 		debug_msg("curl error (%ld): %s", ret, curl_err);
 		/* Return negative curl error code */
 		ret = -ret;

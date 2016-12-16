@@ -146,6 +146,7 @@ const char cmd_write_routes[] = "ip route >> %s 2>&1";
 const char cmd_write_rules[] = "ip rule >> %s 2>&1";
 const char cmd_write_top[] = "top -bn1 >> %s 2>&1";
 const char cmd_write_wireless[] = "uci show wireless >> %s 2>&1";
+const char cmd_wget_download[] = "wget -c --directory-prefix=%s";
 const char fmt_batman_iface[] = "/sys/class/net/%s%s/batman_adv/mesh_iface";
 const char fmt_bridge_port[] = "/sys/class/net/%s/brport/bridge";
 const char fmt_bridge_call_iptables[] = "/sys/class/net/br-%s/bridge/nf_call_iptables";
