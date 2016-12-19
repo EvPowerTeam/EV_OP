@@ -1,20 +1,20 @@
 #
-# Copyright (C) 2011-2012 OpenWrt.org
+# Copyright (C) 2011-2014 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
 
-
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=jansson
-PKG_VERSION:=2.2.1
+PKG_VERSION:=2.9
 PKG_RELEASE:=1
+PKG_LICENSE:=MIT
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://www.digip.org/jansson/releases/
-PKG_MD5SUM:=ebf4ebc7af47de27f7b9d79ad5853176
+PKG_MD5SUM:=84abaefee9502b2f2ff394d758f160c7
 
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
@@ -24,14 +24,23 @@ include $(INCLUDE_DIR)/package.mk
 define Package/jansson
   SECTION:=libs
   CATEGORY:=Libraries
-  TITLE:=JSON library
+  TITLE:=Jansson library
+  URL:=http://www.digip.org/jansson/
+  MAINTAINER:=Gergely Kiss <mail.gery@gmail.com>
+endef
+
+define Package/jansson/description
+  Jansson is a C library for encoding, decoding and manipulating JSON data
 endef
 
 TARGET_CFLAGS += $(FPIC)
+TARGET_LDFLAGS += -Wl,-rpath-link=$(STAGING_DIR)/usr/lib -lm
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/{lib,include}
+	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libjansson* $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/* $(1)/usr/lib/pkgconfig
 	$(CP) $(PKG_INSTALL_DIR)/usr/include/* $(1)/usr/include/
 endef
 

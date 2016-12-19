@@ -5,9 +5,9 @@ DST = chargerTest
 CFLAGS += -Wall -fno-strict-aliasing -W -std=gnu99
 CFLAGS += `pkg-config --cflags libev`
 OFLAGS += -Os
-LDFLAGS += $(OFLAGS) -luci -lpthread -lcrypto `pkg-config --libs libev json-c`
+LDFLAGS += $(OFLAGS) -luci -lpthread -lcrypto `pkg-config --libs libev`
 
-# EXTRA_CFLAGS += -DDEBUG_CONSOLE
+EXTRA_CFLAGS += -DDEBUG_CONSOLE
 # EXTRA_CFLAGS += -DDEBUG_FILE
 # EXTRA_CFLAGS += -DDEBUG_SYSLOG
 # EXTRA_CFLAGS += -DDEBUG_TRACE
