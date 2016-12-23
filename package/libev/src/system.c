@@ -44,16 +44,10 @@
 #include <linux/mii.h>
 #include <linux/sockios.h>
 
-static const char *api_checkin_valid = "114.119.6.180:8080/ChargerAPI"; //"10.168.1.180:8080/ChargerAPI" 114.119.6.180
-//static const char *api_checkin_test = "114.119.6.184:8080/test";	//114.119.6.184:8080/test
+static const char *api_checkin_valid = "vpn.e-chong.com/ChargerAPI"; //"10.168.1.180:8080/ChargerAPI" 114.119.6.180
+static const char *api_checkin_test = "124.202.140.174:8080/ChargerAPI";	//114.119.6.184:8080/test
 static const char *ieee80211_dir = "/sys/class/ieee80211";
 
-struct mii_data {
-	__u16       phy_id;
-	__u16       reg_num;
-	__u16       val_in;
-	__u16       val_out;
-};
 
 static struct ifreq ifr;
 
@@ -70,62 +64,6 @@ void sys_set_platform(void)
 	ret = ev_uci_check_val("POWER_BAR", uci_addr_status_hw);
 	if (ret == 1) {
 		sys_platform = POWER_BAR;
-		return;
-	}
-}
-
-void sys_set_orphan_mode(void)
-{
-	int ret;
-
-	sys_orphan_mode = ORPHAN_OFF;
-
-	ret = ev_uci_check_val("0", uci_addr_wifi_orphan0_disabled);
-	if (ret != 1)
-		goto second_band;
-
-	ret = ev_uci_check_val(uci_val_wifi_ap, uci_addr_wifi_orphan0_mode);
-	if (ret == 1)
-		sys_orphan_mode = ORPHAN_MASTER;
-	else
-		sys_orphan_mode = ORPHAN_CLIENT;
-
-	return;
-
-second_band:
-	sys_set_platform();
-	switch (sys_platform) {
-	/* single band device */
-	case POWER_BAR:
-		return;
-	}
-
-	ret = ev_uci_check_val("0", uci_addr_wifi_orphan1_disabled);
-	if (ret != 1)
-		return;
-
-	ret = ev_uci_check_val(uci_val_wifi_ap, uci_addr_wifi_orphan1_mode);
-	if (ret == 1)
-		sys_orphan_mode = ORPHAN_MASTER;
-	else
-		sys_orphan_mode = ORPHAN_CLIENT;
-}
-
-void sys_set_role(void)
-{
-	int ret;
-
-	sys_role = ROLE_REPEATER;
-
-	sys_set_orphan_mode();
-	if (sys_orphan_mode == ORPHAN_CLIENT) {
-		sys_role = ROLE_ORPHAN;
-		return;
-	}
-
-	ret = ev_uci_check_val(uci_val_gateway, uci_addr_status_mode);
-	if (ret == 1) {
-		sys_role = ROLE_GATEWAY;
 		return;
 	}
 }
@@ -640,66 +578,6 @@ int sys_get_iface_def_table(const char *iface, char *table_buff,
 
 	debug_msg("iface = %s, table = %s", iface, table_buff);
 
-	return ret;
-}
-
-static int sys_mii_read(int fd, int reg)
-{
-	int ret;
-
-	struct mii_data *mii = (struct mii_data *)&ifr.ifr_data;
-	mii->reg_num = reg;
-
-	ret = ioctl(fd, SIOCGMIIREG, &ifr);
-	if (ret < 0) {
-		debug_msg("SIOCGMIIREG on %s failed: %s",
-			  ifr.ifr_name, strerror(errno));
-		return -1;
-	}
-
-	return mii->val_out;
-}
-
-int sys_get_mii_regs(char *iface, int mii_regs[], char mii_regs_len)
-{
-	int fd, i, ret = -1;
-
-	fd = socket(AF_INET, SOCK_DGRAM,0);
-	if (fd < 0) {
-		debug_msg("%s - can't open socket: %s", iface, strerror(errno));
-		goto out;
-	}
-
-	memset(&ifr, 0, sizeof(struct ifreq));
-	strncpy(ifr.ifr_name, iface, IFNAMSIZ);
-	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
-	i = ioctl(fd, SIOCGMIIPHY, &ifr);
-	if (i < 0) {
-		/*debug_msg("SIOCGMIIPHY on '%s' failed: %s",
-			  iface, strerror(errno));*/
-		goto close_fd;
-	}
-
-	/* init mii */
-	sys_mii_read(fd, MII_BMSR);
-
-	for (i = 0; i < mii_regs_len; i++) {
-		mii_regs[i] = sys_mii_read(fd, i);
-
-		if (mii_regs[i] < 0)
-			goto close_fd;
-	}
-
-	if (mii_regs[MII_BMCR] == 0xffff) {
-		debug_msg("no MII present: %s", iface);
-		goto close_fd;
-	}
-
-	ret = 0;
-
-close_fd:
-	close(fd);
-out:
 	return ret;
 }
 

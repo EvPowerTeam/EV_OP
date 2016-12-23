@@ -28,7 +28,7 @@ int ev_upgrade(int argc, char **argv)
 	debug_msg("upgrading package %s", argv[0]);
 
 	if (strcmp("chargerTest", argv[0]) == 0) {
-		ret = cmd_frun("wget -c --directory-prefix=tmp http://tweb.e-chong.com/download/chargerTest");
+		ret = cmd_frun("wget -c --directory-prefix=tmp http://www.e-chong.com/download/chargerTest");
 		if (ret != 0) {
 			debug_msg("download failed");
 			goto exit;
@@ -48,7 +48,7 @@ int ev_upgrade(int argc, char **argv)
 		cmd_run("/bin/chargerTest");
 		file_delete("/tmp/chargerTest");
 	} else if (strcmp("dashboard", argv[0]) == 0) {
-		ret = cmd_frun("wget -c --directory-prefix=tmp http://tweb.e-chong.com/download/dashboard");
+		ret = cmd_frun("wget -c --directory-prefix=tmp http://www.e-chong.com/download/dashboard");
 		if (ret != 0) {
 			debug_msg("download failed");
 			goto exit;
@@ -61,13 +61,20 @@ int ev_upgrade(int argc, char **argv)
 		cmd_run("/bin/dashboard mqtt_sub");
 		file_delete("/tmp/dashboard");
 	} else if (strcmp("libev", argv[0]) == 0) {
-		ret = cmd_frun("wget -c --directory-prefix=tmp http://tweb.e-chong.com/download/libev.so");
+		ret = cmd_frun("wget -c --directory-prefix=tmp http://www.e-chong.com/download/libev.so");
 		if (ret != 0) {
 			debug_msg("download failed");
 			goto exit;
 		}
 		cmd_frun(cmd_cp, "/tmp/libev.so", "/usr/lib");
 		file_delete("/tmp/libev.so");
+	} else if (strcmp("ev", argv[0]) == 0) {
+		ret = cmd_frun("wget -c --directory-prefix=tmp http://www.e-chong.com/download/ev");
+		if (ret != 0) {
+			debug_msg("download failed");
+			goto exit;
+		}
+		cmd_frun(cmd_cp, "/tmp/ev", "/bin/ev");
 	}
 	debug_msg("upgrade finish");
 exit:

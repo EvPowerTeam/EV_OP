@@ -3801,8 +3801,8 @@ CONFIG_PACKAGE_curl=y
 # CONFIG_PACKAGE_uucp is not set
 # CONFIG_PACKAGE_vsftpd is not set
 # CONFIG_PACKAGE_vsftpd-tls is not set
-CONFIG_PACKAGE_wget=y
-# CONFIG_PACKAGE_wget-nossl is not set
+# CONFIG_PACKAGE_wget is not set
+CONFIG_PACKAGE_wget-nossl=y
 # CONFIG_PACKAGE_wput is not set
 # CONFIG_PACKAGE_yafc is not set
 # CONFIG_PACKAGE_zstream is not set

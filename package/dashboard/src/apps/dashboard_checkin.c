@@ -39,7 +39,7 @@ static char *dashboard_checkin_string(int type)
 {
 	static char json_str[JSON_MAX];
 	char *tab_name, *rid, *version, *vpn_ip;
-	char tmp_buff[33], json_sub[100], vpn_int[5];
+	char tmp_buff[33], json_sub[100], vpn_int[5], mobile[10];
 	int i, cnt = 0;
 	int ret;
 
@@ -78,9 +78,18 @@ static char *dashboard_checkin_string(int type)
 	if (ret <= 0)
 		strcpy(version, "0.0000");
 
-	snprintf(json_str, JSON_MAX, "%s?key={routerid:\'%s\',firmware_version:%s,remote_server:\'%s\',chargers:[",
+	snprintf(json_str, JSON_MAX, "%s?key={routerid:\'%s\',firmware_version:%s,remote_server:\'%s\',",
 		 API_UPDATE_FMT, rid, version, vpn_ip);
-	free(vpn_ip);
+
+	//accquire Base station
+	if (file_exists(path_3gmodem)) {
+		ret = file_read_string(path_3gmodem, mobile, 10);
+		if (ret > 0) {
+			sprintf(tmp_buff, "BS:\'%s\',chargers:[", mobile);
+			strncat(json_str, tmp_buff, sizeof(tmp_buff));
+		}
+	} else 
+		strcat(json_str, "chargers:[");
 
 	for (i = 1; i < 12; i++)
 	{
@@ -133,6 +142,7 @@ extra:
 		        sprintf(json_sub, "Parking:\'%s\',", tmp_buff);
 		        strncat(json_str, json_sub, sizeof(json_sub));
 		}
+
 standard:
 		if (ev_uci_data_get_val(tmp_buff, 20, "chargerinfo.%s.MAC", tab_name) == 0) {
 			sprintf(json_sub, "mac:'%s',", tmp_buff);
@@ -193,6 +203,7 @@ standard:
 	free(tab_name);
 	free(rid);
 	free(version);
+	free(vpn_ip);
 
 	strcat(json_str, "]}");
 	json_str[strlen(json_str)] = '\0';

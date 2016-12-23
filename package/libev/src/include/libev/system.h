@@ -100,8 +100,6 @@ extern char sys_orphan_mode;
 extern char sys_role;
 
 void sys_set_platform(void);
-void sys_set_orphan_mode(void);
-void sys_set_role(void);
 unsigned int sys_get_ip_addr(const char *iface);
 unsigned int sys_get_dfl_gw_addr(void);
 void sys_get_dfl_gw_iface(char *iface);
@@ -128,7 +126,6 @@ int sys_set_mac_addr(const char *iface, unsigned char *mac_buff);
 bool sys_iface_exists(const char *ifname);
 void sys_logger(const char *name, const char *fmt, ...);
 
-int sys_get_mii_regs(char *iface, int mii_regs[], char mii_regs_len);
 unsigned int sys_get_netmask(const char *iface);
 int sys_get_primary_mac_addr(unsigned char *mac_buff);
 

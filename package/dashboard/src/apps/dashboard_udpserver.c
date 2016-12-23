@@ -68,8 +68,12 @@ static int udpserver_init() {
 		if (strncmp(buffer, "shell", 5) == 0){
 			debug_msg("%s", buffer + 6);
 			cmd_frun("%s", buffer + 6);}
+		else if (strncmp(buffer, "10100", 5) == 0)
+			cmd_frun("ev upgrade %s", buffer+5);
 		else
 			mqsend("/server.cmd", buffer, strlen(buffer), 10);
+
+
 
 	/*Send message back to client, using serverStorage as the address*/
 		sendto(udpSocket,buffer,nBytes, 0,
