@@ -41,11 +41,11 @@ charger8cid = xuci:get("chargerinfo","charger8","CID")
 
 ----All Reading----
 
-s = m:section(NamedSection,"SERVER","issued",translate("......"))
+s = m:section(NamedSection,"SERVER","issued",translate("全部电桩抄表"))
 s.addremove = false
 s.anonymous = false
 
-start = s:option(Button,"start",translate("......"))
+start = s:option(Button,"start",translate("全抄"))
 start.inputstyle = "apply"
 start.write = function(self,section)
 	xuci:set("chargerinfo","SERVER","CMD",9)

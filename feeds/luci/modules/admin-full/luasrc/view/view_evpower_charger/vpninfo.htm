@@ -19,7 +19,7 @@ $Id$
 <h2><a id="content" name="content"><%:VPN Log%></a></h2>
 
 <fieldset class="cbi-section">
-<input type="button" class="cbi-button cbi-button-apply" value="<%:打印%>" onclick="return vpninfo_button(this)" />
+<input type="button" class="cbi-button cbi-button-apply" value="<%:连接VPN%>" onclick="return vpninfo_button(this)" />
 </fieldset>
 
 <div id="content_syslog">
@@ -30,11 +30,14 @@ $Id$
 
 	function vpninfo_button(obj)
 	{
+		obj.disabled = true;
+		obj.value    = '<%:连接中...%>';
 		var xHR = new XHR();
 		xHR.post('<%=luci.dispatcher.build_url("admin","evpower","vpninfo_button")%>',{
 			vpninfo_flag : 1
 		},function(xhr){
-
+			obj.disabled = false;
+			obj.value    = '<%:连接VPN%>';
 		});
 	}
 setTimeout('refreshPage()',15000)

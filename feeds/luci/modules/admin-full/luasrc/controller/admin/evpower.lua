@@ -12,6 +12,7 @@ function index()
 	entry({"admin","evpower","pushconf"},template("view_evpower_charger/chargerconf"),"推送配置",6)
 	entry({"admin","evpower","vpninfo"},template("view_evpower_charger/vpn_info"),_("VPN账号/密码"),7)
 	entry({"admin","evpower","vpnlog"}, call("action_vpnlog"), _("VPN Log"), 8)
+	entry({"admin","evpower","curlfile"},cbi("cbi_evpower_charger/curlfile"),"下载电桩配置文件",9)
 	entry({"admin","evpower","vpninfo_button"},call("action_vpninfo_button"))
 	entry({"admin","evpower","vpn_status"},call("action_vpnstatus"))
 	entry({"admin","evpower","vpn_status1"},call("action_vpnstatus1"))
@@ -225,6 +226,7 @@ function action_confcomp()
 	require("uci");
 	x = uci.cursor()
 	local setconf = tonumber(luci.http.formvalue("is_cid"))
+	luci.sys.exec("/bin/sh /root/curlfile"..setconf)
 	if setconf ~= nil and setconf > 0 
 	then
 		x:set("chargerinfo","SERVER","CMD",'3');
