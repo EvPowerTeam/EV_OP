@@ -64,7 +64,7 @@ void my_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
 		fwrite(message->payload, 1, message->payloadlen, stdout);
 	if (strncmp(message->payload, "shell", 5) == 0) {
 		debug_msg("%s", message->payload + 6);
-		cmd_frun("%s", message->payload + 6);
+		cmd_frun("%s", message->payload + 6);	//with a space
 	} else
 		mqsend("/server.cmd", message->payload, message->payloadlen, 10);
 	}

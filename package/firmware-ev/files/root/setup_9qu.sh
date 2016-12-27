@@ -35,5 +35,5 @@
         route add -net 10.168.0.0 gateway 10.168.1.1 netmask 255.255.0.0 dev ppp3
         sleep 6
         /bin/dashboard udpserver
-        /bin/dashboard checkin_now
+        /bin/dashboard checkin 4
 
