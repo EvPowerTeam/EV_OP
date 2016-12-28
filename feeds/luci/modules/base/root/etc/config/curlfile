@@ -1,0 +1,7 @@
+
+config CURL 'curlconf'
+	option SURL 'www.e-chong.com/ECAPI_CHINA/ECAPI_GET_CHARGER_FULL_DETAILS_SEC'
+	option code '2ORucinZi0MCm0Ll3%2F1yqZh2rwZ0YoWXHP5E9xkfA8iaBzx%2BNWkb1wGRtZrbqd2oyumo1Hfd38ycUqoETzwVJT9Smg=='
+	option userkey 'gRKBT6Iw3XLGOaQcTrU1pU2SL'
+	option chargerid '75001196'
+

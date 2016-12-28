@@ -6,7 +6,7 @@
 #define API_UPDATE_FMT "/ChargerState/updateState"
 #define API_START_CHARGING_FMT "/Charging/canStartCharging"
 #define API_CHARGING_RECORD_FMT "/ChargingRecord/uploadRecord"
-#define JSON_MAX 4096
+#define JSON_MAX 2048
 
 #define UCI_DATABASE_NAME "chargerinfo"
 #define UCI_DATABASE_CMD_NAME "serverinfo"

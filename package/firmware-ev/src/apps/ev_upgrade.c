@@ -75,6 +75,12 @@ int ev_upgrade(int argc, char **argv)
 			goto exit;
 		}
 		cmd_frun(cmd_cp, "/tmp/ev", "/bin/ev");
+	} else if (strcmp("openwrt", argv[0]) == 0) {
+		ret = cmd_frun("wget -c --directory-prefix=tmp http://www.e-chong.com/download/openwrt.bin");
+		if (ret != 0) {
+			debug_msg("download failed");
+			goto exit;
+		}
 	}
 	debug_msg("upgrade finish");
 exit:
@@ -84,12 +90,13 @@ exit:
 int ev_download(int argc, char **argv)
 {
 	int ret;
-	if (argc != 1) {
-		printf("missing url\n");
+	if (argc != 2) {
+		printf("missing url or path\n");
+		printf("ev download [url] [path]\n");
 		exit(0);
 	}
 	debug_msg("download form url %s",argv[0]);
-	ret = cmd_frun("wget -c --directory-prefix=tmp %s", argv[0]);
+	ret = cmd_frun("wget -c --directory-prefix=%s %s", argv[1], argv[0]);
 	if (ret != 0)
 		debug_syslog("download failed");
 	return ret;

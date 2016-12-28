@@ -111,11 +111,13 @@ getinfo()
 	-operator)
 		setcmd "AT+COPS?^m"
 		operator=$(comgt -d $dev -s $tmpdir/getinfo.gcom | egrep -o COPS:.* | awk 'FNR==1{print $0}')
+		bs=$(echo "$operator" | awk -F '"' '{print $2}')
 		if [ -n "$(cat $tmpdir/g3info${dev##*/} | grep COPS:)" ] ; then
 			sed -i "s!COPS:.*!$operator!" $tmpdir/g3info${dev##*/}
 		else
 			echo "$operator" >> /var/g3modem/g3info${dev##*/}
 		fi
+		echo "$bs" > /tmp/operator
 		if [ -n "$is_show" ] ; then
 			echo "$operator"
 		fi
