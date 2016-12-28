@@ -5,7 +5,6 @@
                 echo 0 > $each/send_redirects
         done
         sysctl -p
-        echo "`date` "+":9qu VPN reconnected" >> /mnt/umemory/routerlog/vpn.log
         sleep 3
         echo "d 9qu" > ../var/run/xl2tpd/l2tp-control
         sleep 3
@@ -16,17 +15,18 @@
         sed -i '57d' /etc/ipsec.conf
         sed -i " 56a \        rightid       = ${vpnip} " /etc/ipsec.conf
         ipsec restart
-	sleep 5
-	./etc/init.d/xl2tpd restart
+        sleep 5
+        ./etc/init.d/xl2tpd restart
         sleep 5
         ipsec up 9qu
         sleep 2
         echo "c 9qu" > ../var/run/xl2tpd/l2tp-control
         sleep 6
-        PPP_INT=`./root/getint.sh`
+        PPP_INT=`/bin/sh /root/getint.sh`
         echo $PPP_INT
+        ifplugd -I -f -i $PPP_INT -r /root/if.sh
         sleep 1
-        PPP_GW_ADD=`./root/getip.sh $PPP_INT`
+        PPP_GW_ADD=`/bin/sh /root/getip.sh $PPP_INT`
         echo $PPP_GW_ADD
         sleep 2
         route add -net 10.168.0.0 gateway $PPP_GW_ADD netmask 255.255.0.0 dev $PPP_INT

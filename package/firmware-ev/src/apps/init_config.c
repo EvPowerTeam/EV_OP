@@ -42,7 +42,7 @@ static void init_vpn_config()
 	cmd_run("chmod 777 /root/setup_9qu.sh");
 	cmd_run("chmod 777 /root/vpn_monitor");
 	cmd_run("chmod 777 /root/vpn_monitor_9qu");
-	cmd_run("chmod 777 /root/record.sh");
+	cmd_run("chmod 777 /root/if.sh");
 }
 
 /**
