@@ -1,0 +1,14 @@
+#!/bin/sh /etc/rc.common
+
+STOP=00
+stop()
+{
+  SSID=`uci get bridge_setting.wireless.ssid`
+  KEY=`uci get bridge_setting.wireless.key`
+  uci set wireless_bridge.@wifi-iface[1].ssid=$SSID
+  uci set wireless_bridge.@wifi-iface[1].key=$KEY
+  uci commit
+  cp /etc/config/wireless_bridge /etc/config/wireless
+  echo "`date "+%Y-%m-%d %H:%M:%S"`: shutdown" >> /root/log/`date "+%Y-%m-%d"`.log
+}
+
