@@ -283,6 +283,7 @@ typedef struct  chargerinfo{
         unsigned int    CID;		                // 电桩CID信息
 	unsigned int    start_time; 	            // 开始充电时间
 	unsigned int    end_time;	                // 结束充电时间
+	unsigned int	lastPower;
 }CHARGER_INFO_TABLE;
 
 

@@ -12,8 +12,8 @@
         sleep 3
         ADDR="vpn.1-chong.com"
         vpnip=`ping ${ADDR} -c 1 | sed '1{s/[^(]*(//;s/).*//;q}'`
-        sed -i '57d' /etc/ipsec.conf
-        sed -i " 56a \        rightid       = ${vpnip} " /etc/ipsec.conf
+        sed -i '47d' /etc/ipsec.conf
+        sed -i " 46a \        rightid       = ${vpnip} " /etc/ipsec.conf
         ipsec restart
         sleep 5
         ./etc/init.d/xl2tpd restart

@@ -33,28 +33,28 @@ static void boot_setup_network()
 
 static void  boot_init_dir(void)
 {
-    char    name[100];
-    mkdir(WORK_DIR, 0711);
-    sprintf(name, "%s/%s", WORK_DIR, CHAOBIAO_DIR);
-    //创建抄表目录
-    mkdir(name, 0711);
+	char name[100];
+	mkdir(WORK_DIR, 0711);
+	sprintf(name, "%s/%s", WORK_DIR, CHAOBIAO_DIR);
+	//创建抄表目录
+	mkdir(name, 0711);
 
-    sprintf(name, "%s/%s", WORK_DIR, CONFIG_DIR);
-    mkdir(name, 0711);
+	sprintf(name, "%s/%s", WORK_DIR, CONFIG_DIR);
+	mkdir(name, 0711);
 
-    sprintf(name, "%s/%s", WORK_DIR, UPDATE_DIR);
-    mkdir(name, 0711);
+	sprintf(name, "%s/%s", WORK_DIR, UPDATE_DIR);
+	mkdir(name, 0711);
 
-    sprintf(name, "%s/%s", WORK_DIR, RECORD_DIR);
-    mkdir(name, 0711);
+	sprintf(name, "%s/%s", WORK_DIR, RECORD_DIR);
+	mkdir(name, 0711);
 
-    sprintf(name, "%s/%s", WORK_DIR, EXCEPTION_DIR);
-    mkdir(name, 0711);
+	sprintf(name, "%s/%s", WORK_DIR, EXCEPTION_DIR);
+	mkdir(name, 0711);
 
-    sprintf(name, "%s/%s", WORK_DIR, LOG_DIR);
-    mkdir(name, 0777);
+	sprintf(name, "%s/%s", WORK_DIR, LOG_DIR);
+	mkdir(name, 0777);
     
-    mkdir(ROUTER_LOG_DIR, 0777);
+	mkdir(ROUTER_LOG_DIR, 0777);
 }
 
 int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
@@ -65,16 +65,20 @@ int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 	debug_syslog("module booting");
 	if (!file_exists(path_router_reboot_log))
 		file_trunc_to_zero(path_router_reboot_log);
+	if (file_size(path_router_reboot_log) > 32768)
+		file_trunc_to_zero(path_router_reboot_log);
 
 	cmd_frun("echo \"`date` Router reboot\" >> %s", path_router_reboot_log);
-	init_config(0, NULL, NULL);
 	//boot_setup_network();
 	boot_init_dir(); // 创建初始化目录
+	init_config(0, NULL, NULL);
+        if (file_exists(path_config_charger))
+		file_delete(path_config_charger);
 	//mqcreate(O_RDONLY | O_NONBLOCK, 10, 10, "/dashboard.checkin");
 	ret = mqcreate(O_EXCL, 10, 100, "/dashboard.checkin");
-	debug_msg("ret: %d errno: %d", ret, errno);
+	debug_msg("checkin queue ret: %d errno: %d", ret, errno);
 	sleep(2);
 	ret = mqcreate(O_EXCL, 10, 200, "/server.cmd");
-	debug_msg("ret: %d errno: %d", ret, errno);
+	debug_msg("command queue ret: %d errno: %d", ret, errno);
 	return ret;
 }

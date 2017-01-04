@@ -2,6 +2,7 @@
 #/init.d/charger
 
 START=97
+STOP=97
 
 start()
 {

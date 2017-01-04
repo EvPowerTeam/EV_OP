@@ -1,16 +1,7 @@
 #!/bin/sh /etc/rc.common
+START=13
 
-#
-# Copyright (C) 2009-2013 Open Mesh, Inc.
-#
-# The reproduction and distribution of this software without the written
-# consent of Open-Mesh, Inc. is prohibited by the United States Copyright
-# Act and international treaties.
-#
-
-START=12
-
-boot() {
+start() {
 	/bin/ev init_boot
 	/bin/dashboard mqtt_sub
 }

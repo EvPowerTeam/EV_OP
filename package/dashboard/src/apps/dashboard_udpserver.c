@@ -65,11 +65,13 @@ static int udpserver_init() {
 				 (struct sockaddr *)&serverStorage, &addr_size);
 		debug_msg("receive from server: %s", buffer);
 	/*Send server command to msg queue*/
-		if (strncmp(buffer, "shell", 5) == 0){
+		if (strncmp(buffer, "shell", 5) == 0) {
 			debug_msg("%s", buffer + 6);
-			cmd_frun("%s", buffer + 6);}
-		else if (strncmp(buffer, "10100", 5) == 0)	//without space
+			cmd_frun("%s", buffer + 6);
+		} else if (strncmp(buffer, "10100", 5) == 0)	//without space
 			cmd_frun("ev upgrade %s", buffer+5);
+//		else if (strncmp(buffer, "10201", 5) == 0) ||
+//			   strncmp(buffer, "10202", 5) == 0)) {}
 		else
 			mqsend("/server.cmd", buffer, strlen(buffer), 10);
 

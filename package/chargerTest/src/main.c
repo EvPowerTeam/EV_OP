@@ -381,7 +381,7 @@ charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BU
     
     // 协议初始化
 	
-    CID = *(ev_uint *)(bf->recv_buff+5);
+	CID = *(ev_uint *)(bf->recv_buff+5);
 	printf("#######----%d--->CMD =%#x, CID = %d, CNT=%d, index=%d\n",bf->recv_cnt, cmd, *(ev_uint *)(bf->recv_buff + 5), charger_manager.present_charger_cnt, *index);
 
     // 1.数据解密,CRC判断，帧头判断略
@@ -694,6 +694,7 @@ cmd_0x10:
 			printf("充电请求...\n");
 			// 统计充电请求个数
 			//记录客户信息
+			charger->lastPower = 0;
                         pthread_mutex_lock(&serv_mutex);
 #if USE_POWER_BAR
                         charger->real_current = 0;
@@ -910,9 +911,22 @@ reply_to_charger2:
 		        tmp_2_val = *(unsigned short *)(bf->recv_buff + 53);
                         sprintf(bf->val_buff, "%d", tmp_2_val);
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargingCode", charger->tab_name);
+                        // 快冲
                         tmp_4_val = *(unsigned int *)(bf->recv_buff + 30);
 			sprintf(bf->val_buff, "%d", tmp_4_val);
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Power", charger->tab_name);
+                        if (charger->charger_type == 2 || charger->charger_type == 4)
+                        {
+                                sprintf(bf->val_buff, "%d", bf->recv_buff[27]);
+			        ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Soc", charger->tab_name);
+                                tmp_2_val = (bf->recv_buff[28] << 8 | bf->recv_buff[29]);
+                                sprintf(bf->val_buff, "%d", tmp_2_val);
+			        ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Tilltime", charger->tab_name);
+			        if (tmp_4_val - charger->lastPower > 500) {
+					cmd_frun("dashboard update_fast");
+					charger->lastPower = tmp_4_val;
+				}
+                        }
                         if (bf->recv_buff[52] != 1) // 拍卡
                         {
                                 bf->val_buff[0] = '\0';
@@ -921,16 +935,6 @@ reply_to_charger2:
                                         sprintf(bf->val_buff + strlen(bf->val_buff), "%02x", bf->recv_buff[36 + i]);
                                 }
 			        ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.privateID", charger->tab_name);
-                        }
-                        // 快冲
-                        if (charger->charger_type == 2 || charger->charger_type == 4)
-                        {
-                                sprintf(bf->val_buff, "%d", bf->recv_buff[27]);
-			        ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Soc", charger->tab_name);
-                                tmp_2_val = (bf->recv_buff[28] << 8 | bf->recv_buff[29]);
-                                sprintf(bf->val_buff, "%d", tmp_2_val);
-			        ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.Tilltime", charger->tab_name);
-                                cmd_frun("dashboard update_fast");
                         }
                         // 记录日志,电量
                         sprintf(bf->send_buff, "%s/%s/%08d", WORK_DIR, LOG_DIR, charger->CID);
