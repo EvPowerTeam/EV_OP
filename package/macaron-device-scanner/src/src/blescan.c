@@ -50,16 +50,17 @@ int getAdvertisingDevices(void *arg)
 		}
 		/* Ignoring multiple reports */
 		info = (le_advertising_info *) (meta->data + 1);
-	
-		/*int i=0;
+		uint8_t evt_type = info->evt_type;
+		/**/
+		int i=0;
 		printf("receive data = ");
 		for(i=0; i<info->length; i++) {
 			printf("%x ", *(info->data + i));
 		}
-		printf("\n");*/
+		printf("\tevt_type = %d\n", evt_type);
+		printf("*********************************\n");
 
-		uint8_t evt_type = info->evt_type;
-		//printf("evt_type = %d\n", evt_type);
+		
 		if(evt_type == 4) {
 			if(parseData(info) == TRUE) {
 				/*if(head != Null) {
