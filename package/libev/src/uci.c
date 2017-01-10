@@ -369,6 +369,95 @@ out:
 	return 0;
 }
 
+int ev_uci_save_val_int(int val, const char *addr_fmt, ...)
+{
+	char buff[LIBEV_INT_WIDTH];
+	va_list args;
+	int ret;
+
+	snprintf(buff, sizeof(buff), "%d", val);
+
+	va_start(args, addr_fmt);
+	ret = ev_uci_save_action_var(UCI_SAVE_OPT, true, buff, addr_fmt, args);
+	va_end(args);
+
+	return ret;
+}
+
+
+int ev_uci_list_foreach(const char *addr, int exec(char *name, void *arg),
+			void *arg)
+{
+	struct uci_context *ctx_local;
+	struct uci_ptr ptr_local;
+	struct uci_element *e;
+	char addr_tmp[100];
+	int ret;
+
+	strcpy(addr_tmp, addr);
+
+	ctx_local = uci_alloc_context();
+	if (!ctx_local)
+		return -1;
+
+	ret = uci_lookup_ptr(ctx_local, &ptr_local, addr_tmp, true);
+	if (ret != UCI_OK)
+		goto err;
+
+	/* if there is no such option, don't return an error */
+	if (!(ptr_local.flags & UCI_LOOKUP_COMPLETE))
+		goto out;
+
+	if (ptr_local.last->type != UCI_TYPE_OPTION) {
+		debug_msg("uci_list_foreach: no option\n");
+		goto err;
+	}
+
+	if (ptr_local.o->type != UCI_TYPE_LIST) {
+		debug_msg("uci_list_foreach: not a list\n");
+		goto err;
+	}
+
+	uci_foreach_element(&ptr_local.o->v.list, e) {
+		if (exec(e->name, arg) < 0)
+			goto err;
+	}
+out:
+	uci_free_context(ctx_local);
+	return 0;
+
+err:
+	uci_free_context(ctx_local);
+	return -1;
+}
+
+int ev_uci_data_list_foreach(void *uci_data, const char *name,
+			     int exec(const char *name, void *arg), void *arg)
+{
+	struct uci_element *e, *value;
+	struct uci_option *o;
+
+	debug_msg("name = %s", name);
+
+	uci_foreach_element((struct uci_list *)uci_data, e) {
+		o = uci_to_option(e);
+
+		if (o->type != UCI_TYPE_LIST)
+			continue;
+
+		if (strcmp(e->name, name) != 0)
+			continue;
+
+		uci_foreach_element(&o->v.list, value) {
+			if (exec(value->name, arg) < 0)
+				return -1;
+		}
+	}
+
+	return 0;
+}
+
+
 int ev_uci_config_foreach(const char *fname, const char *type,
 			  void exec(char *name, void *uci_data, void *data),
 			  void *data)
@@ -409,21 +498,6 @@ int ev_uci_config_foreach(const char *fname, const char *type,
 err:
 	uci_free_context(ctx_local);
 	return -1;
-}
-
-int ev_uci_save_val_int(int val, const char *addr_fmt, ...)
-{
-	char buff[LIBEV_INT_WIDTH];
-	va_list args;
-	int ret;
-
-	snprintf(buff, sizeof(buff), "%d", val);
-
-	va_start(args, addr_fmt);
-	ret = ev_uci_save_action_var(UCI_SAVE_OPT, true, buff, addr_fmt, args);
-	va_end(args);
-
-	return ret;
 }
 
 // 缓存区malloc 需要释放

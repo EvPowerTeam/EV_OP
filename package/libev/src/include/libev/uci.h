@@ -37,6 +37,10 @@ int ev_uci_data_get_val_ptr(void *uci_data, const char *name, char **val_ptr);
 int ev_uci_config_foreach(const char *fname, const char *type,
 			  void exec(char *name, void *uci_data, void *data),
 			  void *data);
+int ev_uci_list_foreach(const char *addr, int exec(char *name, void *arg),
+			void *arg);
+int ev_uci_data_list_foreach(void *uci_data, const char *name,
+			     int exec(const char *name, void *arg), void *arg);
 char * find_uci_tables(const char *TabName);
 
 #define ev_uci_save_val_string(val, addr_fmt, ...) \
