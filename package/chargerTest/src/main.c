@@ -62,7 +62,33 @@ void *pthread_service_send(void *arg);
 void *pthread_service_receive(void *arg);
 void *sigle_pthread(void *arg);
 void *load_balance_pthread(void *arg);
+
 // direction initializa
+static void  init_dir(void)
+{
+	char name[100];
+	mkdir(WORK_DIR, 0711);
+	sprintf(name, "%s/%s", WORK_DIR, CHAOBIAO_DIR);
+	//创建抄表目录
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, CONFIG_DIR);
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, UPDATE_DIR);
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, RECORD_DIR);
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, EXCEPTION_DIR);
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, LOG_DIR);
+	mkdir(name, 0777);
+
+	mkdir(ROUTER_LOG_DIR, 0777);
+}
 
 char *   check_send_status(const char *send_info)
 {
@@ -176,7 +202,7 @@ int main(int argc , char * argv[])
 	{
 		syslog(LOG_ERR, "%s[%ld] is already running", argv[0], (long int)getpid());
 		exit(1);
-    }
+	}
 #endif
 	socklen_t addrlen, clilen;
         FD_ZERO(&rendezvous);
@@ -184,7 +210,7 @@ int main(int argc , char * argv[])
         FD_SET(listenfd, &rendezvous);
         maxfd = listenfd + 1;
 	addrlen = sizeof(struct sockaddr_in);
-
+	init_dir();
         // 线程相关初始化
 	if (access(CHARG_FILE,  F_OK) != 0)
 	{

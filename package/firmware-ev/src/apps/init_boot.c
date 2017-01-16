@@ -70,7 +70,6 @@ int init_boot_boot(int EV_UNUSED(argc), char EV_UNUSED(**argv),
 
 	cmd_frun("echo \"`date` Router reboot\" >> %s", path_router_reboot_log);
 	//boot_setup_network();
-	boot_init_dir(); // 创建初始化目录
 	init_config(0, NULL, NULL);
         if (file_exists(path_config_charger))
 		file_delete(path_config_charger);

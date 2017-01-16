@@ -1,6 +1,4 @@
-
-
-
+#include "init_boot.h"
 #include "init_config.h"
 #include <ev.h>
 #include <libev/cmd.h>
@@ -45,6 +43,32 @@ static void init_vpn_config()
 	cmd_run("chmod 777 /root/if.sh");
 }
 
+static void  init_dir(void)
+{
+	char name[100];
+	mkdir(WORK_DIR, 0711);
+	sprintf(name, "%s/%s", WORK_DIR, CHAOBIAO_DIR);
+	//创建抄表目录
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, CONFIG_DIR);
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, UPDATE_DIR);
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, RECORD_DIR);
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, EXCEPTION_DIR);
+	mkdir(name, 0711);
+
+	sprintf(name, "%s/%s", WORK_DIR, LOG_DIR);
+	mkdir(name, 0777);
+
+	mkdir(ROUTER_LOG_DIR, 0777);
+}
+
 /**
  * save configuration to uci
  * */
@@ -62,5 +86,6 @@ int init_config(int EV_UNUSED(argc), char EV_UNUSED(**argv), char EV_UNUSED(*ext
 	debug_msg("configuration initlization");
 	init_vpn_config();
 	init_router_config();
+	init_dir(); // 创建初始化目录
 	return 0;
 }

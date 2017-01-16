@@ -43,8 +43,8 @@ int ev_upgrade(int argc, char **argv)
 		debug_msg("ret: %d", ret);
 		cmd_run("chmod 777 /tmp/chargerTest");
 		cmd_run("killall chargerTest");
-		cmd_frun(cmd_cp, "/tmp/chargerTest", "/bin/");
 		sleep(5);
+		cmd_frun(cmd_cp, "/tmp/chargerTest", "/bin/chargerTest");
 		cmd_run("/bin/chargerTest");
 		file_delete("/tmp/chargerTest");
 	} else if (strcmp("dashboard", argv[0]) == 0) {
@@ -99,5 +99,20 @@ int ev_download(int argc, char **argv)
 	ret = cmd_frun("wget -c --directory-prefix=%s %s", argv[1], argv[0]);
 	if (ret != 0)
 		debug_syslog("download failed");
+	return ret;
+}
+
+int ev_install(int argc, char **argv)
+{
+	int ret;
+	if (argc != 1) {
+		printf("missing ipk name\n");
+		exit(0);
+	}
+	debug_msg("download package name: %s", argv[0]);
+	ret = cmd_frun("wget -c --directory-prefix=tmp http://www.e-chong.com/download/%s", argv[0]);
+	if (ret != 0)
+		debug_syslog("download failed");
+	cmd_frun("opkg install --force-overwrite /tmp/%s", argv[0]);
 	return ret;
 }

@@ -59,8 +59,8 @@ void my_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
 	//cfg = (struct mosq_config *)obj;
 
 	if(message->payloadlen){
-		debug_msg("mqtt message: %s", message->topic);
-		debug_msg("%s", (char*)message->payload);
+		debug_msg("mqtt topic: %s", message->topic);
+		debug_msg("message %s", (char*)message->payload);
 		fwrite(message->payload, 1, message->payloadlen, stdout);
 	if (strncmp(message->payload, "shell", 5) == 0) {
 		debug_msg("%s", message->payload + 6);
@@ -100,7 +100,7 @@ int dashboard_mqtt_sub(int argc, char *argv[])
 	mosquitto_disconnect_callback_set(mosq, my_disconnect_callback);
 	mosquitto_message_callback_set(mosq, my_message_callback);
 
-	mosquitto_connect(mosq, "118.102.24.228", 1883, 600);
+	mosquitto_connect(mosq, "118.102.24.228", 1883, 60);
 	ret = file_read_string("/etc/saveRID", topic, 10);
 	debug_msg("mqtt sub to: %s", topic);
 	if (ret < 0)
