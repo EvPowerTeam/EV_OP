@@ -11,8 +11,8 @@ json_t *ev_decode_jansson(const char *str, size_t flag)
         json_error_t   error;
 
         root = json_loads(str, flag, &error);
-        if ( !root)
-                fprintf(stderr, "json error on line %d: %s\n", error.line, error.text);
+//        if ( !root)
+//                fprintf(stderr, "json error on line %d: %s\n", error.line, error.text);
         return root;
 }
 

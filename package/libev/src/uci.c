@@ -43,7 +43,6 @@ static int ev_uci_save_action_var(const char action_type, bool commit, const  ch
 	if (ret != UCI_OK) {
 		goto out;
 	}
-
 	ptr.value = val;
 	pthread_mutex_lock(&uci_mutex);
 
@@ -100,7 +99,6 @@ int ev_uci_data_get_val(char *val_buff, int buff_len, const char *addr_fmt, ...)
 
 	va_start(args, addr_fmt);
 	vsnprintf(addr_tmp, sizeof(addr_tmp), addr_fmt, args);
-	debug_msg("uci get val = %s\n", addr_tmp);
 	va_end(args);
 	ctx = uci_alloc_context();
 	if (!ctx) {
@@ -111,7 +109,6 @@ int ev_uci_data_get_val(char *val_buff, int buff_len, const char *addr_fmt, ...)
 	ret = uci_lookup_ptr(ctx, &ptr, addr_tmp, true);
 	if (ret != UCI_OK)
 		goto out;
-	debug_msg("value found");
 	if (!(ptr.flags & UCI_LOOKUP_COMPLETE))
 		goto out;
 
@@ -393,7 +390,7 @@ int ev_uci_list_foreach(const char *addr, int exec(char *name, void *arg),
 	struct uci_element *e;
 	char addr_tmp[100];
 	int ret;
-
+        
 	strcpy(addr_tmp, addr);
 
 	ctx_local = uci_alloc_context();
@@ -419,9 +416,15 @@ int ev_uci_list_foreach(const char *addr, int exec(char *name, void *arg),
 	}
 
 	uci_foreach_element(&ptr_local.o->v.list, e) {
-		if (exec(e->name, arg) < 0)
-			goto err;
+		ret = exec(e->name, arg);
+                if (ret >= 0)
+                      return 2;
 	}
+        if (ret < 0) {
+	     uci_free_context(ctx_local);
+             return 1;
+        }
+        
 out:
 	uci_free_context(ctx_local);
 	return 0;
@@ -437,17 +440,16 @@ int ev_uci_data_list_foreach(void *uci_data, const char *name,
 	struct uci_element *e, *value;
 	struct uci_option *o;
 
-	debug_msg("name = %s", name);
+//	debug_msg("name = %s", name);
+	printf("uci_data:%s, name = %s\n", (char *)uci_data, name);
 
 	uci_foreach_element((struct uci_list *)uci_data, e) {
 		o = uci_to_option(e);
 
 		if (o->type != UCI_TYPE_LIST)
 			continue;
-
 		if (strcmp(e->name, name) != 0)
 			continue;
-
 		uci_foreach_element(&o->v.list, value) {
 			if (exec(value->name, arg) < 0)
 				return -1;

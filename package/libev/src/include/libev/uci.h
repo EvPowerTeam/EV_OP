@@ -58,6 +58,10 @@ ev_uci_save_action(UCI_ADD_LIST, true, val, addr_fmt,\
 ev_uci_save_action(UCI_ADD_LIST, false, val, addr_fmt,\
 		     ##__VA_ARGS__)
 
+#define ev_uci_del_list(val, addr_fmt, ...) \
+ev_uci_save_action(UCI_DEL_LIST, true, val, addr_fmt,\
+		   ##__VA_ARGS__)
+
 #define ev_uci_tmp_del_list(val, addr_fmt, ...) \
 ev_uci_save_action(UCI_DEL_LIST, false, val, addr_fmt,\
 		   ##__VA_ARGS__)

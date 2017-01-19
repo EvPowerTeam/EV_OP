@@ -1,33 +1,28 @@
 
 
 //基于TCP的EV充电桩与EV_Router通信 服务器端
+#include <libev/msgqueue.h>
+#include <libev/uci.h>
 #include "include/err.h"
 #include "include/CRC.h"
 #include "include/AES.h"
 #include "include/list.h"
 #include "include/ev_lib.h"
-#include <libev/msgqueue.h>
+#include "include/ev_hash.h"
 #include "include/serv_config.h"
 #include "include/ev_command_file.h"
 
-pthread_mutex_t		clifd_mutex = PTHREAD_MUTEX_INITIALIZER;	// 线程互斥锁初始化
+//pthread_mutex_t		clifd_mutex = PTHREAD_MUTEX_INITIALIZER;	// 线程互斥锁初始化
 //pthread_cond_t		clifd_cond = PTHREAD_COND_INITIALIZER;  // 线程条件变量初始化
-pthread_mutex_t		serv_mutex = PTHREAD_MUTEX_INITIALIZER;	        // 线程互斥锁初始化
-pthread_cond_t		serv_cond = PTHREAD_COND_INITIALIZER;		// 线程条件变量初始化
-pthread_rwlock_t	charger_rwlock;
+pthread_mutex_t		new_task_mutex = PTHREAD_MUTEX_INITIALIZER;	        // 线程互斥锁初始化
+//pthread_cond_t		serv_cond = PTHREAD_COND_INITIALIZER;		// 线程条件变量初始化
+//pthread_rwlock_t	charger_rwlock;
 
-// 充电桩信息，数组
-CHARGER_INFO_TABLE	ChargerInfo[15];	                        // 用于存入每台电桩信息	
-CHARGER_MANAGER		charger_manager = {
-	.total_num = 8,
-	.limit_max_current = 56,
-	.present_off_net_cnt = 8,
-};
+
 sigset_t        mask;
 
 // 函数声明
 void thread_make(ev_int i);
-ev_int doit_charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BUFF *bf);
 int  sock_serv_init(void);
 void msleep(unsigned long mSec);
 void print_PresentMode(unsigned char pmode);
@@ -39,9 +34,9 @@ void *pthread_service_send(void *arg);
 void *pthread_service_receive(void *arg);
 void *sigle_pthread(void *arg);
 CHARGER_INFO_TABLE *look_for_charger_from_array(int cid);
-struct wait_task *parse_server_command(const char *command);
-int    check_have_all_handle(int pipefd, char way, struct wait_task *task);
-int    check_have_one_handle(char, CHARGER_INFO_TABLE *, struct wait_task *, void (*commit_wrong)(int, struct finish_task *));
+struct NewTask *parse_server_command(const char *command);
+int    check_have_one_handle(CHARGER_INFO_TABLE *charger, struct NewTask *task, \
+        void (*commit_wrong)(int, const CHARGER_INFO_TABLE *, const char *, int));
 
 
 void  dir_init(void)
@@ -80,10 +75,11 @@ void uci_database_init(void)
 	if (access(CHARG_FILE,  F_OK) != 0)
 	{
                 file_trunc_to_zero(CHARG_FILE); //CHARG_FILE);	//创建/etc/config/chargerinfo文件
-                ev_uci_add_named_sec("chargerinfo.%s=tab", "TABS");
+//                ev_uci_add_named_sec("chargerinfo.%s=tab", "TABS");
 //		ev_uci_add_named_sec("chargerinfo.%s=rod", "Record");
                 ev_uci_add_named_sec("chargerinfo.%s=issued", "SERVER");
                 ev_uci_add_named_sec("chargerinfo.%s=respond", "CLIENT");
+                ev_uci_add_named_sec("chargerinfo.%s=chargerinfo", "chargers");
 		charger_info_init(1); // 初始化数据库数据 
 	} else 	
 		charger_info_init(0); //数据库中读入信息，写入内存数组中，如果没有，也直接运行。(CID, IP, KEY)
@@ -130,7 +126,6 @@ int main(int argc , char * argv[])
 	int                 err;
 	pthread_t           tid;
         
-        printf("%s start run ...\n", argv[0]);
         opt_type = load_command_line(argc, argv);
         printf("opt_type:%#x\n", opt_type); 
         command_init_for_run(opt_type, 
@@ -140,7 +135,8 @@ int main(int argc , char * argv[])
                                        OPTION_DEBUG | OPTION_PROCESSLOCK);
         // controller初始化
         protocal_controller_init();
-       
+        // 散列表初始化
+        global_cid_hash = hash_alloc(128, hash_func); 
         // 服务器地址初始化
         listenfd = sock_serv_init();
         // 目录初始化
@@ -174,11 +170,11 @@ int main(int argc , char * argv[])
         
 	return EXIT_SUCCESS;
 }
-#define MAX_LEN     1500
+#define MAX_LEN     2048
 
-void send_cmd_to_chargers(struct join_wait_task *task)
+void send_cmd_to_chargers(struct PipeTask *task)
 {
-        int cmd;
+        int cmd_type;
         CHARGER_INFO_TABLE      *charger;
         
         charger = look_for_charger_from_array(task->cid);
@@ -196,24 +192,23 @@ void send_cmd_to_chargers(struct join_wait_task *task)
             }
             else
                  charger->target_mode = CHARGER_READY;
-
-             cmd = CHARGER_CMD_AUTH_R;
+             cmd_type = CHARGER_CMD_AUTH_R;
         }
         else if (task->cmd == WAIT_CMD_CONFIG)
-            cmd = CHARGER_CMD_CONFIG_R;
+            cmd_type = CHARGER_CMD_CONFIG_R;
         else if (task->cmd == WAIT_CMD_YUYUE)
-            cmd = CHARGER_CMD_YUYUE_R;
+            cmd_type = CHARGER_CMD_YUYUE_R;
         else if (task->cmd == WAIT_CMD_START_CHARGE)
-            cmd = CHARGER_CMD_START_CHARGE_R;
+            cmd_type = CHARGER_CMD_START_CHARGE_R;
         else if (task->cmd == WAIT_CMD_STOP_CHARGE)
-            cmd = CHARGER_CMD_STOP_CHARGE_R;
+            cmd_type = CHARGER_CMD_STOP_CHARGE_R;
         else if (task->cmd == WAIT_CMD_ONE_UPDATE)
-            cmd = CHARGER_CMD_START_UPDATE_R;
+            cmd_type = CHARGER_CMD_START_UPDATE_R;
         else if (task->cmd == WAIT_CMD_CTRL)
-            cmd = CHARGER_CMD_CTRL_R;
+            cmd_type = CHARGER_CMD_CTRL_R;
         else if (task->cmd == WAIT_CMD_CHAOBIAO)
-            cmd = CHARGER_CMD_CHAOBIAO_R;
-        start_service(charger->sockfd, NULL, cmd, charger->CID);
+            cmd_type = CHARGER_CMD_CHAOBIAO_R;
+        start_service(charger->sockfd, NULL, cmd_type, charger->CID);
 //        do_serv_run(charger->sockfd, cmd, bf, charger, error_handler);
 }
 typedef struct String {
@@ -227,7 +222,7 @@ void evdoit_l_serv(void)
         int             maxfd, i, connfd, sockfd, n, pipefd;
         int             nready, client[FD_SETSIZE];
         fd_set          rset, allset;
-        struct join_wait_task   join_task;
+        struct          PipeTask   pipe_task;
         
         if ( (pipefd = open(PIPEFILE, O_RDONLY, 0400)) < 0)
                 err_sys("open %s failed", PIPEFILE);
@@ -275,13 +270,14 @@ void evdoit_l_serv(void)
                 if (FD_ISSET(pipefd, &rset))
                 {
                         // 读取管道
-                        if ( (n = read(pipefd, &join_task, sizeof(struct join_wait_task))) <= 0){
+                        if ( (n = read(pipefd, &pipe_task, sizeof(struct PipeTask))) < 0){
                              exit(EXIT_FAILURE); 
                         }
-                        if (n != sizeof(struct join_wait_task))
+                        printf("pipe receive data ... \n");
+                        if (n != sizeof(struct PipeTask))
                             continue;
                         // 发送命令
-                         send_cmd_to_chargers(&join_task);
+                         send_cmd_to_chargers(&pipe_task);
                          continue;
                 }
 #endif
@@ -315,17 +311,11 @@ over:
 
 CHARGER_INFO_TABLE *look_for_charger_from_array(int cid)
 {
-        int i; 
-        int charger_cnt = charger_manager.present_charger_cnt;
+    void *charger;
 
-        for (i = 0; i < charger_cnt; i++){
-              if (ChargerInfo[i].CID == cid)
-                     break;
-        }
-        if (i >= charger_cnt)
-            return NULL;
-
-        return ( &ChargerInfo[i] );  
+    charger = hash_lookup_entry(global_cid_hash, &cid, sizeof(cid));
+    
+    return (CHARGER_INFO_TABLE *)charger;
 }
 
 #include <netinet/tcp.h>
@@ -409,8 +399,9 @@ void msleep(unsigned long mSec){
 
 void *pthread_send_to_backstage(void *arg)
 {
+#if 0
         struct finish_task *task;
-        struct join_wait_task  wait_task;
+        struct join_new_task  new_task;
         int pipefd;
         char  val_buff[200];
         CHARGER_INFO_TABLE *charger;
@@ -431,13 +422,13 @@ void *pthread_send_to_backstage(void *arg)
              free(task->str);
              char *sptr; // = check_send_status(val_buff);
              if (!sptr)
-                     wait_task.value = SYM_OFF_NET;
+                     new_task.value = SYM_OFF_NET;
               else
-                      wait_task.value = sptr[8] - 48;
+                      new_task.value = sptr[8] - 48;
                 
-              wait_task.cid = task->cid;
-//              wait_task.cmd = WAIT_CMD_CHARGE_REQ;
-              write(pipefd, &wait_task, sizeof(struct join_wait_task));
+              new_task.cid = task->cid;
+//              new_task.cmd = WAIT_CMD_CHARGE_REQ;
+              write(pipefd, &new_task, sizeof(struct join_new_task));
               close(pipefd);
                     
           } else if (task->cmd == WAIT_CMD_UPDATE_FAST_API)
@@ -477,16 +468,15 @@ void *pthread_send_to_backstage(void *arg)
                         
             }
        free(task); 
+#endif
        return NULL; 
 } //end pthread_send_to_backstage
 
 void *pthread_service_send(void *arg)
 {
-    struct finish_task   *task;
-    struct join_wait_task wait_task;
+    struct finish_task   *dash_info;
     int i;
     char   val_buff[200];
-    pthread_t  tid;
     CHARGER_INFO_TABLE *charger;
 
     debug_msg("pthread of send message is running");
@@ -496,16 +486,70 @@ void *pthread_service_send(void *arg)
         while (finish_head == NULL)
             pthread_cond_wait(&finish_task_cond, &finish_task_lock);
         // 移出节点
-        finish_task_remove_head(task = finish_head);
+        finish_task_remove_head(dash_info = finish_head);
         pthread_mutex_unlock(&finish_task_lock);
 
         // 格式化数据，发送给服务器
         // 写入luci数据库
+        charger = dash_info->charger;
         debug_msg("pthread of sending finish deal commands finish");
-        printf("task->cmd = %d, cid = %d, way = %d, errcode = %d \n", 
-                task->cmd, task->cid, task->way, task->errcode);
+        printf("dash->cmd = %d, cid = %d,  errcode = %d str:%s\n", 
+                dash_info->cmd, charger->CID, dash_info->errcode, dash_info->str);
 
-        charger = look_for_charger_from_array(task->cid);
+       switch (dash_info->cmd)
+       {
+       case  DASH_BOARD_INFO:
+                        cmd_frun(dash_info->str);
+                        free(dash_info->str);
+                break;
+                case  DASH_FAST_UPDATE:
+                        cmd_frun("dashboard update_fast");
+                break;
+                case  DASH_FINISH_INFO:
+                        
+                break;
+                
+                case DASH_HB_INFO:
+                        // 进度发送, 用errcode表示, 用于软件更新与抄表
+                break;
+       
+                case  DASH_ERRNO_INFO:
+                         // 电桩状态
+                        if ( dash_info->errcode <= CHARGER_STATE_OFF_NET )
+                         {
+                                
+                        
+                         } else if (dash_info->errcode >= MSG_STATE_NULL && dash_info->errcode <= MSG_STATE_CONTROL )
+                         {
+                                // 还处于发送命令状态
+                         } else if (dash_info->errcode == FILE_NO_EXIST)
+                         {
+                                // 文件不存在
+                         } else if (dash_info->errcode == FILE_SIZE_ZERO)
+                         {
+                                // 0文件
+                         } else if (dash_info->errcode == CHARGER_NO_EXIST)
+                         {
+                                // 电桩不存在
+                         } else if (dash_info->errcode == SERVER_DEAL_ERROR)
+                         {
+                                // 路由处理失败
+                         } else 
+                         {
+                                // 未知错误
+                         }
+                         if (charger->message) {
+                                free(charger->message);
+                                charger->message = NULL;
+                         }
+                break;
+
+       
+       } 
+
+
+
+#if 0
         if (task->way == WEB_WAY)
         {
 	             ev_uci_save_action(UCI_SAVE_OPT, true, "1", "chargerinfo.%s.STATUS", charger->tab_name); 
@@ -590,6 +634,7 @@ void *pthread_service_send(void *arg)
         }
         if ( pthread_create(&tid, NULL, pthread_send_to_backstage, (void *)task) < 0)
                exit(1);
+#endif
     }
 }
 
@@ -625,14 +670,12 @@ struct upt *read_update_file_version(char *name)
 
 // 协议解析函数
 // A(1Byte) + B(2Byte) + C(2Byte) + D(nbyte)
-struct wait_task *parse_server_command(const char *command)
+struct NewTask *parse_server_command(const char *command)
 {
-    static  struct wait_task   cmd;
-    char     *val, A, B, C, offset; 
+    static  struct NewTask  new_task;
+    char    val[40] = {0}, A, B, C, offset; 
     time_t  init_time = 1262275200; // 2010-01-01
 
-    if ( (val = (char *)calloc(40, sizeof(char))) ==NULL)
-        return NULL;
     A = *command - '0';
     B = atoi(strncpy(val, command + 1, 2));
     C = atoi(strncpy(val, command + 3, 2));
@@ -648,13 +691,13 @@ struct wait_task *parse_server_command(const char *command)
                                 memset(val, 0, strlen(val));
                                 if (1 == C) // 部分更新
                                 {
-                                        cmd.cmd = WAIT_CMD_ONE_UPDATE;
-                                        cmd.cid = atoi(strncpy(val, command +5, 8));   //cid
+                                        new_task.cmd = WAIT_CMD_ONE_UPDATE;
+                                        new_task.cid = atoi(strncpy(val, command +5, 8));   //cid
                                         offset = 13;
 
                                 } else if (2 == C) // 全更新
                                 {
-                                        cmd.cmd = WAIT_CMD_ALL_UPDATE;
+                                        new_task.cmd = WAIT_CMD_ALL_UPDATE;
                                         offset = 5;
                                 }
                                 // 解析版本号，和文件名字
@@ -664,39 +707,38 @@ struct wait_task *parse_server_command(const char *command)
                                 struct upt *update = read_update_file_version(val);
                                 if (update == NULL)
                                  {
-                                       free(val);
                                        return NULL;
                                  }
-                                 memcpy(&cmd.u.update, update, sizeof(struct upt));
+                                 memcpy(&new_task.u.update, update, sizeof(struct upt));
 
                         } else if (4 == B) // 配置更新
                         {
                                 // 没有C
-                                cmd.cmd = WAIT_CMD_CONFIG;
-                                cmd.cid = atoi(strncpy(val, command +5, 8));    //cid
-                                sprintf(cmd.u.config.name, "%08d", cmd.cid);
+                                new_task.cmd = WAIT_CMD_CONFIG;
+                                new_task.cid = atoi(strncpy(val, command +5, 8));    //cid
+                                sprintf(new_task.u.config.name, "%08d", new_task.cid);
                         }
         break;
         case    '2':    // chaobiao
                         if ( 1 == B) // one chaobiao
                         {
-                                cmd.cmd = WAIT_CMD_CHAOBIAO;
-                                cmd.cid = atoi(strncpy(val, command + 5, 8));
+                                new_task.cmd = WAIT_CMD_CHAOBIAO;
+                                new_task.cid = atoi(strncpy(val, command + 5, 8));
                                 offset = 13;
                         }
                          else if ( 2 == B)
                          {
-                                cmd.cmd = WAIT_CMD_ALL_CHAOBIAO;
+                                new_task.cmd = WAIT_CMD_ALL_CHAOBIAO;
                                 offset = 5;
                          }
                         if ( 1== C) // chaobiao none time
                         {
-                         //       cmd.u.chaobiao.start_time = atoi(strncpy(val, command + 13, 10));
-                         //       cmd.u.chaobiao.end_time = atoi(strncpy(val, command + 23, 10));
+                         //       new_task.u.chaobiao.start_time = atoi(strncpy(val, command + 13, 10));
+                         //       new_task.u.chaobiao.end_time = atoi(strncpy(val, command + 23, 10));
                         } else if ( 2 == C)
                         {
-                                cmd.u.chaobiao.start_time = atoi(strncpy(val, command + offset, 10));
-                                cmd.u.chaobiao.end_time = atoi(strncpy(val, command + offset +10, 10));
+                                new_task.u.chaobiao.start_time = atoi(strncpy(val, command + offset, 10));
+                                new_task.u.chaobiao.end_time = atoi(strncpy(val, command + offset +10, 10));
                         } 
 
         break;
@@ -704,121 +746,115 @@ struct wait_task *parse_server_command(const char *command)
         case    '3':    // charge
                  if (1 == B)  // start charge
                  {
-                         cmd.cmd = WAIT_CMD_START_CHARGE;
-                         cmd.cid = atoi(strncpy(val, command +5, 8));   //cid
-                         memcpy(cmd.u.start_charge.uid, command + 13, 32); // uid
+                         new_task.cmd = WAIT_CMD_START_CHARGE;
+                         new_task.cid = atoi(strncpy(val, command +5, 8));   //cid
+                         memcpy(new_task.u.start_charge.uid, command + 13, 32); // uid
                          memset(val, 0, strlen(val)); //energy
-                         cmd.u.start_charge.energy = atoi(strncpy(val, command + 45, 4));
-                         memset(cmd.u.start_charge.order_num, ' ', sizeof(cmd.u.start_charge.order_num)); //order
-                         memcpy(cmd.u.start_charge.order_num, command + 49, 21);
-                         memcpy(cmd.u.start_charge.package, command + 70, 15); //package
+                         new_task.u.start_charge.energy = atoi(strncpy(val, command + 45, 4));
+                         memset(new_task.u.start_charge.order_num, ' ', sizeof(new_task.u.start_charge.order_num)); //order
+                         memcpy(new_task.u.start_charge.order_num, command + 49, 21);
+                         memcpy(new_task.u.start_charge.package, command + 70, 15); //package
                  
                  } else if (2 == B) // stop charge
                  {
-                        cmd.cmd = WAIT_CMD_STOP_CHARGE;
-                        cmd.cid = atoi(strncpy(val, command +5, 8));   //cid
-                        cmd.u.stop_charge.username = C; // 1--->admin; 2--->gernal users
+                        new_task.cmd = WAIT_CMD_STOP_CHARGE;
+                        new_task.cid = atoi(strncpy(val, command +5, 8));   //cid
+                        new_task.u.stop_charge.username = C; // 1--->admin; 2--->gernal users
                         if (1 == C) //  admin
                         {
                         }
                         else if (2 == C)
                         {
-                                memcpy(cmd.u.stop_charge.uid, command +13, 32);    // uid
-                                debug_msg("uid:%s\n", cmd.u.stop_charge.uid);
+                                memcpy(new_task.u.stop_charge.uid, command +13, 32);    // uid
+                                debug_msg("uid:%s\n", new_task.u.stop_charge.uid);
                         }
 
                  } else if (3 == B) // reboot charger
                  {
-                        cmd.cmd = WAIT_CMD_CTRL;
-                        cmd.cid = atoi(strncpy(val, command +5, 8));   //cid
-                        cmd.u.control.value = 1; // 重启value
+                        new_task.cmd = WAIT_CMD_CTRL;
+                        new_task.cid = atoi(strncpy(val, command +5, 8));   //cid
+                        new_task.u.control.value = 1; // 重启value
                  } else if (4 == B) // floor lock
                  {
-                        cmd.cmd = WAIT_CMD_CTRL;
-                        cmd.cid = atoi(strncpy(val, command + 5, 8)); // cid
-                        cmd.u.control.value = 2 + C;                  // up or down
+                        new_task.cmd = WAIT_CMD_CTRL;
+                        new_task.cid = atoi(strncpy(val, command + 5, 8)); // cid
+                        new_task.u.control.value = 2 + C;                  // up or down
                  }
 
         break;
         case    '4':    // yuyue
-                 cmd.cmd = WAIT_CMD_YUYUE;
-                 cmd.cid = atoi(strncpy(val, command + 5, 8));
+                 new_task.cmd = WAIT_CMD_YUYUE;
+                 new_task.cid = atoi(strncpy(val, command + 5, 8));
                  if (B == 1)
                  {
-                    cmd.u.yuyue.time = 30;
+                    new_task.u.yuyue.time = 30;
                  } else if (B == 2)
                  {
-                    cmd.u.yuyue.time = 0;
+                    new_task.u.yuyue.time = 0;
                  }
-                 memcpy(cmd.u.yuyue.uid, command + 13, 32);
+                 memcpy(new_task.u.yuyue.uid, command + 13, 32);
 
         break;
         default:
-                free(val);
                 return NULL;
     }
-    printf("udp服务器发送过来的命令:cid:%d, cmd%d", cmd.cid, cmd.cmd);
-    free(val);
-    return (&cmd);
+    printf("udp服务器发送过来的命令:cid:%d, cmd%d", new_task.cid, new_task.cmd);
+    return (&new_task);
 }
 
-int    check_have_all_handle(int pipefd, char way, struct wait_task *task)
+
+void check_all_callback(void *value, void *arg)
+{
+        struct PipeTask   pipe_task;
+        struct NewTask    *new_task = (struct NewTask *)arg;
+        CHARGER_INFO_TABLE *charger = (CHARGER_INFO_TABLE *)value;
+       
+       if ( check_have_one_handle(charger, new_task, finish_task_add) < 0)
+            return;
+       if ( new_task->cmd == WAIT_CMD_ALL_UPDATE)
+            new_task->cmd = WAIT_CMD_ONE_UPDATE;
+       else if (new_task->cmd == WAIT_CMD_ALL_CHAOBIAO)
+           new_task->cmd = WAIT_CMD_CHAOBIAO;
+       pipe_task.cid = charger->CID;
+       pipe_task.way =  new_task->way;
+       writen(new_task->pipefd, &pipe_task, sizeof(struct PipeTask));
+
+       return;
+}
+int    check_have_all_handle(int pipefd, char way, struct NewTask *new_task)
 {
         int i;
-        struct join_wait_task   join_task;
         
-        if (task->cmd != WAIT_CMD_ALL_UPDATE && task->cmd != WAIT_CMD_ALL_CHAOBIAO)
-        {
+        if (new_task->cmd != WAIT_CMD_ALL_UPDATE && new_task->cmd != WAIT_CMD_ALL_CHAOBIAO)
                 return 0;
-        }       
-        for ( i = 0; i < charger_manager.present_charger_cnt; i++)
-        {
-                if (ChargerInfo[i].present_status != EMSG_OFF_NET)
-                {
-                        if (task->cmd == WAIT_CMD_ALL_UPDATE )
-                        {
-                              task->cmd = WAIT_CMD_ONE_UPDATE;
-                              join_task.cmd = WAIT_CMD_ONE_UPDATE;
-                              if (check_have_one_handle(way, ChargerInfo + i, task, finish_task_add) < 0)
-                                   continue;
-                        } else if (task->cmd == WAIT_CMD_ALL_CHAOBIAO )
-                        {
-                              task->cmd = WAIT_CMD_CHAOBIAO;
-                              join_task.cmd = WAIT_CMD_CHAOBIAO;
-                              if (check_have_one_handle(way, ChargerInfo + i, task, finish_task_add) < 0)
-                                   continue;
-//                              do_serv_run(ChargerInfo[i].sockfd, CHARGER_CMD_CHAOBIAO_R, bf,  ChargerInfo + i, error_handler);
-                        }
-                        join_task.cid = ChargerInfo[i].CID;
-                        join_task.way = way;
-                        write(pipefd, &join_task, sizeof(struct join_wait_task));
-                }
-                
-        }
+        
+        // 遍历所有电桩
+        new_task->way = way;
+        new_task->pipefd = pipefd;
+        hash_foreach_entry(global_cid_hash, check_all_callback, new_task);
+        
         return 1;
 }
 
 
-int    check_have_one_handle(char way, CHARGER_INFO_TABLE *charger, struct wait_task *task, 
-       void (*commit_wrong)(int, struct finish_task *))
+int    check_have_one_handle(CHARGER_INFO_TABLE *charger, struct NewTask *task, 
+       void (*commit_wrong)(int, const CHARGER_INFO_TABLE *, const char *, int))
 {
     char  str_buff[1024];
     struct stat *st;
-    struct finish_task fsh_task;
-    struct finish_task *task_err = &fsh_task;
+    int err_code;        
 //    CHARGER_INFO_TABLE *charger, tmp_charger;
     
   
     if ( charger == NULL)
     {
         //操作没有该电桩
-        task_err->errcode = EMSG_HAVE_NO_CHARGER_ERROR;
-        task_err->cmd = task->cmd;
+        err_code = CHARGER_NO_EXIST;
         goto  commit;
     }
-    if (charger->present_status == MSG_OFF_NET)
+    if (charger->present_status == CHARGER_STATE_OFF_NET)
     {
-        task_err->errcode = EMSG_OFF_NET;
+        err_code = CHARGER_STATE_OFF_NET;
         goto commit;
     }
     printf("charger->server_send_status:%d\n", charger->server_send_status);
@@ -830,210 +866,196 @@ int    check_have_one_handle(char way, CHARGER_INFO_TABLE *charger, struct wait_
     {
         if ( (time(0) - charger->last_update_time) < 5 *60) // 5min
         {
-            task_err->errcode = charger->server_send_status;
+            err_code = charger->server_send_status;
             goto commit;
-        } 
-        close(charger->file_fd);
+        }
+        // 线程同步
+        if (charger->message) 
+                close(charger->message->file_fd);
     } else if (charger->server_send_status == MSG_STATE_YUYUE)
     {
         if ( (time(0) - charger->last_update_time) < 10) // 10sec
         {
-            task_err->errcode = charger->server_send_status;
+            err_code = charger->server_send_status;
             goto commit;
         } 
-        free(charger->uid);
         charger->server_send_status = MSG_STATE_NULL;
     } else if (charger->server_send_status == MSG_STATE_START_CHARGE)
     {
         if ( (time(0) - charger->last_update_time) < 10) // 10sec
         {
-            task_err->errcode = charger->server_send_status;
+            err_code = charger->server_send_status;
             goto commit;
         } 
-        free(charger->start_charge_order);
-        free(charger->start_charge_package);
-        free(charger->uid);
+        charger->server_send_status = MSG_STATE_NULL;
     } else if (charger->server_send_status == MSG_STATE_STOP_CHARGE)
     {
         if ( (time(0) - charger->last_update_time) < 10) // 10sec
         {
-            task_err->errcode = charger->server_send_status;
+            err_code = charger->server_send_status;
             goto commit;
         } 
-       free(charger->uid);
+        charger->server_send_status = MSG_STATE_NULL;
     }
+    if (charger->message)
+    {
+        free(charger->message);
+        charger->message = NULL;
+    }
+    if ( !(charger->message = (struct Message *)malloc(sizeof(struct Message))) ) {
+        err_code = SERVER_DEAL_ERROR;
+        goto commit;
+    }
+          
 #endif
     // 此时的命令
     
     printf("charger->present_status:%d\n", charger->present_status);
     if (task->cmd == WAIT_CMD_CONFIG)
     {
-        if (charger->present_status != MSG_CHARGER_READY)
+        if (charger->present_status != CHARGER_READY)
         {
                 // 电桩无法推送配置
-                task_err->errcode = charger->present_status;
+                err_code = charger->present_status;
                 goto commit;
         }
         sprintf(str_buff, "%s/%s/%s", WORK_DIR, CONFIG_DIR, task->u.config.name);
         if (access(str_buff, F_OK) != 0)
         {
-                task_err->errcode = EMSG_CONFIG_ERROR;
+                err_code = FILE_NO_EXIST;
                 goto  commit;
         }
-        charger->file_length = st->st_size;
+        if ( (st = (struct stat *)malloc(sizeof(struct stat))) == NULL)
+         {
+                err_code = SERVER_DEAL_ERROR;
+                goto  commit;
+         }
+         if (stat(str_buff, st) < 0)
+         {
+                err_code = SERVER_DEAL_ERROR;
+                free(st);
+                goto  commit;
+         }
+         if (st->st_size == 0) {
+                free(st);
+                err_code = FILE_SIZE_ZERO;
+                goto commit;
+         }
+        charger->message->file_length = st->st_size;
         charger->server_send_status = MSG_STATE_CONFIG;
+        free(st);
 
     } else if (task->cmd == WAIT_CMD_CHAOBIAO)
     {
-        if (charger->present_status != MSG_CHARGER_READY && charger->present_status != MSG_CHARGER_CHARGING)
+        if (charger->present_status != CHARGER_READY && charger->present_status != CHARGER_CHARGING)
         {
-                task_err->errcode = charger->present_status;
+                err_code = charger->present_status;
                 goto  commit;
         }
-        if (way == SERVER_WAY)
+        if (task->way == SERVER_WAY)
             sprintf(str_buff, "%s/%s/%08d_server", WORK_DIR, CHAOBIAO_DIR, task->cid);
         else
             sprintf(str_buff, "%s/%s/%08d_web", WORK_DIR, CHAOBIAO_DIR, task->cid);
         
         unlink(str_buff);
-        if ( (charger->file_fd = creat(str_buff, FILEPERM)) < 0)
+        if ( (charger->message->file_fd = creat(str_buff, FILEPERM)) < 0)
         {
-              task_err->errcode = EMSG_CHAOBIAO_ERROR;
+               err_code = SERVER_DEAL_ERROR;
                 goto  commit;
         }
-        charger->cb_start_time = task->u.chaobiao.start_time;
-        charger->cb_end_time   = task->u.chaobiao.end_time; 
         charger->server_send_status = MSG_STATE_CHAOBIAO;
 
     } else if (task->cmd == WAIT_CMD_ONE_UPDATE)
     {
-        if (charger->present_status != MSG_CHARGER_READY)
+        if (charger->present_status != CHARGER_READY)
         {
-                task_err->errcode = charger->present_status;
+                err_code = charger->present_status;
                 goto  commit;
         }
         sprintf(str_buff, "%s/%s/%s", WORK_DIR, UPDATE_DIR, task->u.update.name);
         if ( access(str_buff, F_OK) != 0)
         {
-              task_err->errcode = EMSG_UPDATE_ERROR;
+               err_code = SERVER_DEAL_ERROR;
                 goto  commit;
         }
         if ( (st = (struct stat *)malloc(sizeof(struct stat))) == NULL)
          {
-             task_err->errcode = EMSG_UPDATE_ERROR;
+              err_code = SERVER_DEAL_ERROR;
                 goto  commit;
          }
          if (stat(str_buff, st) < 0)
          {
-                task_err->errcode = EMSG_UPDATE_ERROR;
+              err_code = SERVER_DEAL_ERROR;
                 free(st);
                 goto  commit;
          }
-         if ( (charger->file_fd = open(str_buff, O_RDONLY, 0400)) < 0)
+             if ( (charger->message->file_fd = open(str_buff, O_RDONLY, 0400)) < 0)
          {
-             task_err->errcode = EMSG_UPDATE_ERROR;
+              err_code = SERVER_DEAL_ERROR;
                 free(st);
                 goto  commit;
          }
-         charger->file_length = st->st_size;
-         charger->version[0]  = task->u.update.version[0];
-         charger->version[1]  = task->u.update.version[1];
+          if (st->st_size == 0) {
+                err_code = FILE_SIZE_ZERO;
+                free(st);
+                goto commit;
+          }
+         charger->message->file_length = st->st_size;
          charger->server_send_status = MSG_STATE_UPDATE;
          free(st);
         printf("update_file:%s\n", str_buff);
-        printf("file_length:%d\n", charger->file_length);
+        printf("file_length:%d\n", charger->message->file_length);
 
     } else if (task->cmd == WAIT_CMD_YUYUE)
     {
-        if (charger->present_status != MSG_CHARGER_READY)
+        if (charger->present_status != CHARGER_READY)
         {
-               task_err->errcode = charger->present_status;
+               err_code = charger->present_status;
                 goto  commit;
         }
-        if ( (charger->uid = (char *)malloc(32)) == NULL)
-        {
-                task_err->errcode = EMSG_YUYUE_ERROR;
-                goto  commit;
-        }
-        charger->yuyue_time = task->u.yuyue.time;
-        memcpy(charger->uid, task->u.yuyue.uid, 32); 
         charger->server_send_status = MSG_STATE_YUYUE;
 
     } else if (task->cmd == WAIT_CMD_START_CHARGE)
     {
-          if (charger->present_status != MSG_CHARGER_READY)
+          if (charger->present_status != CHARGER_READY)
           {
-               task_err->errcode = charger->present_status;
+               err_code = charger->present_status;
                 goto  commit;
           }
-          if ( (charger->start_charge_order = (char *)malloc(sizeof(task->u.start_charge.order_num) )) == NULL)
-          {
-                task_err->errcode = EMSG_START_CHARGE_ERROR;
-                goto  commit;
-          }
-          if ( (charger->start_charge_package = (char *)malloc(sizeof(task->u.start_charge.package))) == NULL)
-          {
-                free(charger->start_charge_order);
-                task_err->errcode = EMSG_START_CHARGE_ERROR;
-                goto  commit;
-          }
-          if ( (charger->uid = (char *)malloc(sizeof(task->u.start_charge.uid) )) == NULL)
-          {
-               free(charger->start_charge_order);
-               free(charger->start_charge_package);
-               task_err->errcode = EMSG_START_CHARGE_ERROR;
-                goto  commit;
-          }
-          memcpy(charger->start_charge_order, task->u.start_charge.order_num, sizeof(task->u.start_charge.order_num) );
-          memcpy(charger->start_charge_package, task->u.start_charge.package, sizeof(task->u.start_charge.package));
-          memcpy(charger->uid, task->u.start_charge.uid, sizeof(task->u.start_charge.uid));
-          charger->start_charge_energy = task->u.start_charge.energy;
-          charger->start_charge_current = task->u.start_charge.current;
           charger->server_send_status = MSG_STATE_START_CHARGE;
 
     } else if (task->cmd == WAIT_CMD_STOP_CHARGE)
     {
-          if (charger->present_status != MSG_CHARGER_CHARGING)
+          if (charger->present_status != CHARGER_CHARGING)
           {
-               task_err->errcode = charger->present_status;
+                err_code = charger->present_status;
                 goto  commit;
           }
-          if ( (charger->uid = (char *)malloc(sizeof(task->u.start_charge.uid) )) == NULL)
-          {
-                task_err->errcode = EMSG_STOP_CHARGE_ERROR;
-                goto  commit;
-          }
-          charger->stop_charge_username = task->u.stop_charge.username;
-          memcpy(charger->uid, task->u.stop_charge.uid, sizeof(task->u.stop_charge.uid));
           charger->server_send_status = MSG_STATE_STOP_CHARGE;
           printf("stop  cmd ...\n");
     } else if (task->cmd == WAIT_CMD_CTRL)
     {
-          if (charger->present_status != MSG_CHARGER_READY && charger->present_status != MSG_CHARGER_CHARGING)
+          if (charger->present_status != CHARGER_READY && charger->present_status != CHARGER_CHARGING)
           {
-               task_err->errcode = charger->present_status;
+               err_code = charger->present_status;
                 goto  commit;
           }
-          charger->control_cmd =  task->u.control.value; 
           charger->server_send_status = MSG_STATE_CONTROL;
           printf("control  cmd...\n");
     }
     charger->last_update_time = time(0);
-    charger->way = way;
     return 0;
 
 commit:
-      task_err->cmd = MSG_CMD_FROM_SERVER;
-      task_err->cid = task->cid;
       printf("commit error...\n");
      if (commit_wrong)
-         (*commit_wrong)(way, task_err);
+         (*commit_wrong)(DASH_ERRNO_INFO, charger, NULL, err_code);
     return -1;
 }
 void   check_charger_network(void)
 {
         int i;
-
+#if 0
         for (i = 0; i < charger_manager.present_charger_cnt; i++)
         {
                         if (ChargerInfo[i].free_cnt_flag == 1 && ChargerInfo[i].free_cnt > 30)
@@ -1054,6 +1076,7 @@ void   check_charger_network(void)
                         if (ChargerInfo[i].free_cnt_flag == 0)
                                 ev_uci_save_action(UCI_SAVE_OPT, true, "46", "chargerinfo.%s.PresentMode", ChargerInfo[i].tab_name);
         }
+#endif
 }
 
 void * pthread_service_receive(void *arg)
@@ -1066,15 +1089,14 @@ void * pthread_service_receive(void *arg)
     char    have_handle_flag, val_buff[250] = {0};
     time_t   init_time = 1262275200;
     char    CMD_TMP;
-    struct  wait_task  cmd, *pcmd;
-    struct  join_wait_task       join_task;
+    struct  NewTask   new_task, *p_new_task;
+    struct  PipeTask  pipe_task;
     struct  upt     *update;
     CHARGER_INFO_TABLE  *charger;
     // 初始化chargerinfo命令
     if ( (pipefd = open(PIPEFILE, O_WRONLY, 0200)) < 0){
             exit(EXIT_FAILURE);
      }
-    debug_msg("pthread of receive message is running");
    for ( ; ; )
    {
             // 阻塞住，每5秒超时
@@ -1083,30 +1105,29 @@ void * pthread_service_receive(void *arg)
        {
                     debug_msg("队列有数据, 正在操作，str =%s...", recv_str);
 #if 1
-                    if ( (pcmd = parse_server_command(recv_str)) == NULL)
+                    if ( (p_new_task = parse_server_command(recv_str)) == NULL)
                     {
                             free(recv_str);
                             continue;
                     }
-                    if ( check_have_all_handle(pipefd, SERVER_WAY, pcmd))
+                    if ( check_have_all_handle(pipefd, SERVER_WAY, p_new_task))
                     {
                             free(recv_str);
                             continue;
                     }
-                    charger = look_for_charger_from_array(pcmd->cid);
-                    if ( check_have_one_handle(SERVER_WAY, charger, pcmd, finish_task_add) < 0)
+                    charger = look_for_charger_from_array(p_new_task->cid);
+                    if ( check_have_one_handle(charger, p_new_task, finish_task_add) < 0)
                     {
                          free(recv_str);
                          continue;
                     }
-                    join_task.cid = pcmd->cid;
-                    join_task.cmd = pcmd->cmd;
-                    write(pipefd, &join_task, sizeof(struct join_wait_task));
+                    pipe_task.cid = p_new_task->cid;
+                    pipe_task.cmd = p_new_task->cmd;
+                    writen(pipefd, &pipe_task, sizeof(struct PipeTask));
                     free(recv_str);
                     continue;
 #endif
           }
-//         debug_msg("读取队列超时，准备读取UCI数据库, chargers:%d...", charger_manager.present_charger_cnt);
 
          check_charger_network();
          have_handle_flag = 0;
@@ -1134,38 +1155,25 @@ void * pthread_service_receive(void *arg)
         CID = CID_TMP;
         CMD = CMD_TMP;
         debug_msg("CID = %d, CID_TMP= %d, CMD= %d, CMD_TMP=%d\n", CID, CID_TMP, CMD, CMD_TMP); 
-        // 控制一下有效的CID
-        for (i=0; i< charger_manager.present_charger_cnt; i++)
-        {
-            if (CID == ChargerInfo[i].CID || CMD == WAIT_CMD_ALL_CHAOBIAO || CMD == WAIT_CMD_ALL_UPDATE)
-            {
-                have_handle_flag = 1;
-                break;
-            }
-        }
-        if (have_handle_flag != 1)
-        {
-            // 告诉后台
-            log_msg("non match cid");
-            goto set_zero;
-        }
         
       // 封装命令
-      cmd.cid = CID;
-      cmd.cmd = CMD;
-      pcmd = &cmd;
+      new_task.cid = CID;
+      new_task.cmd = CMD;
+      new_task.way = WEB_WAY;
+      new_task.pipefd = pipefd;
+      p_new_task = &new_task;
       switch (CMD)
       {
         case    WAIT_CMD_CHAOBIAO:
-                    cmd.u.chaobiao.start_time = init_time;
-                    cmd.u.chaobiao.end_time = time(0);//end_time;
+                    new_task.u.chaobiao.start_time = init_time;
+                    new_task.u.chaobiao.end_time = time(0);//end_time;
                     debug_msg("pthread of receive command is CHAOBIAO");
         break;
         case    WAIT_CMD_CONFIG:
                     sprintf(val_buff, "%08d%c", CID, '\0');
-                    strcpy(cmd.u.config.name, val_buff);
+                    strcpy(new_task.u.config.name, val_buff);
                     debug_msg("pthread of receive command is CONFIG");
-                    printf("val_buff:%s\n", cmd.u.config.name);
+                    printf("val_buff:%s\n", new_task.u.config.name);
         break;
         case    WAIT_CMD_ONE_UPDATE:
         case    WAIT_CMD_ALL_UPDATE:
@@ -1185,25 +1193,22 @@ void * pthread_service_receive(void *arg)
                     update = read_update_file_version(val_buff);
                     if (update == NULL)
                             goto set_zero;
-                    memcpy(&cmd.u.update, update, sizeof(struct upt));
-                    printf("pcmd->cid1:%d, pcmd->cmd:%d\n", pcmd->cid, pcmd->cmd);
-                    if ( check_have_all_handle(pipefd, WEB_WAY, pcmd))
-                            continue;
-                    printf("pcmd->cid2:%d, pcmd->cmd:%d\n", pcmd->cid, pcmd->cmd);
-                    charger = look_for_charger_from_array(pcmd->cid);
-                    if ( check_have_one_handle(WEB_WAY, charger, pcmd, NULL) < 0)
-                         continue;
-                    printf("pcmd->cid3:%d, pcmd->cmd:%d\n", pcmd->cid, pcmd->cmd);
-                    join_task.cid = pcmd->cid;
-                    join_task.cmd = pcmd->cmd;
-                    write(pipefd, &join_task, sizeof(struct join_wait_task));
+                    memcpy(&new_task.u.update, update, sizeof(struct upt));
+                    if ( check_have_all_handle(pipefd, WEB_WAY, p_new_task))
+                            break;
+                    charger = look_for_charger_from_array(p_new_task->cid);
+                    if ( check_have_one_handle( charger, p_new_task, NULL) < 0)
+                           goto set_zero;
+                    pipe_task.cid = p_new_task->cid;
+                    pipe_task.cmd = p_new_task->cmd;
+                    write(pipefd, &pipe_task, sizeof(struct PipeTask));
 
                     debug_msg("pthread of service read update file = %s\n", val_buff);
         break;
         case    WAIT_CMD_ALL_CHAOBIAO:
-                cmd.u.chaobiao.start_time = time(0) - 7 * 60 *60 *24;
-                cmd.u.chaobiao.end_time = time(0);//end_time;
-                check_have_all_handle(pipefd, WEB_WAY, pcmd);
+                new_task.u.chaobiao.start_time = time(0) - 7 * 60 *60 *24;
+                new_task.u.chaobiao.end_time = time(0);//end_time;
+                check_have_all_handle(pipefd, WEB_WAY, p_new_task);
         break;
         case    WAIT_CMD_START_CHARGE:
                 if (ev_uci_data_get_val(val_buff, sizeof(val_buff), "chargerinfo.SERVER.uid") < 0) //CMD 
@@ -1218,7 +1223,7 @@ void * pthread_service_receive(void *arg)
                     debug_msg("uid 长度不够 ...");
                     goto set_zero;
                 }
-                strncpy(cmd.u.start_charge.uid, val_buff, 32);
+                strncpy(new_task.u.start_charge.uid, val_buff, 32);
                 printf("uid = %s\n", val_buff);
                 if (ev_uci_data_get_val(val_buff, sizeof(val_buff), "chargerinfo.SERVER.order") < 0) //CMD 
                 {
@@ -1228,9 +1233,9 @@ void * pthread_service_receive(void *arg)
                     goto set_zero;
                 }
                 memcpy(val_buff + strlen(val_buff), "                         ", 
-                        sizeof(cmd.u.start_charge.order_num) - strlen(val_buff));
-                strncpy(cmd.u.start_charge.order_num, val_buff, sizeof(cmd.u.start_charge.order_num));
-                printf("order = %s\n", cmd.u.start_charge.order_num);
+                        sizeof(new_task.u.start_charge.order_num) - strlen(val_buff));
+                strncpy(new_task.u.start_charge.order_num, val_buff, sizeof(new_task.u.start_charge.order_num));
+                printf("order = %s\n", new_task.u.start_charge.order_num);
                  
                 if (ev_uci_data_get_val(val_buff, sizeof(val_buff), "chargerinfo.SERVER.package") < 0) //CMD 
                 {
@@ -1242,9 +1247,9 @@ void * pthread_service_receive(void *arg)
                 if (strlen(val_buff) > 15)
                     goto set_zero;
                 // 追加空格
-                memcpy(val_buff + strlen(val_buff), "               ", sizeof(cmd.u.start_charge.package) - strlen(val_buff));
-                strncpy(cmd.u.start_charge.package, val_buff, sizeof(cmd.u.start_charge.package));
-                printf("package = %s\n", cmd.u.start_charge.package);
+                memcpy(val_buff + strlen(val_buff), "               ", sizeof(new_task.u.start_charge.package) - strlen(val_buff));
+                strncpy(new_task.u.start_charge.package, val_buff, sizeof(new_task.u.start_charge.package));
+                printf("package = %s\n", new_task.u.start_charge.package);
                 if (ev_uci_data_get_val(val_buff, sizeof(val_buff), "chargerinfo.SERVER.energy") < 0) //CMD
                 { 
 	                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.uid");
@@ -1252,7 +1257,7 @@ void * pthread_service_receive(void *arg)
 	                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.order");
                     goto set_zero;
                 }
-                cmd.u.start_charge.energy = atoi(val_buff);
+                new_task.u.start_charge.energy = atoi(val_buff);
                 printf("energy = %s\n", val_buff);
 
         break;
@@ -1267,7 +1272,7 @@ void * pthread_service_receive(void *arg)
                     debug_msg("uid 长度不够 ...");
                     goto set_zero;
                 }
-                strncpy(cmd.u.stop_charge.uid, val_buff, 32);
+                strncpy(new_task.u.stop_charge.uid, val_buff, 32);
         break;
         default:
             goto set_zero;
@@ -1295,151 +1300,51 @@ void *load_balance_pthread(void *arg)
 
 }
 
+static int uci_query(const char *uci_value, void *arg UNUSED)
+{
+        char *su, *mac;
+        char cid[50], buff[50];
+        int id, present_mode;
+        CHARGER_INFO_TABLE charger;
+
+        su = strchr(uci_value, '@');
+        memcpy(cid, uci_value, su - uci_value);
+        cid[su - uci_value] = 0;
+        printf("cid:%s\n", cid);
+
+        if ( ev_uci_data_get_val(buff, sizeof(buff), "chargerinfo.%s.CID", cid) < 0)
+                exit(1);
+        id = atoi(buff);
+        printf("id=%d\n", id);
+        if ( ev_uci_data_get_val(buff, sizeof(buff), "chargerinfo.%s.MAC", cid) < 0)
+                exit(1);
+         strcpy(charger.MAC, buff);
+//        if ( ev_uci_data_get_val(buff, sizeof(buff), "chargerinfo.%s.PresentMode", cid) < 0)
+//                exit(1);
+//        present_mode = atoi(buff);
+       charger.CID = id; 
+        hash_add_entry(global_cid_hash, &id, sizeof(id), &charger, sizeof(charger));
+        
+        return 0;
+}
+
 //取出数据库配置信息，然后存入内存中
 void  charger_info_init(int select)
 {
-	//查询数据库，获取表名数据
-	char *tab_name = NULL, *tab_tmp = NULL;
-	char name[20][10] = {{0}}, info[200] = {0};
-        int  i = 0, j=0, charg_cnt = 0;
-        int data, ii; 
-        unsigned char tmp[2];
 
         if (select)
         {
-	    // 存取充电记录变量
-                memset(info, 0, sizeof(info));
-                strcpy(info, "V1.01");
-                ev_uci_save_action(UCI_SAVE_OPT, true, info, "chargerinfo.%s.chargerversion", "TABS"); 	
-                sprintf(info, "%d", charger_manager.limit_max_current);
-                ev_uci_save_action(UCI_SAVE_OPT, true, info, "chargerinfo.%s.maxcurrent", "TABS"); 	
-                sprintf(info, "%d", charger_manager.total_num);
-                ev_uci_save_action(UCI_SAVE_OPT, true, info, "chargerinfo.%s.chargernum", "TABS"); 
-                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.order");
-                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.package");    
-                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.energy");    
-                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.uid");    
-                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.CMD");
-                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.CID");
-                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.START_TIME");
-                ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.END_TIME");
-                return ;
-    }
-//         printf("uci  init ... \n");
-	if( (tab_tmp = tab_name = find_uci_tables(TAB_POS)) == NULL)
-		return ;
-	while(*tab_name)
-	{
-		if(*tab_name == ',')
-		{
-	                printf("charger name[%d] = %s\n",i,  name[i]);
-			i++;
-			j = 0;
-			tab_name++;
-			continue;
-		}
-		name[i][j++] = *tab_name++;		
-	}
-//	printf("charger name[%d] = %s\n",i,  name[i]);
-//        printf("i+1 = %d\n", i+1);
-	
-        for(j =0; j <= i; j++)
-	{
-		if(ev_uci_data_get_val(info, sizeof(info), "chargerinfo.%s.CID", name[j]) < 0) //获取CID
-		        exit(1);
-                ChargerInfo[j].CID = atoi(info);
-                if ( ev_uci_data_get_val(info, sizeof(info), "chargerinfo.%s.PresentMode", name[j]) < 0)
-                     exit(1);
-                if (atoi(info) == CHARGER_CHARGING)
-                {
-                        ChargerInfo[j].is_charging_flag = 1;
-                        debug_msg("服务正在重启，有电桩正在充电");
-                        if (ev_uci_data_get_val(info, sizeof(info), "chargerinfo.%s.privateID", name[j]) < 0) //
-                                goto ret;
-                        for (ii = 0; ii < 16; ii++)
-                        {
-                                data = 0;
-                                tmp[0] = info[2 * ii];
-                                tmp[1] = info[2 * ii + 1];
-                                if (tmp[0] <= '9')
-                                {
-                                        data += (16*(tmp[0] - '0'));
-                                } else
-                                {
-                                        data += (16*(tmp[0] - 'a' + 10));
-                                }
-                                if (tmp[1] >= 'a') 
-                                {
-                                        data +=  (tmp[1] - 'a' + 10);
-                                } else
-                                {
-                                        data += (tmp[1] - '0');
-                                }
-//                                debug_msg("%x ", data);
-                                ChargerInfo[j].ev_linkid[ii] = data;     
-                        }
-                }
-ret:
-		if(ev_uci_data_get_val(info, sizeof(info), "chargerinfo.%s.Model", name[j]) < 0) // IP
-		    exit(1);
-		if(strncmp(info, "EVG-32N", 7) == 0)
-		{
-			ChargerInfo[j].model = EVG_32N;
-		}
-		else
-		{
-			ChargerInfo[j].model = EVG_16N;	
-		}
-//		ev_uci_data_get_val(info, 20, "chargerinfo.%s%c%s", name[j], '.', "IP"); // IP
-		//ChargerInfo[j].IP = inet_addr(info);
-//		unsigned char* p = info;
-//		char cnt;
-//		for(cnt = 0; cnt < 4; cnt++)
-//		{
-//			if(cnt == 0){
-//				str = strtok(p, ".");
-//				if(str) 	ChargerInfo[j].IP[cnt] = atoi(str);
-//				continue;
-//			}
-//			str = strtok(NULL, ".");
-//			if(str)
-//				ChargerInfo[j].IP[cnt] = atoi(str);
-//		}	
-#ifndef NDEBUG
-//		printf("数据库取出的IP为------------------>%d.%d.%d.%d\n", ChargerInfo[j].IP[0], ChargerInfo[j].IP[1], ChargerInfo[j].IP[2], ChargerInfo[j].IP[3]);
-#endif	
-		// 赋值key值
-		if(ev_uci_data_get_val(info, sizeof(info), "chargerinfo.%s.KEYB", name[j]) < 0)
-		    exit(1);
-		strncpy(ChargerInfo[j].KEYB, info, 16);
-		if(ev_uci_data_get_val(info, sizeof(info), "chargerinfo.%s.ChargerType", name[j]) < 0)
-		    exit(1);
-                 ChargerInfo[j].charger_type = atoi(info);
-                if(ev_uci_data_get_val(info, sizeof(info), "chargerinfo.%s.MAC", name[j]) < 0)
-		    exit(1);
-                strncpy(ChargerInfo[j].MAC, info, 17);
-		strcpy(ChargerInfo[j].tab_name, name[j]);
-		charg_cnt++;
-		charger_manager.present_charger_cnt++;	// 全局数组，用于在内存中记录充电桩的个数,所有线程共享	
-		printf("当前从数据库取出充电桩个数为--------------->%d\n", charger_manager.present_charger_cnt);
-	} // end for
-
-//	memcpy(Table_Name, tab_tmp, strlen(tab_tmp));	//赋值表名到全局数组
-	free(tab_tmp);
-	
-    if ( ev_uci_data_get_val(info, sizeof(info), "chargerinfo.TABS.maxcurrent") >= 0)
-                charger_manager.limit_max_current = atoi(info);
-    else
-                charger_manager.limit_max_current = 56;
-    if ( ev_uci_data_get_val(info, sizeof(info), "chargerinfo.TABS.chargernum") >= 0)
-                charger_manager.total_num = atoi(info);
-    else
-                charger_manager.total_num = 8;
-    debug_msg("读取数据库电桩:");
-    for (i = 0 ; i < charger_manager.present_charger_cnt; i++)
-    {
-        debug_msg("%s", ChargerInfo[i].tab_name);
-    }
-    return ;
+                ev_uci_save_val_string("0", "chargerinfo.SERVER.order");
+                ev_uci_save_val_string("0", "chargerinfo.SERVER.package");
+                ev_uci_save_val_string("0", "chargerinfo.SERVER.energy");
+                ev_uci_save_val_string("0", "chargerinfo.SERVER.uid");
+                ev_uci_save_val_string("0", "chargerinfo.SERVER.CMD");
+                ev_uci_save_val_string("0", "chargerinfo.SERVER.START_TIME");
+                ev_uci_save_val_string("0", "chargerinfo.SERVER.END_TIME");
+                return;
+        }
+        
+        ev_uci_list_foreach("chargerinfo.chargers.cids", uci_query, NULL);
+        return ;
 }
 

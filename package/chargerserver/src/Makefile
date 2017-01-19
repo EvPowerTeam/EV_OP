@@ -12,7 +12,7 @@ LDFLAGS += $(OFLAGS) -ljansson -luci -lpthread -lcrypto `pkg-config --libs libev
 # EXTRA_CFLAGS += -DDEBUG_SYSLOG
 # EXTRA_CFLAGS += -DDEBUG_TRACE
 
-SRC_C = ev_main.c ev_lib.c ev_jansson_charger.c ev_communication_protocal_with_charges.c AES.c CRC.c err.c  list.c ev_command_file.c
+SRC_C = ev_main.c ev_hash.c ev_lib.c ev_jansson_charger.c ev_communication_protocal_with_charges.c AES.c CRC.c err.c  list.c ev_command_file.c
 SRC_H = ./include/*.h
 SRC_O = $(SRC_C:.c=.o)
 

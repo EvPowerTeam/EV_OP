@@ -64,18 +64,6 @@ typedef  long           ev_long;
  *      充电协议相关
  *
  *****************************************************/
-#define  FORMAL_ENV         0
-#define  USE_DAEMONIZE      0
-#define  USE_POWER_BAR      0
-#define  SOCK_LONG_CONNECT  0
-
-
-// 错误码定义,未完善
-#define     ESERVER_RESTART         0x1
-#define     ESERVER_SEND_SUCCESS    0x2
-#define     ESERVER_API_ERR         0x3
-#define     ESERVER_CRC_ERR         0x4
-// 抄表错误码
 
 // 后台发送命令错误码
 #define         MSG_CMD_FROM_CHARGER           99
@@ -91,38 +79,42 @@ typedef  long           ev_long;
 #define         EMSG_START_CHARGE_CLEAN         109
 #define         EMSG_STOP_CHARGE_CLEAN          110
 
-// 后台发送命令到电桩的状态,定义在CHARGER_INFO_TABLE结构体中的server_send_status成员中赋值
-#define         MSG_CMD_FROM_SERVER            8
-#define         MSG_STATE_NULL                  0
-#define         MSG_STATE_CONFIG                1
-#define         MSG_STATE_UPDATE                2
-#define         MSG_STATE_CHAOBIAO              3
-#define         MSG_STATE_YUYUE                 4
-#define         MSG_STATE_START_CHARGE          5
-#define         MSG_STATE_STOP_CHARGE           6
-#define         MSG_STATE_CONTROL               7
-// 电桩标志
-#define         MSG_CHAOBIAO_FINISH       0x20
-#define     MSG_UPDATE_FINISH          0x40
-#define     MSG_YUYUE_FINISH           0x50
-#define     MSG_CONFIG_FINISH          0x60
-#define     MSG_CONTROL_FINISH         0x70    // 受控
-#define     MSG_CONTROL_NO_CTRL        0x71    // 不受控
-#define     MSG_START_CHARGE_FINISH    0x80
-//#define     ESTART_CHARGE_ERR       0x82
-#define     MSG_STOP_CHARGE_FINISH     0x83
+// errcode 
 //电桩的状态，定义在CHARGER_INFO_TABLE结构体中的present_status成员中赋值
-#define         MSG_CHARGER_READY                   1
-#define         MSG_CHARGER_CHARGING                2
-#define         MSG_CHARGER_YUYUE                   3
-#define         MSG_CHARGER_UPDATE                  4
-#define         MSG_CHARGER_START_CHARGE            5
-#define         MSG_CHARGER_STOP_CHARGE             6
-#define         MSG_CHARGER_CONTROL                 7
-#define         MSG_CHARGER_CHAOBIAO                8
-#define         MSG_OFF_NET                         9
-#define         MSG_PERM_REFUSED                    10
+#define         CHARGER_STATE_CONFIG            500
+#define         CHARGER_STATE_UPDATE            501
+#define         CHARGER_STATE_CHAOBIAO          502
+#define         CHARGER_STATE_OFF_NET           503
+// 后台发送命令到电桩的状态,定义在CHARGER_INFO_TABLE结构体中的server_send_status成员中赋值
+#define         MSG_STATE_NULL                  504
+#define         MSG_STATE_CONFIG                505
+#define         MSG_STATE_UPDATE                506
+#define         MSG_STATE_CHAOBIAO              507
+#define         MSG_STATE_YUYUE                 508
+#define         MSG_STATE_START_CHARGE          509
+#define         MSG_STATE_STOP_CHARGE           510
+#define         MSG_STATE_CONTROL               511
+// 后台发送命令完成
+#define         MSG_FINISH_START_CHARGE         512
+#define         MSG_FINISH_STOP_CHARGE          513
+#define         MSG_FINISH_CHAOBIAO             514
+#define         MSG_FINISH_UPDATE               515
+#define         MSG_FINISH_YUYUE                516
+#define         MSG_FINSIH_CONTROL              517
+#define         MSG_FINISH_NO_CONTROL           518
 
+#define         FILE_NO_EXIST                   519
+#define         FILE_SIZE_ZERO                  520
+#define         CHARGER_NO_EXIST                521
+#define         SERVER_DEAL_ERROR               522
+// finish task 链表的cmd
+#define         DASH_BOARD_INFO                 1000
+#define         DASH_FAST_UPDATE                1001 // 快充
+#define         DASH_ERRNO_INFO                 1002
+#define         DASH_FINISH_INFO                1003
+#define         DASH_HB_INFO                    1004 // 用于更新和抄表进度
+
+// 电桩命令
 #define     CHARGER_CMD_NULL                0x0
 #define     CHARGER_CMD_CONNECT             0x10
 #define     CHARGER_CMD_CONNECT_R           0x11
@@ -152,6 +144,9 @@ typedef  long           ev_long;
 #define     CHARGER_CMD_AUTH_R              300
 #define     CHARGER_CMD_AUTH                301
 #define     CHARGER_CMD_BOOT                302
+#define     CHARGER_CMD_CONTROL_R           303
+#define     CHARGER_CMD_RECORD_R            304
+#define     CHARGER_CMD_OTHER               305
 
 #define     EVG_16N	16
 #define	    EVG_32N	32
@@ -198,15 +193,7 @@ typedef  long           ev_long;
 #define     WAIT_CMD_CTRL               0x08
 #define     WAIT_CMD_START_CHARGE       0x09
 #define     WAIT_CMD_STOP_CHARGE        10
-#define     WAIT_CMD_CHARGER_API        11
-#define     WAIT_CMD_UPDATE_FAST_API    12
-#define     WAIT_CMD_STOP_STATE_API     13
-#define     WAIT_CMD_PUSH_MESSAGE_API   14
-#define     WAIT_CMD_CHANGE_STATUS_API  15
-#define     WAIT_CMD_CHARGE_REQ         16
-#define     WAIT_CMD_RESERVED_API       17
-#define     WAIT_CMD_CHAOBIAO_API       18
-#define     WAIT_CMD_WAIT_FOR_CHARGE_REQ  19
+#define     WAIT_CMD_WAIT_FOR_CHARGE_REQ  11
 // 状态码
 
 #define     WEB_WAY                 0x01
@@ -234,29 +221,20 @@ typedef  long           ev_long;
  *
  * *********************************************************************/
 
-// 线程存储数据结构
-typedef struct {
-    unsigned char   *recv_buff;
-    unsigned char   *send_buff;
-    char            *val_buff;
-    time_t          real_time;
-    int             recv_cnt;
-    int             ErrorCode;
-}BUFF;
-
 // 链表接收命令的数据结构
 struct cb   { time_t  start_time;   time_t  end_time;  int chargercode;                                         };
 struct upt  { char    version[2];   char    name[40];                                                           };
 struct cfg  { char    name[20];                                                                                 };
-struct yy   { int     time;         char uid[32];                                                               };
+struct yy   { int     time;         char uid[33];                                                               };
 struct ctl   {  unsigned char  value;   unsigned char status;                                                   };
-struct stp { int username; char   uid[32];                                                                                    };
-struct stg { char order_num[25]; char package[15]; char uid[32]; short current; short energy;                   };
+struct stp { int username; char   uid[33];                                                                                    };
+struct stg { char order_num[25]; char package[15]; char uid[33]; short current; short energy;                   };
 // 待处理命令队列
-struct  wait_task {
+struct  NewTask {
    unsigned  char       way;        // 页面设置方式还是服务器设置方式
    unsigned  char       cmd;
-   int        cid;
+   int       cid;
+   int       pipefd;
     union  {
         struct  cb   chaobiao;
         struct  upt  update;
@@ -266,115 +244,55 @@ struct  wait_task {
         struct  stg  start_charge;
         struct  stp  stop_charge;
     }u;
-    struct  wait_task   *next;
-    struct  wait_task   *pre_next;
 };
 
-struct join_wait_task {
+// 管道通信的数据结构
+struct PipeTask {
         int way;
         int cmd;
         int cid;
         int value;
-        struct  join_wait_task   *next;
-        struct  join_wait_task   *pre_next;
 };
 
-// 已经处理完成命令队列
-struct stop {  unsigned char  value;        };
-struct  finish_task {
-    unsigned char       way;
-    unsigned char       cmd;
-    int        cid;
-    char               *str;
-    int                 strlen;
-    int                 errcode;
-    union {
-        struct cb   chaobiao;
-        struct ctl  control;
-        struct stp stop_charge;
-        struct yy   yuyue;
-    }u;
-    struct  finish_task *next;
-    struct  finish_task *pre_next;
-};
-
-struct message {
-        int cid;
-        int num;
+struct Message {
+        int             file_fd;        //打开配置文件的文件描述符，抄表描符，更新描述符
+        int             file_length;
+        int             file_package;   // 1024作为除数 
+        int             config_frame_size;          //配置文件的包大小(文件大小/1024)
+        struct NewTask  new_task;
 };
 
 // 管理充电桩信息的数据结构，动态表单，用于查找每条充电桩
 typedef struct  chargerinfo{
         char            charger_type;        // 电桩类型
-        char            version[2];
-        char            MAC[20];                    //mac地址，字符串
-	char 	        tab_name[10];               //当前数据库表名
-	char 	        is_charging_flag;		      // 电桩正在充电的标志
-	unsigned char   model;		                //电桩信息，型号对应的电流大小 (EVG-32N--->32A)
+        char            MAC[20];
         unsigned char   present_mode;
-	unsigned char   load_balance_cmd;	            //是否有load—balance充电请求的命令
-        unsigned char   way;                // WEB 命令还是后台命令
-        unsigned char   wait_cmd;           // 执行后台发送的命令
-	unsigned char 	KEYB[16];		            // keyb
-	unsigned char   ev_linkid[16];	            //evlink卡用户名
-	unsigned char   real_current;               //load_balance程序分配的动态电流
-        unsigned char   real_time_current;
-        unsigned char	free_cnt;                   //联网的计数器，当计数达到15次(30s),此电桩认为已经断网
-	unsigned char	free_cnt_flag;              //联网计数器标志位，服务器接受一个信息时，设置该标志为1，联网计数器设置为0.
-        unsigned char   support_max_current;        // 支持的最大电流
+        unsigned char   last_present_mode;
         unsigned char   target_mode;
         unsigned char   system_message;
-        unsigned char   config_num;                 // 配置文件包号
-        unsigned char   stop_charge_value;
-        unsigned char   control_cmd;                // 控制命令值
-	unsigned short  charging_code;	            //充电记录:
-        unsigned short  yuyue_time;
-        unsigned short  cb_target_id;
-        unsigned short  cb_charging_code;
-	unsigned short  power;		                //充电电量
-        int last_power;
-        short           start_charge_current;       // 开始充电电流
-        short            start_charge_energy;        // 电量
-        char            *uid;
-        char            *start_charge_order;        // 订单号
-        char            *file_name;
-        char            *start_charge_package;      // 套餐
-        int             stop_charge_username;       // 停止充电用户名代号
-        int             file_length; 
-        int             config_frame_size;          //配置文件的包大小(文件大小/1024)
+        int             last_power;
         int             sockfd;
         int             sequence;
-        int             file_fd;        //打开配置文件的文件描述符，抄表描符，更新描述符
+        int             CID;		                // 电桩CID信息
 	int             present_cmd;	            //当前接受的命令
         int             present_status;
         int             server_send_status;
-        int             present_heartbeat;
-        time_t          last_update_time;     
-        time_t          cb_start_time;        //记录服务器发送的开始抄表时间戳
-        time_t          cb_end_time;          //记录服务器发送的结束抄表时间戳
-        unsigned int    CID;		                // 电桩CID信息
-	unsigned int    start_time; 	            // 开始充电时间
-	unsigned int    end_time;	                // 结束充电时间
+        time_t          last_update_time;           // 上一次发送命令的时间
+        time_t          connect_time;          // 上一次电桩联网时间
+        struct   Message *message;
 }CHARGER_INFO_TABLE;
 
-typedef struct {
-    ev_uchar   present_charger_cnt;	//当前
-    ev_uchar   present_off_net_cnt;	//当前断网的个数
-    ev_uchar   present_networking_cnt;	//当前联网的总数
-    ev_uchar   present_charging_cnt;	//当前正在充电的个数
-    ev_int     limit_max_current;	//限制的最大的充电电流
-    ev_int     total_num;              //充电装总个数，默认给8
-    ev_int     have_powerbar_serial_fd;            //打开与灯板通信的串口描述符
-    ev_int     timeout_cnt;
-    volatile   ev_int power_bar_surpls_current;
-    ev_int   abt_cnt; 
-    struct  about_command *abt_cmd;
-//	pthread_mutex_t clifd_mutex;
-//	pthread_cond_t	clifd_cond;
-//	pthread_mutex_t serv_cond;
-//	pthread_rwlock_t charger_rwlock;
-}CHARGER_MANAGER;
-
+// 已经处理完成命令队列
+struct stop {  unsigned char  value;        };
+struct  finish_task {
+    unsigned char       cmd;
+    int                 cid;
+    int                 errcode;
+    char                *str;
+    const CHARGER_INFO_TABLE  *charger;
+    struct  finish_task *next;
+    struct  finish_task *pre_next;
+};
 
 // 充电协议相关
 //PresentMode
@@ -433,7 +351,5 @@ typedef enum {
 }SystemMessage;
 
 #endif // serv_cmnfig.h
-
-
 
 
