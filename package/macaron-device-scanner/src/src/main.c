@@ -34,15 +34,7 @@ int main(int argc,char **argv)
   // set interrupt signal
   struct sigaction sa;
   memset(&sa, 0, sizeof(sa));
-  sa.sa_flags = SA_NOCLDSTOP;
-  sa.sa_handler = stopScan;
-  sigaction(SIGINT, &sa, NULL);
 
-  // set the timer
-  signal(SIGALRM,timer_handler); 
-  set_timer();
-
-  set_config();
 
   int dev_id, err;
   uint8_t own_type = 0x00;
@@ -136,81 +128,6 @@ void set_config()
     index++;
   }
   fclose(fp);
-}
-
-void set_timer()
-{  
-  struct itimerval itv;  
-  
-  itv.it_value.tv_sec = 3;    //timer start after 3 seconds later  
-  itv.it_value.tv_usec = 0;  
-  
-  itv.it_interval.tv_sec = 5;  
-  itv.it_interval.tv_usec = 0;  
-    
-  setitimer(ITIMER_REAL,&itv,NULL);  
-}
-
-void timer_handler()
-{
-  char *params = (char *) malloc(unit_length*counter + 100);
-  strcpy(params,"");
-  strcat(params, major);
-  strcat(params, "&");
-  strcat(params, minor);
-  strcat(params, "&");
-  strcat(params, uuid);
-  strcat(params, "&listSenderInfo=");
-  if(head != Null) {
-    char rssi[4];
-    struct MACARON_BLE_INFO *p;
-    p = head;
-    int index = 0;
-    char buffer[4];
-    while(index < counter) {
-      strcat(params, p->addr);
-      strcat(params, ",");
-      myitoa(p->rssi, rssi, 10);
-      strcat(params, rssi);
-      strcat(params, ",");
-      sprintf(buffer, "%x", p->extra[0]);
-      strcat(params, buffer);
-      strcat(params, ";");
-
-      p = p->next;
-      index++;
-    }
-  }
-  int params_len = strlen(params);
-  int block = (int)params_len/60;
-  printf("\n******************************************************************\n");
-  printf("*                       sending parameters...                    *\n");
-  int i,j;
-  for(i=0; i<=block; i++)
-  {
-    printf("*  ");
-    for(j=i*60; j<(i+1)*60 && j<params_len; j++)
-    {
-      printf("%c", params[j]);
-    }
-    if(j < (i+1)*60)
-    {
-      int k;
-      for(k=j; k<(i+1)*60; k++)
-      {
-        printf(" ");
-      }
-    }
-    printf("  *\n");
-  }
-  printf("******************************************************************\n");
-  printf("                               ***\n");
-  printf("                                *\n");
-  
-  if(process_post(params, isDebug) >= 0) 
-  {
-    resetData();
-  }
 }
 
 char *myitoa(int num,char *str,int radix)
