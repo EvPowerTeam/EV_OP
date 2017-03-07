@@ -81,6 +81,7 @@ typedef  long           ev_long;
 
 // errcode 
 //电桩的状态，定义在CHARGER_INFO_TABLE结构体中的present_status成员中赋值
+#define         CHARGER_STATE_RESTART           499
 #define         CHARGER_STATE_CONFIG            500
 #define         CHARGER_STATE_UPDATE            501
 #define         CHARGER_STATE_CHAOBIAO          502
@@ -208,6 +209,7 @@ typedef  long           ev_long;
 
 #define   SERV_PORT	        6666	// 服务器端口
 #define	  LISTENMAXLEN	    100     // listen函数的backlog参数
+#define MAX_LEN     2048
 
 // 守护进程文件锁位置以及权限
 #define  LOCKFILE 	"/var/run/chargerserver_daemon.pid"
@@ -285,7 +287,7 @@ typedef struct  chargerinfo{
 // 已经处理完成命令队列
 struct stop {  unsigned char  value;        };
 struct  finish_task {
-    unsigned char       cmd;
+    int                 cmd;
     int                 cid;
     int                 errcode;
     char                *str;

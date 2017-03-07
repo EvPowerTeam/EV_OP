@@ -21,12 +21,14 @@ int  doit_control_r(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charge
 int  doit_update_r(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
 int  doit_config_r(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
 int  doit_record_r(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
+int  doit_yuyue_r(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
+int  doit_yuyue(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
 int  doit_other(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
 //int  doit_message_r(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
 //int  doit_start_req_r(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
 
 static void  report_chargers_status_changes(CHARGER_INFO_TABLE *charger, const char *uid);
-static int  check_doit_other(int fd, const char *data);
+static int  check_cid_doit_other(int fd, const char *data);
 
 struct Protocal_Controller *global_protocal_controller = NULL;
 static struct pro_command_t all_serv[] = {
@@ -39,11 +41,13 @@ static struct pro_command_t all_serv[] = {
         {"StopCharging",        CHARGER_CMD_STOP_REQ,           doit_stop_req           }, //结束充电请求
         {"RemoteStartCharging", CHARGER_CMD_START_CHARGE_R,     doit_start_charge_r     },
         {"RemoteStopCharging",  CHARGER_CMD_STOP_CHARGE_R,      doit_stop_charge_r      },
+        {"RemoteReserved",      CHARGER_CMD_YUYUE,              doit_yuyue              },
+        {NULL,                  CHARGER_CMD_YUYUE_R,            doit_yuyue_r            },
         {"RemoteControl",       CHARGER_CMD_CONTROL_R,          doit_control_r          },
-        {"UpdateFW",            CHARGER_CMD_UPDATE_R,           doit_update_r           },
+        {"UpdateFW",            CHARGER_CMD_START_UPDATE_R,     doit_update_r           },
         {"UpdateCF",            CHARGER_CMD_CONFIG_R,           doit_config_r           },
         {"UpdateRecord",        CHARGER_CMD_RECORD_R,           doit_record_r           },
-        {"NULL",                CHARGER_CMD_OTHER,              doit_other              },
+        {NULL,                  CHARGER_CMD_OTHER,              doit_other              },
 //        {"TriggerMessage",      CHARGER_CMD_MESSAGE_R,          doit_message_r          },
         {NULL,                  0,                              NULL                    }
 };
@@ -61,7 +65,7 @@ static inline struct pro_command_t *look_for_command(struct pro_command_t *ctrl,
                 ctrl++;
         }
 
-        return (struct pro_command_t *)NULL;
+        return (struct pro_command_t *)0;
 }
 
 static int protocal_start_run_cmd(struct pro_command_t *cmd, int fd, json_t *json, char *data, CHARGER_INFO_TABLE *charger)
@@ -96,12 +100,14 @@ int start_service(int sockfd, char *data, int cmd_type, int cid)
                 } else  //不是json数据(更新，抄表，推送配置)
                 {
                         //需要解析数据
-                        if ( (cid = check_doit_other(sockfd, data)) < 0)
+                        if ( (cid = check_cid_doit_other(sockfd, data)) < 0)
                                 return -1;
+                        printf("PP-->cid = %d\n", cid);
                         ctrl->cmd = look_for_command(ctrl->cmd_index, NULL, CHARGER_CMD_OTHER);
                 }
         } else  // 后台发送命令
         {
+                printf("cmd_type:%#x\n", cmd_type);
                 ctrl->cmd = look_for_command(ctrl->cmd_index, NULL, cmd_type);
         }
         // 查找cid
@@ -114,23 +120,18 @@ int start_service(int sockfd, char *data, int cmd_type, int cid)
              charger->sockfd = sockfd;
              charger->connect_time = time(0);
         }
-        printf("a1 ...\n");
         // 服务程序
        if (!ctrl->cmd)
                 goto error;
-        printf("a2 ...\n");
        err_code = (*ctrl->start_run_cmd)(ctrl->cmd, sockfd, root, data, charger);
-        printf("a3 ...\n");
 error:
        if (ctrl->err_report)
             (*ctrl->err_report) (charger, err_code);
-        printf("a4 ...\n");
        
        // 释放json内存
         if (root) {
                (*ctrl->json_free)(root);
         }
-        printf("a5 ...\n");
 
        return 0;
 }
@@ -141,32 +142,184 @@ error:
 //
 int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *charger)
 {
+        // crc 校验
+        int cb_charging_code, cb_target_id, n, crc, tmp, process;
+        char cmd;
+        unsigned char  *pdata = data;
 
-}
-static int  check_doit_other(int fd, const char *data)
-{
-        // 头比较
-        int cid = 0;
-        if ( strncmp(data, "EV>", 3) || (data[5] != 0x95 && data[5] != 0x50 && data[5] != 0xa5) ) {
-                writen(fd, "unknow data: ",  13);
-                writen(fd, data,  strlen(data));
+        if ( !charger )
+        {
                 return -1;
         }
+        switch (pdata[5])
+        {
+                // chaobiao
+                case 0xa5: 
+                        // 判断包每10个发送给后台
+                        charger->present_status = CHARGER_STATE_CHAOBIAO;
+                        if (pdata[982] > 0 && writen(charger->message->file_fd, &pdata[22], pdata[982] * 64) != 64 * pdata[982])
+                                goto error;
+                        if (pdata[987] == 0)
+                        {
+                                cb_charging_code = *(unsigned short *)(&pdata[983]) - 15;
+                                cb_target_id = 0;
+                                n = *(unsigned short *)&pdata[985];
+                                tmp = n - cb_charging_code;
+                                process = (float)tmp / (float)n * 100.0;
+                                printf("process percent:%d%%, Onum:%d, Acc:%d, Snum:%d\n", process, pdata[982], n, cb_charging_code);
+                                finish_task_add(DASH_HB_INFO, charger, NULL, process);
+                        } else 
+                        {
+                                cb_charging_code = 0;
+                                cb_target_id = 0xFFFF; 
+                                process = 100;
+                                finish_task_add(DASH_FINISH_INFO, charger, NULL, 100);
+                        }
+                        // time
+                        data[10]  = 0;
+                        data[11] = 0;
+                        data[12] = 0;
+                        data[13] = 0;
+                        // cb_target_id
+                        data[14] = cb_target_id;
+                        data[15] = cb_target_id >> 8;
+                        // cb_start_time
+                        data[16] = charger->message->new_task.u.chaobiao.start_time;
+                        data[17] = (charger->message->new_task.u.chaobiao.start_time >> 8 );
+                        data[18] = (charger->message->new_task.u.chaobiao.start_time >> 16);
+                        data[19] = (charger->message->new_task.u.chaobiao.start_time >> 24);
+                        // cb_end_time
+                        data[20] = charger->message->new_task.u.chaobiao.end_time;
+                        data[21] = (charger->message->new_task.u.chaobiao.end_time >> 8 );
+                        data[22] = (charger->message->new_task.u.chaobiao.end_time >> 16);
+                        data[23] = (charger->message->new_task.u.chaobiao.end_time >> 24);
+                        // charging_code
+                        data[24] = cb_charging_code;
+                        data[25] = (cb_charging_code >> 8);
+                        cmd = 0xa4;
+                        n = 26;
+                break;
+                // update
+                case 0x95:
+                       printf("正在更新 ...package:%d\n", pdata[12]);
+                       if (pdata[13] == 1) {
+                                charger->present_status = CHARGER_STATE_RESTART;
+                                n = 0;
+                                process = 100;
+                                printf("process percent:%d%%\n", process);
+                                finish_task_add(DASH_FINISH_INFO, charger, NULL, process);
+                        } else {
+                                charger->present_status = CHARGER_STATE_UPDATE;
+                                if (lseek(charger->message->file_fd, pdata[12] * 1024, SEEK_SET) < 0)
+                                        goto error;
+                                if ( (n = read(charger->message->file_fd, pdata + 17, 1024)) < 0)
+                                        goto error;
+                                if (pdata[12] % 10 == 0) {
+                                        process = (float)pdata[12]/(float)charger->message->file_package * 100.0;
+                                        printf("process percent:%d%%\n", process);
+                                        finish_task_add(DASH_HB_INFO, charger, NULL, process);
+                                }
+                        }
+                       cmd = 0x94;
+                       // seq,reserved
+                       data[16] = pdata[12];
+                       // version
+                       data[10]  = charger->message->new_task.u.update.version[0];
+                       data[11] = charger->message->new_task.u.update.version[1];
+                       // length
+                       data[12] = n;
+                       data[13] = (n >> 8);
+                       data[14] = (n >> 16);
+                       data[15] = (n >> 24);
+                       n += 17;
+                break;
+                // config
+                case 0x50:
+                       if (pdata[11] == 1)
+                       {
+                                charger->present_status = CHARGER_STATE_RESTART;
+                                n = 0;
+                                finish_task_add(DASH_FINISH_INFO, charger, NULL, 100);
+                       
+                       } else 
+                       {
+                                charger->present_status = CHARGER_STATE_CONFIG;
+                                if (lseek(charger->message->file_fd, pdata[10] * 1024, SEEK_SET) < 0)
+                                        goto error;
+                                if ( (n = read(charger->message->file_fd, pdata + 20, 1024)) < 0)
+                                        goto error;
+                       }
+                       tmp = pdata[10];
+                       // num
+                       data[10] = charger->message->file_package;
+                       // length
+                       data[11] = charger->message->file_length;
+                       data[12] = (charger->message->file_length >> 8 );
+                       data[13] = (charger->message->file_length >> 16);
+                       data[14] = (charger->message->file_length >> 24);
+                       // n
+                       data[15] = n;
+                       data[16] = (n >> 8 );
+                       data[17] = (n >> 16);
+                       data[18] = (n >> 24);
+                       // seq
+                       data[19] = tmp;
+                       n  += 20;
+                break;
 
-        // 更新
-        if ( data[5] == 0x95)
-        {
-        
-        } else if ( data[5] == 0x50) // 推送配置
-        {
-         
-        } else if (data[5] == 0xa5) // 抄表
-        {
-        
-        
-        } 
-        
-        return cid;
+                default :
+                        goto error;
+                break;
+        }
+        // 进行组包
+        memcpy(data, "EV<", 3);
+        // cmd
+        data[5] = cmd;
+        data[6] = charger->CID;
+        data[7] = (charger->CID >> 8);
+        data[8] = (charger->CID >> 16);
+        data[9] = (charger->CID >> 24);
+        crc = getCRC(data, n);
+        data[n++]   = crc;
+        data[n++] = (crc >> 8);
+        // 长度
+        data[3] = n;
+        data[4] = (n >> 8);
+        writen(fd, data, n);
+        return 0;
+error:
+        printf("API error ...\n");
+        return -1;
+}
+static int  check_cid_doit_other(int fd, const char *data)
+{
+        // 头比较
+        char *pstr;
+       unsigned char *pdata = data;
+        int   crc, num;
+
+        printf("data[5]=%#x\n", pdata[5]);
+        if ( strncmp(data, "EV>", 3) || (pdata[5] != 0x95 && pdata[5] != 0x50 && pdata[5] != 0xa5) ) {
+                pstr = data + strlen(data);
+                if ( (pstr - data + 3) <= MAX_LEN) {
+                        *pstr++ = '\r';
+                        *pstr++ = '\n';
+                        *pstr   =  0;
+                }
+                writen(fd, "unknow data: ",  13);
+                writen(fd, data,  pstr - data);
+                return -1;
+        }
+//        num = (pdata[3] << 8 | pdata[4]);
+//        crc = getCRC(pdata, num - 2);
+//        printf("num:%d, crc:%#x, crc1:%#x, crc2:%#x\n", num, crc, pdata[num-2], pdata[num - 1]);
+//        if (crc != *(unsigned short *)&pdata[num-2]) {
+//                printf("数据CRC校准失败 ...\n");
+//                return -1;
+//        }
+        // 解密(暂时)，校验
+        printf("数据解析正确 ...\n");
+        return  (int) ((data[6] << 24) | (data[7] << 16) | (data[8] << 8) | data[9]);
 }
 
 int  doit_record_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO_TABLE *charger)
@@ -189,8 +342,8 @@ int  doit_record_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO_
         json_decref(array);
         json_decref(object);
         writen(fd, send_string, strlen(send_string));
+        printf("发送抄表命令 ...%s\n", send_string);
         free(send_string);
-
         return 0;
 }
 
@@ -223,7 +376,7 @@ int  doit_update_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO_
 {
         json_t *array, *object;
         char *send_string, tmp[10];
-        
+       
         array = json_array();
         // msg_type
         json_array_append_new(array, json_integer(2));
@@ -246,6 +399,43 @@ int  doit_update_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO_
         return 0;
 }
 
+int  doit_yuyue(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE *charger)
+{
+        json_t *object;
+        const char *uid, *status;
+
+        object = json_array_get(root, JSON_OBJECT_INDEX);
+        uid = json_string_value(json_object_get(object, "ReservedId"));
+        status = json_string_value(json_object_get(object, "ReservedStatus"));
+        printf("ReservedId:%s, ReservedStatus:%s\n", uid, status);
+
+        return 0;
+}
+
+int  doit_yuyue_r(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE *charger)
+{
+        json_t *array, *object;
+        char *send_string;
+        
+        array = json_array();
+        // msg_type
+        json_array_append_new(array, json_integer(2));
+        // seq--> 0
+        json_array_append_new(array, json_integer(0));
+        // cmd
+        json_array_append_new(array, json_string("RemoteReserved"));
+        object = json_object();
+        json_object_set_new(object, "ReservedID", json_string(charger->message->new_task.u.yuyue.uid));
+        json_object_set_new(object, "ReservedTime", json_integer(charger->message->new_task.u.yuyue.time));
+        json_array_append_new(array, object);
+        send_string = json_dumps(array, 0);
+        json_decref(array);
+        json_decref(object);
+        writen(fd, send_string, strlen(send_string));
+        free(send_string);
+        
+        return 0;
+}
 int  doit_control_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO_TABLE *charger)
 {
         json_t *array, *object;
@@ -262,9 +452,9 @@ int  doit_control_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO
         if (charger->message->new_task.u.control.value == 1)
                 json_object_set_new(object, "Control", json_string("restart"));
          else  if (charger->message->new_task.u.control.value == 2)
-                json_object_set_new(object, "Control", json_string("floor_look_up"));
+                json_object_set_new(object, "Control", json_string("floor_lock_up"));
         else   if (charger->message->new_task.u.control.value == 3)
-                json_object_set_new(object, "Control", json_string("floor_look_down"));
+                json_object_set_new(object, "Control", json_string("floor_lock_down"));
         
         json_array_append_new(array, object);
         send_string = json_dumps(array, 0);
@@ -308,6 +498,8 @@ int  doit_start_charge_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER
 {
         json_t *array, *object;
         char *send_string;
+        
+        array = json_array();
         // msg_type
         json_array_append_new(array, json_integer(2));
         // seq--> 0
@@ -495,11 +687,11 @@ int  doit_state_update(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TAB
                 if (power - charger->last_power >= 1000)
                 {
                         finish_task_add(DASH_FAST_UPDATE, charger, NULL, 0);
-                       
+                        charger->last_power = power;
                 }
-                charger->last_power = power;
         }
-        charger->present_mode = new_mode;
+        charger->present_mode   = new_mode;
+        charger->present_status = new_mode;
         if (new_mode != charger->last_present_mode && new_mode == CHARGER_CHARGING )
         {
                 if ( (send_string = (char *)malloc(528)) )
@@ -668,8 +860,9 @@ int  doit_heartbeat(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE 
              goto error;
         sprintf(tmp, "%d", json_integer_value( json_tmp));
         report_chargers_status_changes(charger, NULL);
+        printf("submode:%s\n", tmp);
         ev_uci_save_val_string(tmp, "chargerinfo.%08d.SubMode", charger->CID);
-       
+        charger->present_status = charger->present_mode; 
         // 发送回应
         json_t *array; 
         array = json_array();

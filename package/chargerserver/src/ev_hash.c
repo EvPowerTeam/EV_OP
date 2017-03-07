@@ -182,6 +182,9 @@ int main(int argc, char **argv)
         key = 257;
         value = 1003;
         hash_add_entry(s_ip_hash, &key, sizeof(key), &value, sizeof(value));
+        key = 3;
+        value = 1004;
+        hash_add_entry(s_ip_hash, &key, sizeof(key), &value, sizeof(value));
         
         hash_foreach_entry(s_ip_hash, call_back, key);
         unsigned int *val;

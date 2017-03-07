@@ -39,8 +39,8 @@ static ev_command_t run_cmd[] = {
         {OPTION_START,       "-start",       set_start       },
         {OPTION_RESTART,     "-restart",     set_restart     },
         {OPTION_DEBUG,       "-debug",       NULL            },
-        {OPTION_PROCESSLOCK, "NULL",         set_process_lock},
         {OPTION_DAEMON,      "-daemon",      set_daemon      },
+        {OPTION_PROCESSLOCK, "NULL",         set_process_lock},
         {OPTION_RUNNING,      NULL,          doit_serv     },
         {OPTION_NULL,        NULL,           NULL            }
 };
@@ -77,7 +77,8 @@ int load_command_line(int argc, char **argv)
 
     arg = argv + 1;
     have_option = 0;    
-    do {
+    while (*arg) 
+    {
            if (!strcmp(*arg, "-help")){ 
                config_type = OPTION_HELP;
                break;
@@ -114,7 +115,8 @@ int load_command_line(int argc, char **argv)
                continue;
            }
            have_option++;
-    } while(*++arg);
+           arg++;
+    }
     if ( have_option > 0)
          config_type = OPTION_HELP;
     config_type |= OPTION_PROCESSLOCK;

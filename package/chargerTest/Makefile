@@ -18,7 +18,7 @@ define Package/chargerTest
 	SECTION:=utils
 	CATEGORY:=Utilities
 	TITLE:= chargerTest communicate with chargers
-	DEPENDS:=+libopenssl +libc +libpthread +libuci +libnl-tiny +libev
+	DEPENDS:=+libopenssl +libc +libpthread +libuci +libnl-tiny +libev 
 endef
 
 define Package/chargerTest/description
