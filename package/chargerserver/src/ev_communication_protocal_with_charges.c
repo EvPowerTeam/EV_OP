@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "include/list.h"
+#include "include/file.h"
 #include "include/ev_lib.h"
 #include "include/ev_hash.h"
 #include "include/ev_jansson_charger.h"
@@ -27,7 +28,7 @@ int  doit_other(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
 //int  doit_message_r(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
 //int  doit_start_req_r(int fd, json_t *root, char *data, CHARGER_INFO_TABLE *charger);
 
-static void  report_chargers_status_changes(CHARGER_INFO_TABLE *charger, const char *uid);
+static void  report_chargers_status_changes(CHARGER_INFO_TABLE *charger, int submode, const char *uid);
 static int  check_cid_doit_other(int fd, const char *data);
 
 struct Protocal_Controller *global_protocal_controller = NULL;
@@ -100,8 +101,10 @@ int start_service(int sockfd, char *data, int cmd_type, int cid)
                 } else  //不是json数据(更新，抄表，推送配置)
                 {
                         //需要解析数据
-                        if ( (cid = check_cid_doit_other(sockfd, data)) < 0)
-                                return -1;
+                        if ( (cid = check_cid_doit_other(sockfd, data)) < 0) {
+                            printf("PP-->cid = %d\n", cid);
+                            return -1;
+                        }
                         printf("PP-->cid = %d\n", cid);
                         ctrl->cmd = look_for_command(ctrl->cmd_index, NULL, CHARGER_CMD_OTHER);
                 }
@@ -144,8 +147,10 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
 {
         // crc 校验
         int cb_charging_code, cb_target_id, n, crc, tmp, process;
-        char cmd;
+        char cmd, *str;
         unsigned char  *pdata = data;
+        time_t   first_tmp, sec_tmp;
+        char     buff[20];
 
         if ( !charger )
         {
@@ -159,20 +164,28 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
                         charger->present_status = CHARGER_STATE_CHAOBIAO;
                         if (pdata[982] > 0 && writen(charger->message->file_fd, &pdata[22], pdata[982] * 64) != 64 * pdata[982])
                                 goto error;
+
                         if (pdata[987] == 0)
                         {
-                                cb_charging_code = *(unsigned short *)(&pdata[983]) - 15;
+                                first_tmp = charger->message->new_task.u.chaobiao.start_time;
+                                sec_tmp   = charger->message->new_task.u.chaobiao.end_time;
+                                //cb_charging_code = *(unsigned short *)(&pdata[983]) - 15;
+                                cb_charging_code = (unsigned short)((pdata[983] << 8) | pdata[984]) - 15;
                                 cb_target_id = 0;
-                                n = *(unsigned short *)&pdata[985];
-                                tmp = n - cb_charging_code;
-                                process = (float)tmp / (float)n * 100.0;
-                                printf("process percent:%d%%, Onum:%d, Acc:%d, Snum:%d\n", process, pdata[982], n, cb_charging_code);
-                                finish_task_add(DASH_HB_INFO, charger, NULL, process);
+                                n = (unsigned short)((pdata[985] << 8) | pdata[986]);
+//                                tmp = n - cb_charging_code;
+//                                process = (float)tmp / (float)n * 100.0;
+//                                finish_task_add(DASH_HB_INFO, charger, NULL, process);
+                                printf("num:%d, Acc:%d, charging_code:%d\n", pdata[982], n, cb_charging_code+15);
                         } else 
                         {
+                                sprintf(buff, "%ld", time(0));
+                                ev_uci_save_val_string(buff, "chargerinfo.%08d.CB_END_TIME", charger->CID);
+                                sprintf(buff, "%ld", (pdata[985] << 8) | pdata[986]);
+                                ev_uci_save_val_string(buff, "chargerinfo.%08d.CB_NUM", charger->CID);
                                 cb_charging_code = 0;
                                 cb_target_id = 0xFFFF; 
-                                process = 100;
+                                printf("num:%d, Acc:%d, charging_code:%d\n", pdata[982], n, cb_charging_code+15);
                                 finish_task_add(DASH_FINISH_INFO, charger, NULL, 100);
                         }
                         // time
@@ -184,15 +197,15 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
                         data[14] = cb_target_id;
                         data[15] = cb_target_id >> 8;
                         // cb_start_time
-                        data[16] = charger->message->new_task.u.chaobiao.start_time;
-                        data[17] = (charger->message->new_task.u.chaobiao.start_time >> 8 );
-                        data[18] = (charger->message->new_task.u.chaobiao.start_time >> 16);
-                        data[19] = (charger->message->new_task.u.chaobiao.start_time >> 24);
+                        data[16] =  first_tmp;
+                        data[17] = (first_tmp >> 8 );
+                        data[18] = (first_tmp >> 16);
+                        data[19] = (first_tmp >> 24);
                         // cb_end_time
-                        data[20] = charger->message->new_task.u.chaobiao.end_time;
-                        data[21] = (charger->message->new_task.u.chaobiao.end_time >> 8 );
-                        data[22] = (charger->message->new_task.u.chaobiao.end_time >> 16);
-                        data[23] = (charger->message->new_task.u.chaobiao.end_time >> 24);
+                        data[20] =  sec_tmp;
+                        data[21] = (sec_tmp >> 8 );
+                        data[22] = (sec_tmp >> 16);
+                        data[23] = (sec_tmp >> 24);
                         // charging_code
                         data[24] = cb_charging_code;
                         data[25] = (cb_charging_code >> 8);
@@ -203,6 +216,8 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
                 case 0x95:
                        printf("正在更新 ...package:%d\n", pdata[12]);
                        if (pdata[13] == 1) {
+                                sprintf(buff, "%ld", time(0));
+                                ev_uci_save_val_string(buff, "chargerinfo.%08d.FW_END_TIME", charger->CID);
                                 charger->present_status = CHARGER_STATE_RESTART;
                                 n = 0;
                                 process = 100;
@@ -210,6 +225,8 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
                                 finish_task_add(DASH_FINISH_INFO, charger, NULL, process);
                         } else {
                                 charger->present_status = CHARGER_STATE_UPDATE;
+                                first_tmp = charger->message->new_task.u.update.version[0];
+                                sec_tmp = charger->message->new_task.u.update.version[1];
                                 if (lseek(charger->message->file_fd, pdata[12] * 1024, SEEK_SET) < 0)
                                         goto error;
                                 if ( (n = read(charger->message->file_fd, pdata + 17, 1024)) < 0)
@@ -224,8 +241,8 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
                        // seq,reserved
                        data[16] = pdata[12];
                        // version
-                       data[10]  = charger->message->new_task.u.update.version[0];
-                       data[11] = charger->message->new_task.u.update.version[1];
+                       data[10]  = first_tmp;
+                       data[11] =  sec_tmp;
                        // length
                        data[12] = n;
                        data[13] = (n >> 8);
@@ -237,6 +254,8 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
                 case 0x50:
                        if (pdata[11] == 1)
                        {
+                                sprintf(buff, "%ld", time(0));
+                                ev_uci_save_val_string(buff, "chargerinfo.%08d.CONFIG_END_TIME", charger->CID);
                                 charger->present_status = CHARGER_STATE_RESTART;
                                 n = 0;
                                 finish_task_add(DASH_FINISH_INFO, charger, NULL, 100);
@@ -244,19 +263,22 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
                        } else 
                        {
                                 charger->present_status = CHARGER_STATE_CONFIG;
+                                first_tmp = charger->message->file_length;
+                                sec_tmp = charger->message->file_package;
                                 if (lseek(charger->message->file_fd, pdata[10] * 1024, SEEK_SET) < 0)
                                         goto error;
                                 if ( (n = read(charger->message->file_fd, pdata + 20, 1024)) < 0)
                                         goto error;
                        }
+                       printf("config packge:%d\n", pdata[10]);
                        tmp = pdata[10];
                        // num
-                       data[10] = charger->message->file_package;
+                       data[10] = sec_tmp;
                        // length
-                       data[11] = charger->message->file_length;
-                       data[12] = (charger->message->file_length >> 8 );
-                       data[13] = (charger->message->file_length >> 16);
-                       data[14] = (charger->message->file_length >> 24);
+                       data[11] =  first_tmp;
+                       data[12] = (first_tmp >> 8 );
+                       data[13] = (first_tmp >> 16);
+                       data[14] = (first_tmp >> 24);
                        // n
                        data[15] = n;
                        data[16] = (n >> 8 );
@@ -265,6 +287,7 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
                        // seq
                        data[19] = tmp;
                        n  += 20;
+                       cmd = 0x51;
                 break;
 
                 default :
@@ -286,6 +309,8 @@ int  doit_other(int fd, json_t *root UNUSED, char *data, CHARGER_INFO_TABLE *cha
         data[3] = n;
         data[4] = (n >> 8);
         writen(fd, data, n);
+        memset(data, 0, MAX_LEN);
+        printf("发送完毕 ...\n");
         return 0;
 error:
         printf("API error ...\n");
@@ -366,6 +391,7 @@ int  doit_config_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO_
         send_string = json_dumps(array, 0);
         json_decref(array);
         json_decref(object);
+        printf("%s\n", send_string);
         writen(fd, send_string, strlen(send_string));
         free(send_string);
 
@@ -377,6 +403,7 @@ int  doit_update_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO_
         json_t *array, *object;
         char *send_string, tmp[10];
        
+        printf("start update ...\n");
         array = json_array();
         // msg_type
         json_array_append_new(array, json_integer(2));
@@ -394,6 +421,7 @@ int  doit_update_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO_
         json_decref(array);
         json_decref(object);
         writen(fd, send_string, strlen(send_string));
+        printf("%s\n", send_string);
         free(send_string);
 
         return 0;
@@ -403,12 +431,30 @@ int  doit_yuyue(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE *cha
 {
         json_t *object;
         const char *uid, *status;
+        char  *str;
+        int  code;
 
         object = json_array_get(root, JSON_OBJECT_INDEX);
         uid = json_string_value(json_object_get(object, "ReservedId"));
         status = json_string_value(json_object_get(object, "ReservedStatus"));
         printf("ReservedId:%s, ReservedStatus:%s\n", uid, status);
-
+        if ( !strcmp(status, "Success") )
+        {
+              code = 102;
+              str = (char *)malloc(200);
+              sprintf(str, "/reserve?key={cid:\\\"%08d\\\",pid:\\\"%s\\\",status:%d}", 
+                      charger->CID, uid, CHARGER_RESERVED);
+              finish_task_add(DASH_BOARD_INFO, NULL, str, 0);
+        } else 
+        {
+                 
+        }
+        if ( !(str = (char *)malloc(200)) )
+                return -1;
+        sprintf(str, "/PushMessage/pushMessage?cid=%08d\\\&type=%d\\\&code=%d\\\&id=%s",
+                charger->CID, 3, code, uid);
+        finish_task_add(DASH_BOARD_INFO, NULL, str, 0);
+        finish_task_add(DASH_FINISH_INFO, charger, NULL, 100);
         return 0;
 }
 
@@ -450,7 +496,7 @@ int  doit_control_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO
         json_array_append_new(array, json_string("RemoteControl"));
         object = json_object();
         if (charger->message->new_task.u.control.value == 1)
-                json_object_set_new(object, "Control", json_string("restart"));
+                json_object_set_new(object, "Control", json_string("reboot"));
          else  if (charger->message->new_task.u.control.value == 2)
                 json_object_set_new(object, "Control", json_string("floor_lock_up"));
         else   if (charger->message->new_task.u.control.value == 3)
@@ -463,6 +509,7 @@ int  doit_control_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO
         printf("send_string:%s\n", send_string);
         writen(fd, send_string, strlen(send_string));
         free(send_string);
+        finish_task_add(DASH_FINISH_INFO, charger, NULL, 100);
         return 0; 
 }
 int  doit_stop_charge_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_INFO_TABLE *charger)
@@ -490,6 +537,7 @@ int  doit_stop_charge_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER_
         printf("send_string:%s\n", send_string);
         writen(fd, send_string, strlen(send_string));
         free(send_string);
+        finish_task_add(DASH_FINISH_INFO, charger, NULL, 100);
 
         return 0;
 }
@@ -516,13 +564,14 @@ int  doit_start_charge_r(int fd, json_t *root UNUSED, char *data UNUSED, CHARGER
         json_decref(object);
         writen(fd, send_string, strlen(send_string));
         free(send_string);
-
+        finish_task_add(DASH_FINISH_INFO, charger, NULL, 100);
+        
         return 0;
 }
 int  doit_stop_req(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE *charger)
 {
         json_t  *array, *object, *uid_object, *charging_object, *json_tmp;
-        long  integer, cycle, power, present_mode, acc_power, type;
+        long  integer, cycle, power, present_mode, acc_power, type, submode;
         char *uid, *mac;
 
         if ( !charger)
@@ -536,6 +585,10 @@ int  doit_stop_req(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE *
         if ( !json_is_number(json_tmp = json_object_get(object, "Cycle")) )
             goto error;
         cycle = json_integer_value(json_tmp);
+        // submode
+        if ( !json_is_number(json_tmp = json_object_get(object, "SubMode")) )
+            goto error;
+        submode = json_integer_value(json_tmp);
         // present_mode
         if ( !json_is_number(json_tmp = json_object_get(object, "PresentMode")) )
             goto error;
@@ -553,14 +606,13 @@ int  doit_stop_req(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE *
         char *send_string = (char *)malloc(528);
        if ( !send_string)
                 goto error;
-        sprintf(send_string, "/Charger/State/stopState?key={chargers:[{chargerId\\\"%08d\\\",privateID:\\\"%s\\\",power:%ld,chargingRecord:%ld,mac:\\\"%s\\\",chargingType:%ld,status:%ld}]}", 
+        sprintf(send_string, "/ChargerState/stopState?key={chargers:[{chargerId:\\\"%08d\\\",privateID:\\\"%s\\\",power:%ld,chargingRecord:%ld,mac:\\\"%s\\\",chargingType:%ld,status:%ld}]}", 
                           charger->CID, uid, power, cycle, charger->MAC, type, present_mode);
         
         finish_task_add(DASH_BOARD_INFO, charger, send_string, 0);
         
         charger->present_mode = present_mode;
-        report_chargers_status_changes(charger, uid);
-        
+        report_chargers_status_changes(charger, submode, uid); 
         // 发送数据
         array = json_array();
         json_array_append_new(array, json_integer(3));
@@ -617,9 +669,9 @@ int  doit_state_update(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TAB
 {
         json_t          *object, *sub_object, *json_tmp;
         const char      *string, *uid;
-        char            *send_string = NULL, tmp[20];
-        long            acc_power, power, cycle, charging_way, status, integer, new_mode, current, voltage, start_time, use_time;
-        
+        char            *send_string = NULL, tmp[150], data_record[200];
+        long            dg_input, dg_output, cpv, acc_power, power, cycle, charging_way, status, integer, new_mode, current, voltage, start_time, use_time;
+        long            submode; 
         if ( !charger)
                 goto error;
         object = json_array_get(root, JSON_OBJECT_INDEX);
@@ -628,6 +680,11 @@ int  doit_state_update(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TAB
         if ( !json_is_number(json_tmp = json_object_get(object, "PresentMode")) )
             goto error;
         new_mode = json_integer_value(json_tmp);
+        // subMode
+        if ( !json_is_number(json_tmp = json_object_get(object, "PresentMo")) )
+            goto error;
+        new_mode = json_integer_value(json_tmp);
+
         // chargingway
         if ( !json_is_number(json_tmp = json_object_get(object, "ChargingWay")) )
             goto error;
@@ -640,6 +697,10 @@ int  doit_state_update(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TAB
         if ( !json_is_number(json_tmp = json_object_get(object, "AccPower")) )
             goto error;
         acc_power = json_integer_value(json_tmp);
+        
+        // dg_in(out)put
+        dg_input = json_integer_value(json_object_get(object, "DigitalInput"));
+        dg_output = json_integer_value(json_object_get(object, "DigitalOutput"));
 
         // uid
         sub_object = json_object_get(object, "UidInfo");
@@ -668,10 +729,15 @@ int  doit_state_update(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TAB
         if ( !json_is_number(json_tmp = json_object_get(sub_object, "Current")) )
             goto error;
         current = json_integer_value(json_tmp);
+        // cpv
+        json_tmp = json_object_get(sub_object, "CpVoltage");
+        cpv = json_integer_value(json_tmp);
+
         
 
         if (charger->charger_type == 2 || charger->charger_type == 4)
         {
+                printf(" quick charger ...\n");
                 // soc
                 if ( !json_is_number(json_tmp = json_object_get(sub_object, "Soc")) )
                         goto error;
@@ -683,7 +749,7 @@ int  doit_state_update(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TAB
                         goto error;
                 integer = json_integer_value(json_tmp);
                 sprintf(tmp, "%ld", integer);
-                ev_uci_save_val_string(tmp, "chargerinfo.%08d.RemainTime", charger->CID);
+                ev_uci_save_val_string(tmp, "chargerinfo.%08d.TillTime", charger->CID);
                 if (power - charger->last_power >= 1000)
                 {
                         finish_task_add(DASH_FAST_UPDATE, charger, NULL, 0);
@@ -692,18 +758,32 @@ int  doit_state_update(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TAB
         }
         charger->present_mode   = new_mode;
         charger->present_status = new_mode;
-        if (new_mode != charger->last_present_mode && new_mode == CHARGER_CHARGING )
+        if (new_mode != charger->last_present_mode && charger->last_present_mode >0 && new_mode == CHARGER_CHARGING )
         {
                 if ( (send_string = (char *)malloc(528)) )
                 {
                         sprintf(send_string, 
-                        "/ChargerState/stopState?key={chargers:[{chargerId:\\\"%08d\\\",privateID:\\\"%s\\\",power:%ld,chargingRecord:%ld,mac:\\\"%s\\\",chargingType:%ld,status:%ld}]}", 
+                        "/ChargerState/startState?key={chargers:[{chargerId:\\\"%08d\\\",privateID:\\\"%s\\\",power:%ld,chargingRecord:%ld,mac:\\\"%s\\\",chargingType:%ld,status:%ld}]}", 
                         charger->CID, uid, power, cycle, charger->MAC, charging_way, new_mode);
                         finish_task_add(DASH_BOARD_INFO, charger, send_string, 0);
                 }
-                report_chargers_status_changes(charger, uid);
+               report_chargers_status_changes(charger, submode, uid);
+               sprintf(tmp, "%s/%s/%08d-%d", WORK_DIR, RECORD_DIR, charger->CID, cycle);
+               printf("record:%s, length:%d\n", tmp, strlen(tmp));
+               init_file(tmp);
+               sprintf(data_record, "usetime(m)   ,vol(V)   ,cpv(mV)   ,cur(mA)   ,energy(wh)\n");
+                write_file(tmp, data_record, 0);
+                
         }
+        sprintf(tmp, "%s/%s/%08d-%d", WORK_DIR, RECORD_DIR, charger->CID, cycle);
+        sprintf(data_record, "%-10ld , %-6ld  , %-6ld   , %-6ld   , %ld\n", use_time, voltage, cpv, current, power);
+        write_file(tmp, data_record, 0);
+        printf("save uci ...\n");
         // 写入UCI
+        sprintf(tmp, "%ld", dg_input);
+        ev_uci_save_val_string(tmp, "chargerinfo.%08d.DigitalInput", charger->CID);
+        sprintf(tmp, "%ld", dg_output);
+        ev_uci_save_val_string(tmp, "chargerinfo.%08d.DigitalOutput", charger->CID);
         sprintf(tmp, "%ld", new_mode);
         ev_uci_save_val_string(tmp, "chargerinfo.%08d.PresentMode", charger->CID);
         sprintf(tmp, "%ld", acc_power);
@@ -726,6 +806,7 @@ int  doit_state_update(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TAB
 
         // 更新内存数据
        // 发送回应
+#if 0
        json_t *array;
         array = json_array();
         // msg_type
@@ -747,6 +828,7 @@ int  doit_state_update(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TAB
        writen(fd, send_string, strlen(send_string));
        if (send_string)
                 free(send_string); 
+#endif
         return 0;
 error:
         return -1;        
@@ -757,7 +839,7 @@ struct User {
 };
 void *pthread_send_charger_req(void *arg)
 {
-        char  *sptr;
+        char  *sptr, *str;
         int pipefd, i;
         struct PipeTask pipe_task;
         struct User *user = (struct User *)arg;
@@ -768,7 +850,7 @@ void *pthread_send_charger_req(void *arg)
         for ( i = 0; i < 3; i++)
         {
                 cmd_frun("dashboard url_post %s %s", sys_checkin_url(), user->info);
-                sptr = mqreceive_timed("/dashboard.checkin", 10, 3);
+                sptr = mqreceive_timed("/dashboard.checkin", 20, 3);
                 if (sptr != NULL){
                         if ( !strncmp(sptr, "charging", 8))
                             break;
@@ -779,11 +861,17 @@ void *pthread_send_charger_req(void *arg)
              sptr = NULL;
         // 反馈的信息写入管道
         printf("phtead receive data:%s\n", sptr);
-        if (!sptr)
+        if (!sptr) {
             pipe_task.value = 0xEE;
+            pipe_task.cid = user->cid;
+        }
         else
+        {
+            str = sptr + 10;
+            sptr[18] = 0;
+            pipe_task.cid = atoi(str);
             pipe_task.value = sptr[8] - '0';
-        pipe_task.cid = user->cid;
+        }
         pipe_task.cmd = WAIT_CMD_WAIT_FOR_CHARGE_REQ;
         writen(pipefd, &pipe_task, sizeof(struct PipeTask));
         free(user->info);
@@ -844,7 +932,7 @@ int  doit_heartbeat(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE 
         json_t          *object, *json_tmp;
         const char      *string, tmp[50];
         char            *send_string;
-        long            integer;
+        long            integer, submode;
 
         if ( !charger)
                 goto error;
@@ -858,11 +946,13 @@ int  doit_heartbeat(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE 
         // submode
         if ( !json_is_number(json_tmp = json_object_get(object, "SubMode")) )
              goto error;
-        sprintf(tmp, "%d", json_integer_value( json_tmp));
-        report_chargers_status_changes(charger, NULL);
+        submode = json_integer_value( json_tmp);
+        sprintf(tmp, "%d", submode);
+        report_chargers_status_changes(charger, submode, NULL);
         printf("submode:%s\n", tmp);
         ev_uci_save_val_string(tmp, "chargerinfo.%08d.SubMode", charger->CID);
         charger->present_status = charger->present_mode; 
+#if 0
         // 发送回应
         json_t *array; 
         array = json_array();
@@ -881,50 +971,67 @@ int  doit_heartbeat(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE 
         printf("send_string:%s\n", send_string);
         json_decref(array);
         // 发送数据
-        writen(fd, send_string, strlen(send_string));
+//        writen(fd, send_string, strlen(send_string));
         if (send_string)
-                free(send_string); 
+                free(send_string);
+#endif
         printf("HeartBeat cid[%d] ...\n", charger->CID);
         return 0;
 error:
         return -1;
 }
 
+
 int  uci_exec(const char *name, void *arg)
 {
         char *str = (char *)arg;
         char *sn, *sa;
+        CHARGER_INFO_TABLE charger, *p_charger;
+        int  cid, new_cid;
       
        printf("name:%s, arg:%s\n", name, str); 
         if ( !strcmp(name, str))
-             return 0;
+             return -1;
         sn  = strchr(name, '@');
         sa =  strchr(str, '@');
-        // 比较 mac
-        if ( !strcmp(sn+1, sa+1) )
+        // 比较 mac, cid
+        if ( !strcmp(sn+1, sa+1) || !strncmp(name, str, sn - name))
         {
              // 删除该list，并增加（更新）list, tmp
               ev_uci_del_list(name, "chargerinfo.chargers.cids");
-              *sa = 0;
-              ev_uci_add_named_sec("chargerinfo.%s=chargerinfo", str);
-              *sa = '@';
               ev_uci_add_list(str, "chargerinfo.chargers.cids");
-              return 0;
+              // hash 
+              *sn = 0;
+              *sa = 0;
+              cid = atoi(name);
+              new_cid = atoi(str);
+              p_charger = look_for_charger_from_array(cid);
+              if ((cid % HASH_BUCKETS) == (new_cid % HASH_BUCKETS))
+              {
+                  p_charger->CID = new_cid;
+              } else
+              {
+                  // 清除hash列表中原来的cid，目前未实现
+                  charger = *p_charger;
+                  charger.CID = new_cid;
+                  hash_add_entry(global_cid_hash, &new_cid, sizeof(new_cid), &charger, sizeof(charger));
+              }
+              ev_uci_add_named_sec("chargerinfo.%s=chargerinfo", str);
+              return -1;
         }
-        return -1;
+        return 0;
 }
-
 
 int  doit_boot(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE *charger)
 {
         json_t          *object;
         const json_t    *json_tmp;
-        const char      *serial, *model, *ip, *mac;
+        const char      *serial, *model, *ip, *mac, *firname;
         char            *send_string, *string, *uci_value;
-        long            integer, cid;
+        long            integer, cid, charger_type;
         unsigned char   charger_count;
-        char            tmp[30];
         int             ret;
+        char            tmp[30];
 
         printf("boot ...\n"); 
         object = json_array_get(root, JSON_OBJECT_INDEX);
@@ -946,44 +1053,52 @@ int  doit_boot(int fd, json_t *root, char *data UNUSED, CHARGER_INFO_TABLE *char
             goto error;
        printf("model:%s\n", model);
        //  localIP 
-//        if ( !(ip = json_string_value( json_object_get(object, "LocalIP"))) )
-//            goto error;
-//       printf("localIP:%s\n", ip);
+        if ( !(ip = json_string_value( json_object_get(object, "LocalIp"))) )
+            goto error;
+       printf("localIP:%s\n", ip);
+
+       if ( !(firname = json_string_value( json_object_get(object, "FirwareVersion"))) )
+            goto error;
+        
+       if ( !json_is_number(json_tmp = json_object_get(object, "ChargerType")) )
+            goto error;
+        charger_type = json_integer_value(json_tmp);
+
        // 发送回应
         sprintf(tmp, "%08d@%s", cid, mac);
         
         // 查找UCI中list列表;
         ret = ev_uci_list_foreach("chargerinfo.chargers.cids", uci_exec, tmp);
-       printf("ret = %d\n", ret);
+        printf("ret = %d\n", ret);
         // 增加新的list
-        if (ret  == 0 || ret == 1)
+        if (ret  == 0)
         {
-             printf("tmp:%s\n", tmp);
              ev_uci_add_list(tmp, "chargerinfo.chargers.cids");
              ev_uci_add_named_sec("chargerinfo.%08d=chargerinfo", cid);
-        } else if (ret < 0)
-             goto error;
+             // 加入hash
+             CHARGER_INFO_TABLE chr;
+             chr.CID = cid;
+             strcpy(chr.MAC, mac);
+             hash_add_entry(global_cid_hash, &cid, sizeof(cid), &chr, sizeof(chr));
+             printf("add hash ...\n");
+        } 
         // 更新uci数据库
         sprintf(tmp, "%08d", cid);
         if (ev_uci_save_val_string(tmp, "chargerinfo.%08d.CID", cid) < 1)
+             goto uci_wrong;
+        if (ev_uci_save_val_string(mac, "chargerinfo.%08d.MAC", cid) < 1)
              goto uci_wrong;
         if (ev_uci_save_val_string(serial, "chargerinfo.%08d.Serial", cid) < 1)
              goto uci_wrong;
         if (ev_uci_save_val_string(model, "chargerinfo.%08d.Model", cid) < 1)
              goto uci_wrong;
-        if (ev_uci_save_val_string(mac, "chargerinfo.%08d.MAC", cid) < 1)
+        if (ev_uci_save_val_string(firname, "chargerinfo.%08d.FwName", cid) < 1)
+             goto uci_wrong;
+        sprintf(tmp, "%ld", charger_type);
+        if (ev_uci_save_val_string(tmp, "chargerinfo.%08d.ChargerType", cid) < 1)
              goto uci_wrong;
 //        if (ev_uci_save_val_string(ip, "chargerinfo.%08d.IP", cid) < 1)
 //             goto uci_wrong;
-        // 加入hash
-        if ( ret == 0 || ret == 1 || !charger)
-        {
-                printf("add hash ...\n");
-                CHARGER_INFO_TABLE chr;
-                chr.CID = cid;
-                strcpy(chr.MAC, mac);
-                hash_add_entry(global_cid_hash, &cid, sizeof(cid), &chr, sizeof(chr));
-        }
         json_t *array; 
         array = json_array();
         // msg_type
@@ -1012,14 +1127,15 @@ error:
        return -1;
 }
 
-static void  report_chargers_status_changes(CHARGER_INFO_TABLE *charger, const char *uid)
+static void  report_chargers_status_changes( CHARGER_INFO_TABLE *charger, int sub_mode, const char *uid)
 {
         char *str;
        
-        if (charger->last_present_mode == charger->present_mode)
+        if (charger->last_present_mode == charger->present_mode && charger->last_submode == sub_mode)
                 return ;
         if (charger->last_present_mode == 0) {
                 charger->last_present_mode = charger->present_mode;
+                charger->last_submode = sub_mode;
                 return ;
         }
         if ( !(str = (char *)malloc(128)) )
@@ -1027,12 +1143,12 @@ static void  report_chargers_status_changes(CHARGER_INFO_TABLE *charger, const c
 
         if (uid)
         {
-                sprintf(str, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",pid:\\\"%s\\\",status:%d}", 
-                      charger->CID, uid, charger->present_mode);
+                sprintf(str, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",pid:\\\"%s\\\",submode:%d,status:%d}", 
+                      charger->CID, uid, sub_mode, charger->present_mode);
         } else
         {
-                sprintf(str, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",status:%d}", 
-                      charger->CID, charger->present_mode);
+                sprintf(str, "/ChargerState/changesStatus?key={cid:\\\"%08d\\\",submode:%d,status:%d}", 
+                      charger->CID, sub_mode, charger->present_mode);
         }
         if (charger->present_mode == CHARGER_READY)
         {
@@ -1042,13 +1158,16 @@ static void  report_chargers_status_changes(CHARGER_INFO_TABLE *charger, const c
                 ev_uci_delete("chargerinfo.%08d.Current", charger->CID);
                 ev_uci_delete("chargerinfo.%08d.ChargingWay", charger->CID);
                 ev_uci_delete("chargerinfo.%08d.Power", charger->CID);
+                ev_uci_delete("chargerinfo.%08d.StartTime", charger->CID);
+                ev_uci_delete("chargerinfo.%08d.UseTime", charger->CID);
                 if (charger->charger_type == 2 || charger->charger_type == 4) {
                         ev_uci_delete("chargerinfo.%08d.Soc", charger->CID);
-                        ev_uci_delete("chargerinfo.%08d.RemainTime", charger->CID);
+                        ev_uci_delete("chargerinfo.%08d.TillTime", charger->CID);
                 }
         }
         finish_task_add(DASH_BOARD_INFO, charger, str, 0);
         charger->last_present_mode = charger->present_mode;
+        charger->last_submode = sub_mode;
 
         return ;
 }

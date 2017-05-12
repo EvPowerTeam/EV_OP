@@ -671,7 +671,7 @@ gernal_command(int fd, const int cmd, const CHARGER_INFO_TABLE *charger, BUFF *b
           return -1;
      if (write(fd, bf->send_buff, len + 9) != len + 9)
         goto err;
-    printf("发送成功, 命令:%#x, CID[%d] ...\n", cmd, charger->CID);
+//    printf("发送成功, 命令:%#x, CID[%d] ...\n", cmd, charger->CID);
     return 0;
 err:
     printf("发送失败, 命令:%#x, CID[%d] failed ...\n", cmd, charger->CID);

@@ -7,7 +7,7 @@ CFLAGS += `pkg-config --cflags libev`
 OFLAGS += -Os
 LDFLAGS += $(OFLAGS) -luci -lpthread -lcrypto `pkg-config --libs libev json-c`
 
-EXTRA_CFLAGS += -DDEBUG_CONSOLE
+#EXTRA_CFLAGS += -DDEBUG_CONSOLE
 # EXTRA_CFLAGS += -DDEBUG_FILE
 # EXTRA_CFLAGS += -DDEBUG_SYSLOG
 # EXTRA_CFLAGS += -DDEBUG_TRACE

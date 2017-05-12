@@ -210,6 +210,7 @@ typedef  long           ev_long;
 #define   SERV_PORT	        6666	// 服务器端口
 #define	  LISTENMAXLEN	    100     // listen函数的backlog参数
 #define MAX_LEN     2048
+#define  HASH_BUCKETS           128
 
 // 守护进程文件锁位置以及权限
 #define  LOCKFILE 	"/var/run/chargerserver_daemon.pid"
@@ -273,6 +274,7 @@ typedef struct  chargerinfo{
         unsigned char   target_mode;
         unsigned char   system_message;
         int             last_power;
+        int             last_submode;
         int             sockfd;
         int             sequence;
         int             CID;		                // 电桩CID信息

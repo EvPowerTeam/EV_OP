@@ -44,7 +44,7 @@
 #include <linux/mii.h>
 #include <linux/sockios.h>
 
-static const char *api_checkin_valid = "vpn.e-chong.com/ChargerAPI"; //"10.168.1.180:8080/ChargerAPI" 114.119.6.180
+static const char *api_checkin_valid = "tvpn.e-chong.com:8080/ChargerAPI";//"vpn.e-chong.com/ChargerAPI"; //"10.168.1.180:8080/ChargerAPI" 114.119.6.180
 static const char *api_checkin_test = "124.202.140.174:8080/ChargerAPI";	//114.119.6.184:8080/test
 static const char *ieee80211_dir = "/sys/class/ieee80211";
 

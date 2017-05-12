@@ -416,15 +416,9 @@ int ev_uci_list_foreach(const char *addr, int exec(char *name, void *arg),
 	}
 
 	uci_foreach_element(&ptr_local.o->v.list, e) {
-		ret = exec(e->name, arg);
-                if (ret >= 0)
-                      return 2;
-	}
-        if (ret < 0) {
-	     uci_free_context(ctx_local);
-             return 1;
+		if ( exec(e->name, arg) < 0)
+	                goto err;
         }
-        
 out:
 	uci_free_context(ctx_local);
 	return 0;
@@ -443,19 +437,28 @@ int ev_uci_data_list_foreach(void *uci_data, const char *name,
 //	debug_msg("name = %s", name);
 	printf("uci_data:%s, name = %s\n", (char *)uci_data, name);
 
+	        printf("run_0 ...\n");
 	uci_foreach_element((struct uci_list *)uci_data, e) {
-		o = uci_to_option(e);
-
+	        printf("run_1 ...\n");
+                o = uci_to_option(e);
+	        printf("run_2 ...\n");
+                if ( !o)
+                     printf("o null ...\n");
+                 else 
+                     printf("o no null ...\n");
 		if (o->type != UCI_TYPE_LIST)
 			continue;
+                printf("e->name:%s\n", e->name);
 		if (strcmp(e->name, name) != 0)
 			continue;
+	        printf("run_3 ...\n");
 		uci_foreach_element(&o->v.list, value) {
+	                printf("run_4 ...\n");
 			if (exec(value->name, arg) < 0)
 				return -1;
 		}
 	}
-
+        printf("end ...\n");
 	return 0;
 }
 

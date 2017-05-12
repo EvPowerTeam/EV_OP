@@ -198,6 +198,7 @@ int main(int argc , char * argv[])
 		charger_info_init(0); //数据库中读入信息，写入内存数组中，如果没有，也直接运行。(CID, IP, KEY)
 	
 
+        printf("singlen init ...\n");
 #if  1
         sigemptyset(&sa.sa_mask);
         sa.sa_flags = 0;
@@ -243,7 +244,6 @@ int main(int argc , char * argv[])
 //               errno = err, err_sys("pthread_create failed");
 
         syslog(LOG_INFO, "%s[%ld] is  initlizaton finish...", argv[0], (long int)getpid());
-
         // 执行服务程序
         for ( ; ; )
 	{
@@ -257,7 +257,7 @@ int main(int argc , char * argv[])
 			else
                                 err_sys("accept error");
 		}
-//		printf("conn fd = %d\n", connfd);
+		printf("conn fd = %d\n", connfd);
 		if ( (err = pthread_create(&tid, NULL, &thread_main, (void *)connfd)) < 0)
 			errno = err, err_sys("pthread_create error");
 #if 0
@@ -411,6 +411,12 @@ charger_serv(const ev_int fd, const ev_int cmd, CHARGER_INFO_TABLE *charger,  BU
 		//出错处理
 		return -1;
 	}
+//        printf("crc success ---> cid:%d, len:%d\n", *(int *)(bf->recv_buff + 5), len);
+//        for (i = 0; i < len; i++)
+//        {
+//                printf("%x  ", bf->recv_buff[i]);
+//        }
+//        printf("\n");
         msleep(100);
     // 判断有没有抄表指令
 //	bzero(bf->send_buff, strlen(bf->send_buff));
@@ -653,7 +659,7 @@ cmd_0x10:
 		break;
 
 		case 	CHARGER_CMD_HB:	 // 0x34  心跳
-			printf("心跳请求...\n");
+//			printf("心跳请求...\n");
                 //解决充电完成，还未解锁导致浮点计算出错的BUG
 //			if(bf->recv_buff[9] ==  CHARGER_CHARGING_COMPLETE_LOCK && ChargerInfo[(*index)].is_charging_flag == 0) 
 //			{
@@ -678,7 +684,7 @@ cmd_0x10:
 			// 心跳处理略
 			//  回复心跳
 #if USE_POWER_BAR
-                        printf("=======>surpls current:%d\n", charger->real_current = charger_manager.power_bar_surpls_current);
+  //                      printf("=======>surpls current:%d\n", charger->real_current = charger_manager.power_bar_surpls_current);
 #else
 #endif
 		        if (gernal_command(fd, CHARGER_CMD_HB_R, charger, bf) < 0)
@@ -890,10 +896,18 @@ reply_to_charger2:
                         return 0;
 
 	         case	CHARGER_CMD_STATE_UPDATE:	// 0X56 充电中状态更新
-			printf("充电中状态更新...\n");
+//			printf("充电中状态更新...\n");
                         charger->is_charging_flag = 1;
                         charger->real_time_current = bf->recv_buff[22];
-                        printf("======================> bf->recv_buff[22] = %d\n", charger->real_time_current);
+                        // load balance
+                        // 实际电流大于目标电流，取实际电流，否则取目标电流
+//                        if ( ((bf->recv_buff[23] << 8) | bf->recv_buff[24]) > charger->real_current)
+//                        {
+//                                charger->real_time_current = (bf->recv_buff[23] << 8) | bf->recv_buff[24];
+//                        } else
+//                        {
+//                                charger->real_time_current = bf->recv_buff[22];
+//                        }
 #if 1
 			sprintf(bf->val_buff, "%d", bf->recv_buff[52]);
 			ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.ChargerWay", charger->tab_name);
@@ -937,7 +951,8 @@ reply_to_charger2:
 			        ev_uci_save_action(UCI_SAVE_OPT, true, bf->val_buff, "chargerinfo.%s.privateID", charger->tab_name);
                         }
                         // 记录日志,电量
-                        sprintf(bf->send_buff, "%s/%s/%08d", WORK_DIR, LOG_DIR, charger->CID);
+		        tmp_2_val = *(unsigned short *)(bf->recv_buff + 53);
+                        sprintf(bf->send_buff, "%s/%s/%08d-%d", WORK_DIR, LOG_DIR, charger->CID, tmp_2_val);
                         if ( (file = fopen(bf->send_buff, "ab+")) != NULL)
                         {
                                 struct tm *tim1 = (struct tm *)malloc(sizeof(struct tm));
@@ -946,12 +961,15 @@ reply_to_charger2:
                                         tm = *(time_t *)(bf->recv_buff + 13);
                                         if (localtime_r(&tm, tim1) != NULL)
                                         {
-                                            sprintf(bf->val_buff, "[%4d-%02d-%02d %02d:%02d:%02d]", 
+                                            sprintf(bf->val_buff, "[%4d-%02d-%02d %02d:%02d:%02d]",
                                             tim1->tm_year+1900, tim1->tm_mon+1, tim1->tm_mday, tim1->tm_hour, tim1->tm_min, tim1->tm_sec);
-                                            sprintf(bf->val_buff + strlen(bf->val_buff), " CID:%08d, cycid:%4d, cur:%2dA, vol:%3dV, \
-                                        power:%dwh, soc:%d, tilltime:%d\n", charger->CID, ((bf->recv_buff[53] << 8)|bf->recv_buff[54]),\ 
-                                       (bf->recv_buff[23]<<8 | bf->recv_buff[24]),(bf->recv_buff[25]<<8 | bf->recv_buff[26]), \
-                                *(unsigned int *)( bf->recv_buff + 30), bf->recv_buff[27], (bf->recv_buff[28] << 8| bf->recv_buff[29]));
+                                            sprintf(bf->val_buff + strlen(bf->val_buff), 
+                                          "cur:%2dA, vol:%3dV, power:%dwh, soc:%d, tilltime:%d, pwm:%d, cpv:%d\n", 
+                                            (bf->recv_buff[23]<<8 | bf->recv_buff[24]),(bf->recv_buff[25]<<8 | bf->recv_buff[26]),  
+                                            *(unsigned int *)( bf->recv_buff + 30), bf->recv_buff[27], 
+                                            (bf->recv_buff[28] << 8| bf->recv_buff[29]),
+                                            (bf->recv_buff[59] << 8 | bf->recv_buff[60]),
+                                            (bf->recv_buff[61] << 8 | bf->recv_buff[62]) );
                                         }
                                         free(tim1);
                                 }
@@ -1022,23 +1040,16 @@ reply_to_charger2:
 //replay58:            
             uci_clean_charge_finish(charger);
             memset(bf->val_buff, 0, strlen(bf->val_buff));
-            if (charger->start_time != 0)
+            sprintf(bf->val_buff, "cid:%08d,start_tm:%d,end_tm:%d,pow:%d,way:%d,cycid:%d, uid:%s, stopReason:%d\n",  
+                   CID, (charger->end_time - 60 * (bf->recv_buff[41] << 8 | bf->recv_buff[42])), 
+                   charger->end_time, charger->power,bf->recv_buff[59], (bf->recv_buff[60] << 8 | bf->recv_buff[61]),
+                   bf->recv_buff[59] != 1 ? bf->send_buff : "null", bf->recv_buff[66]);
+            
+            sprintf(bf->send_buff, "%s/%s/%08d", WORK_DIR, RECORD_DIR, charger->CID);
+            if ( (file = fopen(bf->send_buff, "ab+")) != NULL)
             {
-			        sprintf(bf->val_buff, "cid:%08d,start_tm:%d,end_tm:%d,pow:%d,way:%d,cycid:%d, uid:",  CID, charger->start_time, 
-                             charger->end_time, charger->power,bf->recv_buff[59], (bf->recv_buff[60] << 8 | bf->recv_buff[61]));
-               
-                    if (bf->recv_buff[59] != 1) // 不是扫码,不追加uid
-                    {
-                        sprintf(bf->val_buff + strlen(bf->val_buff), "%s", bf->send_buff);
-                    }
-                    bf->val_buff[strlen(bf->val_buff)] = '\n';
-
-                    sprintf(bf->send_buff, "%s/%s/%08d", WORK_DIR, RECORD_DIR, charger->CID);
-                    if ( (file = fopen(bf->send_buff, "ab+")) != NULL)
-                    {
-                        fwrite(bf->val_buff, 1, strlen(bf->val_buff), file);
-                        fclose(file);
-                    }
+                 fwrite(bf->val_buff, 1, strlen(bf->val_buff), file);
+                 fclose(file);
             }
              // 回应
             charger->target_mode = CHARGER_READY;
@@ -1978,14 +1989,14 @@ void * pthread_service_receive(void *arg)
     struct  wait_task  cmd, *pcmd;
     struct  upt     *update;
     // 初始化chargerinfo命令
-    debug_msg("pthread of receive message is running");
+//    debug_msg("pthread of receive message is running");
    for ( ; ; )
    {
             // 阻塞住，每5秒超时
        recv_str = mqreceive_timed("/server.cmd", 100, 5);
        if (recv_str)
        {
-                    debug_msg("队列有数据, 正在操作，str =%s...", recv_str);
+//                    debug_msg("队列有数据, 正在操作，str =%s...", recv_str);
                     if ( (pcmd = parse_server_command(recv_str)) == NULL)
                     {
                             free(recv_str);
@@ -2342,44 +2353,9 @@ void *load_balance_pthread(void *arg)
                                 balance[i].charging_flag = 0;      // balance 对应电桩序列,复制到局部变量，防止被改变
                         }
                 }
-	 
-         charger_manager.present_off_net_cnt = charger_manager.total_num - off_net_cnt;
-         debug_msg("load_balance============>charger_cnt:%d, charing_cnt:%d, net_off_cnt:%d \n", CNT, NUM, charger_manager.present_off_net_cnt);
-//        debug_msg("pthread of load balance: off net cnt = %d", charger_manager.present_off_net_cnt);
-        // 向串口发送灯板控制命令
-        if(NUM <= 5)
-        {
-            send_buff[0] = 0x53;
-            send_buff[4] = 0x45;
-            send_buff[1] = POWER_BAR_PWN_3S;  
-            send_buff[2] = POWER_BAR_GREEN;  
-            send_buff[3] = (6-NUM) + 0x30;  
-            send_buff[5] = '\0';
-//            cmd_frun("echo %s > /dev/ttyUSB0", send_buff);
-//              power_bar_ctrl_send(charger_manager.have_powerbar_serial_fd, POWER_BAR_PWN_3S, POWER_BAR_GREEN, 6 -NUM);
-        }
-        else if(NUM >= CNT)
-        {
-            send_buff[0] = 0x53;
-            send_buff[4] = 0x45;
-            send_buff[1] = POWER_BAR_PWN_3S;  
-            send_buff[2] = POWER_BAR_RED;  
-            send_buff[3] = 6 + 0x30;  
-            send_buff[5] = '\0';
- //           cmd_frun("echo %s > /dev/ttyUSB0", send_buff);
-//              power_bar_ctrl_send(charger_manager.have_powerbar_serial_fd, POWER_BAR_PWN_3S, POWER_BAR_RED, 6);
-        }
-        else
-        {
-            send_buff[0] = 0x53;
-            send_buff[4] = 0x45;
-            send_buff[1] = POWER_BAR_PWN_3S;  
-            send_buff[2] = POWER_BAR_GREEN;  
-            send_buff[3] = 1 + 0x30;  
-            send_buff[5] = '\0';
-//            cmd_frun("echo %s > /dev/ttyUSB0", send_buff);
-//                power_bar_ctrl_send(charger_manager.have_powerbar_serial_fd, POWER_BAR_PWN_3S, POWER_BAR_GREEN, 1);
-        }
+                charger_manager.present_off_net_cnt = charger_manager.total_num - off_net_cnt;
+                printf("load_balance======>charger_cnt:%d, charing_cnt:%d, net_off_cnt:%d \n",
+                                                         CNT, NUM, charger_manager.present_off_net_cnt);
                 // 不进行分配的条件
                 if (have_charger_flag == 0 && NUM == 0)
                 {
@@ -2391,21 +2367,23 @@ void *load_balance_pthread(void *arg)
                 //有充电请求，分配充电电流, 7A
                 if (have_charger_flag == 1)
                 {
-                printf("*********************************\n");
-                 printf("**       开始进行电流分配     ***\n");
-                printf("*********************************\n");
                         if (charger_manager.power_bar_surpls_current >= 16)
                         {
                             ChargerInfo[charger_index].real_current = 15;
                             ChargerInfo[charger_index].real_time_current = 16;
                             ChargerInfo[charger_index].load_balance_cmd = 0;
                             ChargerInfo[charger_index].is_charging_flag = 1;
+                            balance[charger_index].charging_flag = 1;
                         } else
                         {
                                 charger_manager.power_bar_surpls_current = 0;
                                 ChargerInfo[charger_index].real_current = 0;
                                 ChargerInfo[charger_index].load_balance_cmd = 0;
+                                ChargerInfo[charger_index].is_charging_flag = 0;
+                                continue;
                         }
+                        printf("分配15A成功，等待中...\n");
+                        msleep(5000);
                         index = 0;
                         for (i = 0; i < CNT; i++)
                         {
@@ -2415,10 +2393,12 @@ void *load_balance_pthread(void *arg)
                                         index++;
                                 }
                         }
+                        printf("开始进行%d台电桩7A设置 ...\n", index);
                         // 等待 1min, 提前相等直接跳出
                         wait_time = 30;
                         // 清0位未改变的电桩,做标记用
                         memset(no_change_index, 0, sizeof(no_change_index));
+                        printf("设置完毕，%d秒内等待反馈结果 ...\n", wait_time);
                         while (wait_time--)
                         {
                                 cnt = 0;
@@ -2442,13 +2422,13 @@ void *load_balance_pthread(void *arg)
                                         printf("电桩已经全部改变 ...\n");
                                         break;
                                 }
-                                sleep(1);
+                                msleep(1000);
                         }
                         if (charger_manager.limit_max_current - sum >= 16)
                                 charger_manager.power_bar_surpls_current = 16;
                         else
                                 charger_manager.power_bar_surpls_current = 0;
-                            
+                        printf("等待结束，共有%d台电桩变成7A,剩余电流为:%d\n", cnt, charger_manager.limit_max_current - sum);
                         sleep(5);
                         continue;
           }  
@@ -2485,7 +2465,7 @@ READ:
          }
          else
          { 
-//             charger_manager.power_bar_surpls_current = charger_manager.limit_max_current - sum;
+//               cur = charger_manager.limit_max_current - sum;
                charger_manager.power_bar_surpls_current = 0;
                cur = 16;
          }
@@ -2559,9 +2539,10 @@ void  charger_info_init(int select)
                 ev_uci_save_action(UCI_SAVE_OPT, true, "0", "chargerinfo.SERVER.END_TIME");
                 return ;
     }
-//         printf("uci  init ... \n");
+         printf("uci  init ... \n");
 	if( (tab_tmp = tab_name = find_uci_tables(TAB_POS)) == NULL)
 		return ;
+        printf("init uci...end\n");
 	while(*tab_name)
 	{
 		if(*tab_name == ',')

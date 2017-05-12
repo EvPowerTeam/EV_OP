@@ -55,7 +55,7 @@ typedef  long           ev_long;
  *      充电协议相关
  *
  *****************************************************/
-#define  USE_DAEMONIZE      1
+#define  USE_DAEMONIZE      0
 #define  USE_POWER_BAR      0
 #define  SOCK_LONG_CONNECT  0
 
